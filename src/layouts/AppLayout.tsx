@@ -9,6 +9,7 @@ import { MacrosPage } from "@/pages/MacrosPage";
 import { CountersPage } from "@/pages/CountersPage";
 import { PlaceholderPage } from "@/pages/PlaceholderPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { AboutPage } from "@/pages/AboutPage";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { useAppStore } from "@/store/useAppStore";
 import type { RouteId } from "@/types";
@@ -20,7 +21,7 @@ const pages: Record<RouteId, ComponentType> = {
   macros: MacrosPage,
   counters: CountersPage,
   settings: SettingsPage,
-  about: () => <PlaceholderPage />,
+  about: AboutPage,
   credits: () => <PlaceholderPage />,
 };
 

@@ -55,7 +55,7 @@ export function SettingsPage() {
   return (
     <div className="h-full overflow-auto p-6">
       <h1 className="text-[26px] font-semibold tracking-tight text-white">Ustawienia</h1>
-      <p className="mt-1 text-[13px] text-zinc-500">Konto, aktualizacje, makra i informacje o aplikacji</p>
+      <p className="mt-1 text-[13px] text-zinc-500">Konto, aktualizacje i szybki import makr</p>
 
       <div className="mt-6 max-w-lg space-y-4">
         <Card className="p-5">
@@ -74,27 +74,6 @@ export function SettingsPage() {
             className="mt-4 h-10 w-full rounded-lg border border-syn-border bg-[#0c0c0e] px-3 text-[13px] text-white outline-none focus:border-violet-500/50"
             placeholder="Twoja nazwa"
           />
-        </Card>
-
-        <Card className="p-5">
-          <div className="text-[15px] font-medium text-white">O aplikacji</div>
-          <p className="mt-1 text-[12px] text-zinc-500">ARIES — prywatny panel administracyjny</p>
-          <ul className="mt-4 space-y-2.5">
-            {[
-              { role: "Main developer", name: "Filipek" },
-              { role: "Developer", name: "Rysiasty" },
-              { role: "Beta tester", name: "Wiśniófka" },
-              { role: "Loga", name: "Dorek helper" },
-            ].map((person) => (
-              <li
-                key={person.role}
-                className="flex items-center justify-between gap-3 rounded-lg border border-syn-border bg-[#0c0c0e] px-3 py-2.5"
-              >
-                <span className="text-[12px] text-zinc-500">{person.role}</span>
-                <span className="text-[13px] font-medium text-zinc-100">{person.name}</span>
-              </li>
-            ))}
-          </ul>
         </Card>
 
         <Card className="overflow-hidden p-5">

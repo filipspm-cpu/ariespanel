@@ -52,6 +52,6 @@ export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
   macros: { title: "Makra" },
   counters: { title: "Liczniki" },
   settings: { title: "Ustawienia systemu" },
-  about: { title: "O aplikacji" },
+  about: { title: "O aplikacji", subtitle: "ARIES — prywatny panel administracyjny" },
   credits: { title: "Podziękowania" },
 };
