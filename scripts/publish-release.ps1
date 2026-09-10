@@ -13,7 +13,8 @@ foreach ($line in $credLines) {
 $token = $dict['password']
 if (-not $token) { throw "No GitHub credentials" }
 
-$version = "1.1.10"
+$pkg = Get-Content "C:\Users\filip\Desktop\Nowy folder\package.json" -Raw | ConvertFrom-Json
+$version = [string]$pkg.version
 $tag = "v$version"
 $owner = "filipspm-cpu"
 $repo = "ariespanel"
@@ -24,11 +25,19 @@ $headers = @{
   "User-Agent" = "aries-release-publish"
 }
 
-# Ensure tag exists remotely
-& $git tag -f $tag -m "ARIES $version"
-& $git push -f origin $tag
+# Ensure tag exists remotely (no force)
+$remoteTag = & $git ls-remote --tags origin $tag
+if (-not $remoteTag) {
+  & $git tag -a $tag -m "ARIES $version"
+  & $git push origin $tag
+}
 
-$existing = Invoke-RestMethod -Uri "https://api.github.com/repos/$owner/$repo/releases/tags/$tag" -Headers $headers -ErrorAction SilentlyContinue
+$existing = $null
+try {
+  $existing = Invoke-RestMethod -Uri "https://api.github.com/repos/$owner/$repo/releases/tags/$tag" -Headers $headers
+} catch {
+  $existing = $null
+}
 if ($existing) {
   Invoke-RestMethod -Method Delete -Uri "https://api.github.com/repos/$owner/$repo/releases/$($existing.id)" -Headers $headers | Out-Null
   Write-Output ("deleted_old_release id=" + $existing.id)
@@ -48,7 +57,7 @@ Write-Output ("created_release id=" + $release.id)
 $files = @(
   @{ path = "C:\Users\filip\Desktop\Nowy folder\release\ARIES-Setup-$version.exe"; name = "ARIES-Setup-$version.exe" },
   @{ path = "C:\Users\filip\Desktop\Nowy folder\release\ARIES-Setup-$version.exe.blockmap"; name = "ARIES-Setup-$version.exe.blockmap" },
-  @{ path = "$env:TEMP\aries-installer-$version\latest.yml"; name = "latest.yml" }
+  @{ path = "C:\Users\filip\Desktop\Nowy folder\release\latest.yml"; name = "latest.yml" }
 )
 
 foreach ($f in $files) {

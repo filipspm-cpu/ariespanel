@@ -1,4 +1,17 @@
+!include "FileFunc.nsh"
+
+; electron-updater always passes --updated. Force silent install so the wizard never appears.
+!macro customInit
+  ${GetParameters} $R0
+  ClearErrors
+  ${GetOptions} $R0 "--updated" $R1
+  ${IfNot} ${Errors}
+    SetSilent silent
+  ${EndIf}
+!macroend
+
 !macro customWelcomePage
+  !insertmacro skipPageIfUpdated
   !define MUI_WELCOMEPAGE_TITLE "Witaj w ARIES"
   !define MUI_WELCOMEPAGE_TEXT "Ten kreator zainstaluje panel ARIES na Twoim komputerze.$\r$\n$\r$\nKliknij Dalej, aby kontynuować."
   !insertmacro MUI_PAGE_WELCOME
@@ -18,6 +31,7 @@
     !define MUI_FINISHPAGE_RUN
     !define MUI_FINISHPAGE_RUN_FUNCTION "StartApp"
   !endif
+  !insertmacro skipPageIfUpdated
   !define MUI_FINISHPAGE_TITLE "ARIES jest gotowy"
   !define MUI_FINISHPAGE_TEXT "Instalacja zakończyła się pomyślnie. Możesz teraz uruchomić aplikację."
   !insertmacro MUI_PAGE_FINISH
