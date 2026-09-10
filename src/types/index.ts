@@ -153,3 +153,12 @@ export interface ProcessInfo {
   title: string;
   name: string;
 }
+
+export interface LiveServerStatus {
+  endpoint: string;
+  name: string;
+  project: "majestic" | "gta5rp";
+  players: number;
+  online: boolean;
+  region?: string;
+}

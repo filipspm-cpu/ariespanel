@@ -68,6 +68,7 @@ const api = {
     ipcRenderer.on("update:status", listener);
     return () => ipcRenderer.removeListener("update:status", listener);
   },
+  majesticServers: () => ipcRenderer.invoke("majestic:servers"),
 };
 
 contextBridge.exposeInMainWorld("synvity", api);

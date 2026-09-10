@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/Card";
+import { MajesticServersPanel } from "@/components/MajesticServersPanel";
 import { formatDuration } from "@/services/api";
 import { counterPeriodTotals, startOfDay, startOfWeek } from "@/services/counterStats";
 import { useAppStore } from "@/store/useAppStore";
@@ -65,7 +66,7 @@ export function HomePage() {
   const ticketWeek = counterPeriodTotals(ticket, weekStart, weekStart + 7 * 86400000);
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 overflow-auto p-4 xl:p-5">
+    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden p-4 xl:p-5">
       <div className="grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Reporty dziś"
@@ -98,6 +99,8 @@ export function HomePage() {
           hint="Czas pracy tej instalacji, bez przerw między sesjami."
         />
       </div>
+
+      <MajesticServersPanel />
     </div>
   );
 }

@@ -40,6 +40,7 @@ export interface SynvityApi {
   updateCheck: () => Promise<UpdateStatus>;
   updateInstall: () => Promise<unknown>;
   onUpdateStatus: (cb: (status: UpdateStatus) => void) => () => void;
+  majesticServers: () => Promise<import("./index").LiveServerStatus[]>;
 }
 
 export {};

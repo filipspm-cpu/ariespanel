@@ -7,6 +7,7 @@ import { getSpotifyTrack } from "./spotify";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
 import { runMacroById, triggersFromMacros } from "./runMacro";
 import { registerUpdater } from "./updater";
+import { fetchMajesticServerStatuses } from "./majesticStatus";
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 let mainWindow: BrowserWindow | null = null;
@@ -251,6 +252,7 @@ function registerIpc() {
   ipcMain.handle("process:find", () => findGameProcess());
   ipcMain.handle("process:list", () => listWindows());
   ipcMain.handle("spotify:now", () => getSpotifyTrack());
+  ipcMain.handle("majestic:servers", () => fetchMajesticServerStatuses());
 
   ipcMain.handle("displays:list", () =>
     screen.getAllDisplays().map((d, i) => ({
