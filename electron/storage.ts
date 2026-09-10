@@ -239,8 +239,14 @@ function filePath() {
 let cache: AppState | null = null;
 
 function normalizeState(state: AppState): AppState {
+  const settings = {
+    ...state.settings,
+    githubOwner: "filipspm-cpu",
+    githubRepo: "ariespanel",
+  };
   return {
     ...state,
+    settings,
     macros: (state.macros ?? []).map((m) => migrateMacro(m)),
   };
 }
@@ -251,6 +257,15 @@ export function loadState(): AppState {
     const raw = fs.readFileSync(filePath(), "utf-8");
     const parsed = JSON.parse(raw) as Partial<AppState>;
     cache = normalizeState(deepMerge(defaultState(), parsed));
+    const repo = (parsed.settings as AppSettings | undefined)?.githubRepo;
+    const owner = (parsed.settings as AppSettings | undefined)?.githubOwner;
+    if (repo !== "ariespanel" || owner !== "filipspm-cpu") {
+      try {
+        fs.writeFileSync(filePath(), JSON.stringify(cache, null, 2), "utf-8");
+      } catch {
+        /* ignore */
+      }
+    }
   } catch {
     cache = defaultState();
     try {

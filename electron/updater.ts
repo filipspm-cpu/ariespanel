@@ -28,15 +28,25 @@ function send(patch: Partial<UpdateStatus>) {
   getWindow()?.webContents.send("update:status", last);
 }
 
+function friendlyUpdateError(err: unknown) {
+  const raw = err instanceof Error ? err.message : String(err);
+  if (/404|Not Found|authentication token/i.test(raw)) {
+    return "Nie znaleziono aktualizacji. Gdy wyjdzie nowa wersja, pojawi się tutaj.";
+  }
+  if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|net::|network/i.test(raw)) {
+    return "Brak połączenia z internetem. Spróbuj ponownie za chwilę.";
+  }
+  if (raw.length > 160) return "Nie udało się sprawdzić aktualizacji.";
+  return raw;
+}
+
 function applyFeed() {
-  const s = loadState().settings;
-  const owner = s.githubOwner?.trim() || GITHUB_OWNER;
-  const repo = s.githubRepo?.trim() || GITHUB_REPO;
-  const token = s.githubToken?.trim();
+  const token = loadState().settings.githubToken?.trim();
+  // Always use the fixed public feed — ignore stale settings like githubRepo=aries.
   autoUpdater.setFeedURL({
     provider: "github",
-    owner,
-    repo,
+    owner: GITHUB_OWNER,
+    repo: GITHUB_REPO,
     private: Boolean(token),
     token: token || undefined,
   });
@@ -109,7 +119,7 @@ async function checkNow(fromUser: boolean) {
   try {
     await autoUpdater.checkForUpdates();
   } catch (err) {
-    send({ status: "error", message: err instanceof Error ? err.message : String(err) });
+    send({ status: "error", message: friendlyUpdateError(err) });
   } finally {
     checking = false;
   }
@@ -143,7 +153,7 @@ async function applyUpdate() {
   } catch (err) {
     applying = false;
     closeUpdateProgressWindow();
-    send({ status: "error", message: err instanceof Error ? err.message : String(err) });
+    send({ status: "error", message: friendlyUpdateError(err) });
   }
   return last;
 }
@@ -208,7 +218,7 @@ export function registerUpdater(opts: {
   autoUpdater.on("error", (err) => {
     applying = false;
     closeUpdateProgressWindow();
-    send({ status: "error", message: err instanceof Error ? err.message : String(err) });
+    send({ status: "error", message: friendlyUpdateError(err) });
   });
 
   ipcMain.handle("app:version", () => app.getVersion());

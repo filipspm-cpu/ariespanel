@@ -91,13 +91,19 @@ export function SettingsPage() {
               <div className="mt-1 text-[20px] font-semibold tracking-tight text-white">v{update?.version}</div>
             </div>
           ) : (
-            <div className="mt-4 rounded-lg border border-syn-border bg-[#0c0c0e] px-3 py-3 text-[13px] text-zinc-400">
+            <div
+              className={`mt-4 rounded-lg border px-3 py-3 text-[13px] leading-relaxed ${
+                update?.status === "error"
+                  ? "border-amber-500/25 bg-amber-500/10 text-amber-100/90"
+                  : "border-syn-border bg-[#0c0c0e] text-zinc-400"
+              }`}
+            >
               {update?.status === "checking"
                 ? "Sprawdzanie…"
                 : update?.status === "not-available"
                   ? "Masz najnowszą wersję."
                   : update?.status === "error"
-                    ? update.message
+                    ? update.message || "Nie udało się sprawdzić aktualizacji."
                     : "Nie sprawdzono jeszcze aktualizacji."}
             </div>
           )}
