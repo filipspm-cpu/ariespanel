@@ -1,7 +1,7 @@
 {
   "name": "aries",
   "productName": "ARIES",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "ARIES — prywatny panel administracyjny",
   "author": "ARIES",
   "private": true,
@@ -83,7 +83,14 @@
       "allowToChangeInstallationDirectory": true,
       "artifactName": "ARIES-Setup-${version}.exe",
       "shortcutName": "ARIES",
-      "differentialPackage": true
+      "uninstallDisplayName": "ARIES",
+      "differentialPackage": true,
+      "installerIcon": "build/installerIcon.ico",
+      "uninstallerIcon": "build/installerIcon.ico",
+      "installerHeader": "build/installerHeader.bmp",
+      "installerSidebar": "build/installerSidebar.bmp",
+      "uninstallerSidebar": "build/installerSidebar.bmp",
+      "include": "build/installer.nsh"
     },
     "publish": {
       "provider": "github",
