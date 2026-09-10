@@ -43,6 +43,11 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    const off = window.synvity?.onOpenSettings(() => useAppStore.getState().setRoute("settings"));
+    return () => off?.();
+  }, []);
+
+  useEffect(() => {
     const off = window.synvity?.onOverlayLayout((overlay) => {
       useAppStore.setState({ overlay });
     });

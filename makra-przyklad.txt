@@ -1,0 +1,18 @@
+# Pakiet makr ARIES
+# Wzor:  .komenda = tekst
+# Losowe odpowiedzi rozdziel znakiem |
+# Zapisz jako .txt lub .ariesmacros i wczytaj w Makrach albo w Ustawieniach
+
+.w = Witam | Hejka | Cześć | Dzień dobry
+.p = Poczekaj chwilę.
+.s = Spokojnie.
+.m = Moment.
+.v = W porządku.
+.t = Tak jest.
+.e = Rozumiem.
+.f = Jasne.
+.b = Dobrze.
+.z = Zaraz wracam.
+.l = Lecę.
+.c = Czekam.
+.blad = Przepraszam, pomyłka.

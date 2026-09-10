@@ -6,7 +6,7 @@ import { sendTextToWindow, sendTextForeground, pressKey, findGameProcess, listWi
 import { getSpotifyTrack } from "./spotify";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
 import { runMacroById, triggersFromMacros } from "./runMacro";
-import { checkUpdatesOnOpen, registerUpdater } from "./updater";
+import { registerUpdater } from "./updater";
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 let mainWindow: BrowserWindow | null = null;
@@ -84,9 +84,7 @@ function createMainWindow() {
 
   mainWindow.once("ready-to-show", () => {
     mainWindow?.show();
-    checkUpdatesOnOpen(() => mainWindow);
   });
-  mainWindow.on("show", () => checkUpdatesOnOpen(() => mainWindow));
   mainWindow.on("close", (e) => {
     if (!(app as unknown as { isQuiting?: boolean }).isQuiting) {
       e.preventDefault();
@@ -380,12 +378,17 @@ function registerShortcuts() {
 }
 
 app.commandLine.appendSwitch("enable-transparent-visuals");
+app.setAppUserModelId("com.aries.app");
 
 app.whenReady().then(() => {
   registerIpc();
-  registerUpdater(() => mainWindow);
   createMainWindow();
   createTray();
+  registerUpdater({
+    getWindow: () => mainWindow,
+    getTray: () => tray,
+    getIcon: () => appIcon(),
+  });
   registerShortcuts();
   const saved = loadState();
   if (saved.overlay.enabled) {

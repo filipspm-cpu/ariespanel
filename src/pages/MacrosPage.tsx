@@ -1,10 +1,12 @@
 import { Toggle } from "@/components/ui/Toggle";
 import { defaultMacros, migrateMacro, macroUid, parseTrigger } from "@/data/defaultMacros";
+import { exportMacroPack, exportMacroTxt, mergeImportedMacros, parseMacroFile } from "@/services/macroPack";
 import { useAppStore } from "@/store/useAppStore";
 import type { Macro, MacroFolder, MacroStep, MacroStepType, MacroTrigger } from "@/types";
 import {
   AlignLeft,
   Clock,
+  Download,
   Folder,
   FolderPlus,
   GitBranch,
@@ -21,6 +23,7 @@ import {
   Trash2,
   Type,
   ArrowLeftRight,
+  FileUp,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
@@ -75,6 +78,8 @@ export function MacrosPage() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(macros[0]?.id ?? null);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [packMsg, setPackMsg] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const selected = macros.find((m) => m.id === selectedId) ?? null;
 
@@ -128,6 +133,30 @@ export function MacrosPage() {
     if (!selectedId && extra[0]) setSelectedId(extra[0].id);
   };
 
+  const importFromFile = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const parsed = parseMacroFile(await file.text());
+      const { next, added, skipped } = mergeImportedMacros(useAppStore.getState().macros, parsed.macros);
+      setMacros(next);
+      setPackMsg(added ? `Dodano ${added} makr` : skipped ? "Te makra już są" : "Pusty plik");
+      if (added && parsed.macros[0]) setSelectedId(parsed.macros[0].id);
+    } catch (err) {
+      setPackMsg(err instanceof Error ? err.message : "Błąd pliku");
+    }
+  };
+
+  const exportPack = (asTxt: boolean) => {
+    const blob = new Blob([asTxt ? exportMacroTxt(macros) : exportMacroPack(macros, folders)], {
+      type: "text/plain;charset=utf-8",
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = asTxt ? "aries-makra.txt" : "aries-makra.ariesmacros";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   return (
     <div className="flex h-full min-h-0">
       <div className="flex w-[280px] shrink-0 flex-col border-r border-syn-line">
@@ -137,9 +166,26 @@ export function MacrosPage() {
             <button title="Nowe makro" className="rounded p-1 hover:bg-white/5 hover:text-white" onClick={() => addMacro(null)}>
               <Plus size={15} />
             </button>
+            <button title="Wczytaj z pliku" className="rounded p-1 hover:bg-white/5 hover:text-white" onClick={() => fileRef.current?.click()}>
+              <FileUp size={15} />
+            </button>
+            <button title="Zapisz do pliku" className="rounded p-1 hover:bg-white/5 hover:text-white" onClick={() => exportPack(true)}>
+              <Download size={15} />
+            </button>
             <button title="Nowy folder" className="rounded p-1 hover:bg-white/5 hover:text-white" onClick={addFolder}>
               <FolderPlus size={15} />
             </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".txt,.macros,.ariesmacros,.json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                void importFromFile(file);
+              }}
+            />
           </div>
         </div>
         <div className="px-3 pb-2">
@@ -149,6 +195,7 @@ export function MacrosPage() {
             placeholder="Szukaj makr..."
             className="h-8 w-full rounded-md border border-syn-border bg-[#0c0c0e] px-2 text-[12px] outline-none"
           />
+          {packMsg ? <div className="mt-2 text-[11px] text-emerald-400">{packMsg}</div> : null}
         </div>
         <div className="flex-1 overflow-auto px-2 pb-3">
           {filtered.filter((m) => m.folderId === null).map((m) => (

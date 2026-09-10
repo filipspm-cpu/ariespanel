@@ -49,6 +49,11 @@ const api = {
     ipcRenderer.on("ui:commandPalette", listener);
     return () => ipcRenderer.removeListener("ui:commandPalette", listener);
   },
+  onOpenSettings: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on("ui:openSettings", listener);
+    return () => ipcRenderer.removeListener("ui:openSettings", listener);
+  },
   onMacroFired: (cb: (data: { id: string }) => void) => {
     const listener = (_: unknown, data: { id: string }) => cb(data);
     ipcRenderer.on("macro:fired", listener);

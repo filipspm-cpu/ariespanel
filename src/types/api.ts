@@ -33,6 +33,7 @@ export interface SynvityApi {
   onCmdProgress: (cb: (data: { command: string }) => void) => () => void;
   onCmdDone: (cb: (data: { aborted: boolean }) => void) => () => void;
   onCommandPalette: (cb: () => void) => () => void;
+  onOpenSettings: (cb: () => void) => () => void;
   onMacroFired: (cb: (data: { id: string }) => void) => () => void;
   appVersion: () => Promise<string>;
   updateStatus: () => Promise<UpdateStatus>;
