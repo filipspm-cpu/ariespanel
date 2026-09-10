@@ -168,7 +168,7 @@ function finishInstall() {
   });
   setTimeout(() => {
     closeUpdateProgressWindow();
-    autoUpdater.quitAndInstall(false, true);
+    autoUpdater.quitAndInstall(true, true);
   }, 600);
 }
 
