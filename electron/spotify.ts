@@ -8,6 +8,7 @@ export interface SpotifyTrack {
   title: string;
   artist: string;
   album?: string;
+  artwork?: string;
   playing: boolean;
   position?: number;
   duration?: number;
@@ -16,6 +17,7 @@ export interface SpotifyTrack {
 const SMTC_SCRIPT = `
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false
 $ErrorActionPreference = "SilentlyContinue"
+$artFile = "ART_FILE_PLACEHOLDER"
 
 function Wait-Async($op) {
   if ($null -eq $op) { return $null }
@@ -23,10 +25,51 @@ function Wait-Async($op) {
   while ($op.Status -eq 0) {
     Start-Sleep -Milliseconds 15
     $n++
-    if ($n -gt 120) { return $null }
+    if ($n -gt 160) { return $null }
   }
   if ($op.Status -ne 1) { return $null }
   try { return $op.GetResults() } catch { return $null }
+}
+
+function Save-Thumb($props) {
+  try {
+    if (-not $props -or -not $props.Thumbnail) { return "" }
+    $ras = Wait-Async ($props.Thumbnail.OpenReadAsync())
+    if (-not $ras) { return "" }
+    $copied = $false
+    try {
+      $methods = [System.IO.WindowsRuntimeStreamExtensions].GetMethods() | Where-Object { $_.Name -eq "AsStreamForRead" }
+      foreach ($m in @($methods)) {
+        try {
+          $net = $m.Invoke($null, @($ras))
+          $fs = [System.IO.File]::Open($artFile, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write)
+          $net.CopyTo($fs)
+          $fs.Dispose()
+          $net.Dispose()
+          $copied = $true
+          break
+        } catch {}
+      }
+    } catch {}
+    if (-not $copied) {
+      $null = [Windows.Storage.Streams.DataReader, Windows.Storage.Streams, ContentType = WindowsRuntime]
+      $reader = [Windows.Storage.Streams.DataReader]::Create($ras)
+      $size = [uint32]$ras.Size
+      if ($size -le 0 -or $size -gt 2500000) { return "" }
+      $load = $reader.LoadAsync($size)
+      $n = 0
+      while ($load.Status -eq 0) {
+        Start-Sleep -Milliseconds 15
+        $n++
+        if ($n -gt 160) { return "" }
+      }
+      $bytes = New-Object byte[] $size
+      $reader.ReadBytes($bytes)
+      [System.IO.File]::WriteAllBytes($artFile, $bytes)
+    }
+    if ((Test-Path $artFile) -and ((Get-Item $artFile).Length -gt 32)) { return $artFile }
+  } catch {}
+  return ""
 }
 
 function Emit($obj) {
@@ -35,6 +78,7 @@ function Emit($obj) {
 }
 
 try {
+  Add-Type -Path "$env:WINDIR\\Microsoft.NET\\Framework64\\v4.0.30319\\System.Runtime.WindowsRuntime.dll" -ErrorAction SilentlyContinue
   $null = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType = WindowsRuntime]
   $mgr = Wait-Async ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync())
   $picked = $null
@@ -55,6 +99,7 @@ try {
         title = $title
         artist = [string]$props.Artist
         album = [string]$props.AlbumTitle
+        artworkPath = (Save-Thumb $props)
         playing = ($status -match "Playing")
         position = 0
         duration = 0
@@ -79,13 +124,12 @@ try {
     if ($procs.Count -gt 0) {
       $raw = [string]$procs[0].MainWindowTitle
       $raw = $raw -replace "\\s+-\\s+Spotify(?: Premium)?\\s*$", ""
-      # Keep this script ASCII-only: Windows PowerShell can misread a UTF-8
-      # script without a BOM, which previously stopped all Spotify detection.
       $parts = @($raw -split "\\s+-\\s+", 2)
       $out = [ordered]@{
         title = $parts[0].Trim()
         artist = $(if ($parts.Count -gt 1) { $parts[1].Trim() } else { "" })
         album = ""
+        artworkPath = ""
         playing = $true
         position = 0
         duration = 0
@@ -102,14 +146,15 @@ try {
 
 let cache: { at: number; track: SpotifyTrack | null } = { at: 0, track: null };
 let inflight: Promise<SpotifyTrack | null> | null = null;
-let scriptReady = "";
+
+function artFilePath() {
+  return path.join(app.getPath("userData"), "spotify-art.bin");
+}
 
 function scriptPath() {
   const dest = path.join(app.getPath("userData"), "smtc.ps1");
-  if (scriptReady !== dest) {
-    fs.writeFileSync(dest, SMTC_SCRIPT, "utf8");
-    scriptReady = dest;
-  }
+  const art = artFilePath().replace(/\\/g, "\\\\");
+  fs.writeFileSync(dest, SMTC_SCRIPT.replace("ART_FILE_PLACEHOLDER", art), "utf8");
   return dest;
 }
 
@@ -132,14 +177,23 @@ function fromWindowTitle(): SpotifyTrack | null {
       const parsed = parseTitle(t);
       if (parsed) return parsed;
     }
-    for (const w of windows) {
-      const parsed = parseTitle(w.title.trim());
-      if (parsed && /spotify/i.test(w.title)) return parsed;
-    }
   } catch {
     /* ignore */
   }
   return null;
+}
+
+function loadArtwork(filePath?: string): string | undefined {
+  const file = filePath || artFilePath();
+  try {
+    if (!file || !fs.existsSync(file)) return undefined;
+    const buf = fs.readFileSync(file);
+    if (buf.length < 32) return undefined;
+    const mime = buf[0] === 0x89 ? "image/png" : "image/jpeg";
+    return `data:${mime};base64,${buf.toString("base64")}`;
+  } catch {
+    return undefined;
+  }
 }
 
 function parseSmtcOutput(stdout: string): SpotifyTrack | null {
@@ -152,6 +206,7 @@ function parseSmtcOutput(stdout: string): SpotifyTrack | null {
       title?: string;
       artist?: string;
       album?: string;
+      artworkPath?: string;
       playing?: boolean;
       position?: number;
       duration?: number;
@@ -161,6 +216,7 @@ function parseSmtcOutput(stdout: string): SpotifyTrack | null {
       title: parsed.title,
       artist: parsed.artist || "",
       album: parsed.album,
+      artwork: loadArtwork(parsed.artworkPath),
       playing: Boolean(parsed.playing),
       position: parsed.position,
       duration: parsed.duration,
@@ -175,7 +231,7 @@ function fromSmtc(): Promise<SpotifyTrack | null> {
     execFile(
       "powershell.exe",
       ["-NoProfile", "-Sta", "-ExecutionPolicy", "Bypass", "-File", scriptPath()],
-      { windowsHide: true, timeout: 5000, windowsVerbatimArguments: false },
+      { windowsHide: true, timeout: 7000, windowsVerbatimArguments: false },
       (err, stdout) => {
         if (err && !stdout) {
           resolve(null);
@@ -187,25 +243,36 @@ function fromSmtc(): Promise<SpotifyTrack | null> {
   });
 }
 
+function sameSong(a?: SpotifyTrack | null, b?: SpotifyTrack | null) {
+  if (!a || !b) return false;
+  return a.title === b.title && a.artist === b.artist;
+}
+
+function mergeTracks(smtc: SpotifyTrack | null, titled: SpotifyTrack | null, prev: SpotifyTrack | null): SpotifyTrack | null {
+  const base = smtc ?? titled ?? prev;
+  if (!base) return null;
+  const artwork = smtc?.artwork || (sameSong(base, prev) ? prev?.artwork : undefined);
+  return {
+    title: smtc?.title || titled?.title || base.title,
+    artist: smtc?.artist || titled?.artist || base.artist,
+    album: smtc?.album || prev?.album,
+    artwork,
+    playing: smtc?.playing ?? titled?.playing ?? Boolean(base.playing),
+    position: smtc?.position ?? prev?.position,
+    duration: smtc?.duration ?? prev?.duration,
+  };
+}
+
 export async function getSpotifyTrack(): Promise<SpotifyTrack | null> {
-  const titled = fromWindowTitle();
-  if (titled?.title) {
-    cache = { at: Date.now(), track: titled };
-    return titled;
-  }
-  if (Date.now() - cache.at < 800 && cache.track) {
-    return cache.track;
-  }
   if (inflight) return inflight;
-  inflight = fromSmtc()
-    .then((smtc) => {
-      const track = smtc ?? titled ?? cache.track;
-      if (track) cache = { at: Date.now(), track };
-      else cache = { at: Date.now(), track: null };
-      return track ?? null;
-    })
-    .finally(() => {
-      inflight = null;
-    });
+  inflight = (async () => {
+    const titled = fromWindowTitle();
+    const smtc = await fromSmtc();
+    const track = mergeTracks(smtc, titled, cache.track);
+    cache = { at: Date.now(), track };
+    return track;
+  })().finally(() => {
+    inflight = null;
+  });
   return inflight;
 }

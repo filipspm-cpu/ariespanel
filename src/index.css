@@ -128,3 +128,16 @@ textarea {
   background: #fafafa;
   cursor: pointer;
 }
+
+@keyframes aries-ticker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.aries-ticker {
+  animation: aries-ticker 28s linear infinite;
+}

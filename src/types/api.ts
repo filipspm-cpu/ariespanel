@@ -9,7 +9,7 @@ export interface SynvityApi {
   saveState: (partial: unknown) => Promise<unknown>;
   findProcess: () => Promise<{ pid: number; title: string; name: string } | null>;
   listWindows: () => Promise<unknown>;
-  spotifyNow: () => Promise<{ title: string; artist: string; playing: boolean } | null>;
+  spotifyNow: () => Promise<import("./index").SpotifyTrack | null>;
   listDisplays: () => Promise<
     { id: number; label: string; bounds: { x: number; y: number; width: number; height: number }; primary: boolean }[]
   >;

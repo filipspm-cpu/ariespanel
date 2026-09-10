@@ -1,0 +1,14 @@
+---
+description: Po każdej zmianie podbij wersję, wypchnij na GitHub i zrestartuj ARIES.
+alwaysApply: true
+---
+
+# Wersja, GitHub i restart
+
+Po każdej aktualizacji kodu (naprawa, nowa funkcja, zmiana UI/Electron):
+
+1. Podbij `version` w `package.json` (patch, np. 1.1.1 → 1.1.2).
+2. Zrób commit i `git push origin main` na `https://github.com/filipspm-cpu/ariespanel.git`.
+3. Zbuduj/uruchom to, czego wymaga zmiana (`tsc` electron jeśli ruszany był `electron/`).
+4. Zamknij poprzednią instancję Electron/ARIES z tego projektu i otwórz ponownie (`npm run dev`).
+5. Nie kończ zadania bez pusha i ponownego uruchomienia, jeśli zmiana ma być od razu widoczna.

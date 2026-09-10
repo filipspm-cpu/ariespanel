@@ -134,6 +134,7 @@ export interface SpotifyTrack {
   title: string;
   artist: string;
   album?: string;
+  artwork?: string;
   playing: boolean;
   position?: number;
   duration?: number;
