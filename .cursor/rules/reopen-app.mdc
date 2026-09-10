@@ -1,0 +1,13 @@
+---
+description: Po każdej zmianie w kodzie ponownie otwórz aplikację ARIES.
+alwaysApply: true
+---
+
+# Restart aplikacji po aktualizacji
+
+Po każdej aktualizacji kodu (naprawa, nowa funkcja, zmiana UI/Electron) na końcu pracy:
+
+1. Zbuduj/uruchom to, czego wymaga zmiana (`tsc` electron jeśli ruszany był `electron/`).
+2. Zamknij poprzednią instancję aplikacji (proces Electron/ARIES z tego projektu).
+3. Otwórz aplikację ponownie (`npm run dev` w katalogu projektu, chyba że użytkownik korzysta z paczki w `release/`).
+4. Nie kończ zadania bez ponownego uruchomienia, jeśli zmiana ma być od razu widoczna.

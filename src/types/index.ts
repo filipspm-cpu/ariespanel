@@ -1,0 +1,154 @@
+export type RouteId =
+  | "home"
+  | "cmd"
+  | "overlay"
+  | "macros"
+  | "counters"
+  | "settings"
+  | "about"
+  | "credits";
+
+export interface NavItem {
+  id: RouteId;
+  label: string;
+  icon: string;
+  badge?: string;
+}
+
+export interface NavGroup {
+  id: string;
+  label: string;
+  items: (NavItem & { children?: NavItem[] })[];
+}
+
+export type MacroStepType =
+  | "insert-text"
+  | "multiline-text"
+  | "key-press"
+  | "wait"
+  | "call-function"
+  | "if"
+  | "if-else"
+  | "random"
+  | "counter";
+
+export interface MacroTrigger {
+  prefix: string;
+  command: string;
+}
+
+export interface MacroStep {
+  id: string;
+  type: MacroStepType;
+  text: string;
+  pressEnter: boolean;
+  waitMs?: number;
+  key?: string;
+  condition?: string;
+  counterId?: string;
+  children?: MacroStep[];
+  elseChildren?: MacroStep[];
+}
+
+export interface Macro {
+  id: string;
+  name: string;
+  folderId: string | null;
+  trigger: string;
+  triggers: MacroTrigger[];
+  random: boolean;
+  enabled: boolean;
+  steps: MacroStep[];
+}
+
+export interface MacroFolder {
+  id: string;
+  name: string;
+}
+
+export interface Counter {
+  id: string;
+  name: string;
+  description: string;
+  value: number;
+  color: "purple" | "green";
+  shortcut: string;
+  showInOverlay: boolean;
+  history: { timestamp: number; delta: number }[];
+}
+
+export interface OverlayHudLayout {
+  showReports: boolean;
+  showSpotify: boolean;
+  showClock: boolean;
+  showRadial: boolean;
+  showPush: boolean;
+  positions: {
+    reports: { x: number; y: number; scale: number };
+    spotify: { x: number; y: number; scale: number };
+    clock: { x: number; y: number; scale: number };
+  };
+}
+
+export interface OverlaySettings extends OverlayHudLayout {
+  displayId: number | null;
+  enabled: boolean;
+  editMode: boolean;
+  previousLayout: OverlayHudLayout | null;
+}
+
+export interface CmdSettings {
+  pressT: boolean;
+  reverse: boolean;
+  pressEnter: boolean;
+  intervalMs: number;
+}
+
+export interface AppSettings {
+  language: "pl";
+  username: string;
+  theme: "dark";
+  githubOwner: string;
+  githubRepo: string;
+  githubToken: string;
+  autoUpdate: boolean;
+}
+
+export interface UpdateStatus {
+  status: "idle" | "checking" | "available" | "not-available" | "downloading" | "downloaded" | "error";
+  version?: string;
+  currentVersion: string;
+  percent?: number;
+  message?: string;
+}
+
+export interface AppStats {
+  reportsToday: number;
+  reportsWeek: number;
+  eventSpecsToday: number;
+  appOnlineMs: number;
+  sessionStartedAt: number;
+}
+
+export interface SpotifyTrack {
+  title: string;
+  artist: string;
+  album?: string;
+  playing: boolean;
+  position?: number;
+  duration?: number;
+}
+
+export interface DisplayInfo {
+  id: number;
+  label: string;
+  bounds: { x: number; y: number; width: number; height: number };
+  primary: boolean;
+}
+
+export interface ProcessInfo {
+  hwnd: unknown;
+  pid: number;
+  title: string;
+  name: string;
+}

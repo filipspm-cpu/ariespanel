@@ -1,0 +1,20 @@
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  background: transparent !important;
+  background-color: transparent !important;
+  pointer-events: none;
+  user-select: none;
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+}
+
+[data-hud] {
+  pointer-events: auto;
+}
