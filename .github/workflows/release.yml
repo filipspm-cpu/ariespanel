@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Align GitHub publish target
-        run: node -e "const fs=require('fs'); const [owner,repo]=process.env.GITHUB_REPOSITORY.split('/'); const pkg=JSON.parse(fs.readFileSync('package.json','utf8')); pkg.repository={type:'git',url:`https://github.com/${owner}/${repo}.git`}; pkg.build.publish.owner=owner; pkg.build.publish.repo=repo; fs.writeFileSync('package.json', JSON.stringify(pkg,null,2)+'\n');"
+        run: node scripts/align-publish-target.js
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -24,4 +24,5 @@ jobs:
       - name: Build and publish installer
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npm run release
