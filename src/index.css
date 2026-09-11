@@ -581,14 +581,24 @@ textarea {
 
 .rank-badge {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
-  margin-top: 5px;
   border-radius: 999px;
   padding: 2px 8px;
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+.rank-badge.rank-xs {
+  padding: 1px 5px;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+
+.rank-badge.rank-sm {
+  margin-top: 5px;
 }
 
 .rank-badge.rank-md {

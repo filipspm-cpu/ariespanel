@@ -167,11 +167,13 @@ export function Sidebar() {
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-medium text-white">{nick}</div>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <div className="min-w-0 truncate text-[13px] font-medium text-white">{nick}</div>
+            <RankBadge rank={rank} size="xs" />
+          </div>
           {settings.discordUsername ? (
             <div className="truncate text-[11px] text-zinc-500">@{settings.discordUsername}</div>
           ) : null}
-          <RankBadge rank={rank} />
         </div>
       </button>
     </aside>

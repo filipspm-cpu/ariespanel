@@ -12,9 +12,16 @@ export function RankBadge({
   size = "sm",
 }: {
   rank: AccountRank | null;
-  size?: "sm" | "md";
+  size?: "xs" | "sm" | "md";
 }) {
   if (!rank) return null;
-  const label = rank === "developer" ? "Developer" : "Beta tester";
+  const label =
+    size === "xs"
+      ? rank === "developer"
+        ? "Dev"
+        : "Beta"
+      : rank === "developer"
+        ? "Developer"
+        : "Beta tester";
   return <span className={`rank-badge rank-${rank} rank-${size}`}>{label}</span>;
 }
