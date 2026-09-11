@@ -1,4 +1,3 @@
-import { Card } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
 import { Toggle } from "@/components/ui/Toggle";
 import { useAppStore } from "@/store/useAppStore";
@@ -49,20 +48,20 @@ export function OverlayPage() {
   }, [overlay, counters, open]);
 
   return (
-    <div className="h-full overflow-auto p-6">
+    <div className="ink-page overflow-auto p-6">
       <div>
         <h1 className="text-[26px] font-semibold tracking-tight text-white">Nakładka</h1>
         <p className="mt-1 text-[13px] text-zinc-500">Skonfiguruj nakładkę gry i powiadomienia</p>
       </div>
 
       <div className="mt-6 grid w-full grid-cols-1 gap-3 xl:grid-cols-2">
-        <div className="flex gap-3 rounded-md border border-syn-border px-4 py-3 text-[12px] text-zinc-500 xl:col-span-2">
+        <div className="ink-note xl:col-span-2">
           <Info size={16} className="mt-0.5 shrink-0" />
           Nakładka jest przezroczysta i zawsze przepuszcza kliknięcia do gry. W trybie edycji możesz przesuwać tylko
           elementy HUD — reszta ekranu nadal działa.
         </div>
 
-        <Card className="p-4">
+        <div className="ink-card p-4">
           <div className="text-[13px] font-medium text-white">Aktywuj nakładkę</div>
           <p className="mt-1 text-[12px] text-zinc-500">Aktywuj nakładkę, aby wyświetlać informacje o grze</p>
           <button
@@ -72,9 +71,9 @@ export function OverlayPage() {
             <Monitor size={16} />
             {open ? "Zamknij okno nakładki" : "Otwórz okno nakładki"}
           </button>
-        </Card>
+        </div>
 
-        <Card className="p-4">
+        <div className="ink-card p-4">
           <div className="text-[13px] font-medium text-white">Monitor nakładki</div>
           <p className="mt-1 text-[12px] text-zinc-500">Nakładka w trybie pełnoekranowym na tym monitorze</p>
           <Select
@@ -86,11 +85,11 @@ export function OverlayPage() {
               label: `${d.label}${d.primary ? " (Główny)" : ""} — ${d.bounds.width} x ${d.bounds.height}`,
             }))}
           />
-        </Card>
+        </div>
 
         <div className="grid gap-3 xl:col-span-2 xl:grid-cols-2">
           <div className="flex flex-col gap-3">
-            <Card className="flex items-center justify-between p-4">
+            <div className="ink-card flex items-center justify-between p-4">
               <div>
                 <div className="text-[13px] font-medium text-white">Tryb edycji</div>
                 <div className="text-[12px] text-zinc-500">
@@ -104,9 +103,9 @@ export function OverlayPage() {
                   void window.synvity?.overlayEditMode(v);
                 }}
               />
-            </Card>
+            </div>
 
-            <Card className="divide-y divide-syn-border">
+            <div className="ink-card divide-y divide-white/[0.06]">
               <Row
                 title="Powiadomienia push"
                 checked={overlay.showPush}
@@ -115,11 +114,11 @@ export function OverlayPage() {
               <Row title="Statystyki" checked={overlay.showReports} onChange={(v) => patchOverlay({ showReports: v })} />
               <Row title="Spotify" checked={overlay.showSpotify} onChange={(v) => patchOverlay({ showSpotify: v })} />
               <Row title="Zegar" checked={overlay.showClock} onChange={(v) => patchOverlay({ showClock: v })} />
-            </Card>
+            </div>
           </div>
 
           <div className="flex flex-col gap-3">
-            <Card className="p-4">
+            <div className="ink-card p-4">
               <div className="text-[13px] font-medium text-white">Reset układu</div>
               <p className="mt-1 text-[12px] text-zinc-500">
                 Przywróć domyślne pozycje i rozmiary albo wróć do poprzedniego układu.
@@ -127,7 +126,7 @@ export function OverlayPage() {
               <div className="mt-3 flex flex-col gap-2">
                 <button
                   onClick={() => useAppStore.getState().resetOverlayLayout()}
-                  className="flex h-10 items-center justify-center gap-2 rounded-md border border-syn-border text-[13px] text-zinc-200 hover:bg-white/5"
+                  className="ink-btn h-10 w-full justify-center text-[13px]"
                 >
                   <RotateCcw size={14} />
                   Resetuj do domyślnych
@@ -135,15 +134,15 @@ export function OverlayPage() {
                 <button
                   disabled={!overlay.previousLayout}
                   onClick={() => useAppStore.getState().restoreOverlayPrevious()}
-                  className="flex h-10 items-center justify-center gap-2 rounded-md border border-syn-border text-[13px] text-zinc-200 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="ink-btn h-10 w-full justify-center text-[13px] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Undo2 size={14} />
                   Przywróć poprzedni układ
                 </button>
               </div>
-            </Card>
+            </div>
 
-            <Card className="p-4">
+            <div className="ink-card p-4">
               <div className="text-[13px] font-medium text-white">Rozmiar elementów</div>
               <p className="mt-1 text-[12px] text-zinc-500">
                 Suwakiem zmniejszasz lub powiększasz Reporty, Spotify i zegar na nakładce.
@@ -189,7 +188,7 @@ export function OverlayPage() {
                   }
                 />
               </div>
-            </Card>
+            </div>
           </div>
         </div>
       </div>

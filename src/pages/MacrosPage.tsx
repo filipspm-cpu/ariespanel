@@ -151,8 +151,8 @@ export function MacrosPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0">
-      <div className="flex w-[280px] shrink-0 flex-col border-r border-syn-line">
+    <div className="ink-page flex min-h-0">
+      <div className="ink-side flex w-[280px] shrink-0 flex-col">
         <div className="flex items-center justify-between px-3 py-3">
           <div className="text-[15px] font-medium text-white">Makra</div>
           <div className="flex items-center gap-1 text-zinc-500">
@@ -186,7 +186,7 @@ export function MacrosPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Szukaj makr..."
-            className="h-8 w-full rounded-md border border-syn-border bg-[#0c0c0e] px-2 text-[12px] outline-none"
+            className="h-8 w-full rounded-md border px-2 text-[12px]"
           />
           {packMsg ? <div className="mt-2 text-[11px] text-emerald-400">{packMsg}</div> : null}
         </div>
@@ -315,7 +315,7 @@ function MacroRow({
       onDragStart={onDragStart}
       onClick={onSelect}
       className={`mb-0.5 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 ${
-        active ? "bg-[#1c1c1f]" : "hover:bg-white/[0.03]"
+        active ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"
       }`}
     >
       <div className="min-w-0 flex-1">
@@ -481,12 +481,12 @@ function MacroEditor({
           <div className="relative" ref={addRef}>
             <button
               onClick={() => setAddOpen((v) => !v)}
-              className="flex h-8 items-center gap-1 rounded-md border border-syn-border px-2 text-[12px] text-zinc-300"
+              className="flex h-8 items-center gap-1 rounded-md border border-white/[0.08] bg-[#050505] px-2 text-[12px] text-zinc-300"
             >
               <Plus size={13} /> Dodaj krok
             </button>
             {addOpen ? (
-              <div className="absolute right-0 z-20 mt-1 w-[240px] rounded-md border border-syn-border bg-[#121214] py-1 shadow-xl">
+              <div className="absolute right-0 z-20 mt-1 w-[240px] rounded-md border border-white/[0.08] bg-[#050505] py-1 shadow-xl">
                 {STEP_MENU.map((item) => (
                   <button
                     key={item.type}
@@ -503,12 +503,12 @@ function MacroEditor({
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuOpen((v) => !v)}
-              className="flex h-8 w-8 items-center justify-center rounded-md border border-syn-border text-zinc-400 hover:text-white"
+              className="flex h-8 w-8 items-center justify-center rounded-md border border-white/[0.08] text-zinc-400 hover:text-white"
             >
               <MoreHorizontal size={16} />
             </button>
             {menuOpen ? (
-              <div className="absolute right-0 z-20 mt-1 w-[220px] rounded-md border border-syn-border bg-[#121214] py-1 shadow-xl">
+              <div className="absolute right-0 z-20 mt-1 w-[220px] rounded-md border border-white/[0.08] bg-[#050505] py-1 shadow-xl">
                 <MenuItem label="Przenieś do folderu" onClick={moveToFolder} />
                 <MenuItem label="Udostępnij makro" onClick={() => void share()} />
                 <MenuItem label="Importuj makra domyślne" onClick={onImportDefaults} />
@@ -533,7 +533,7 @@ function MacroEditor({
       <div className="mt-6 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
         <span className="h-2 w-2 rounded-full bg-zinc-500" /> Wyzwalacz
       </div>
-      <div className="mt-2 space-y-2 rounded-xl border border-zinc-800 bg-[#09090a] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,.035)]">
+      <div className="mt-2 space-y-2 rounded-xl border border-white/[0.07] bg-[#050505] p-3">
         {triggers.map((t, i) => (
           <div key={`trigger-${i}`} className="flex flex-wrap items-center gap-2">
             <label className="text-[12px] text-zinc-500">
@@ -544,7 +544,7 @@ function MacroEditor({
                   const next = triggers.map((x, idx) => (idx === i ? { ...x, prefix: e.target.value } : x));
                   setTriggers(next);
                 }}
-                className="ml-2 h-8 w-16 rounded-md border border-zinc-700 bg-black px-2 text-[13px] text-zinc-100 outline-none focus:border-zinc-400"
+                className="ml-2 h-8 w-16 rounded-md border px-2 text-[13px]"
               />
             </label>
             <label className="text-[12px] text-zinc-500">
@@ -555,7 +555,7 @@ function MacroEditor({
                   const next = triggers.map((x, idx) => (idx === i ? { ...x, command: e.target.value } : x));
                   setTriggers(next);
                 }}
-                className="ml-2 h-8 w-28 rounded-md border border-zinc-700 bg-black px-2 text-[13px] text-zinc-100 outline-none focus:border-zinc-400"
+                className="ml-2 h-8 w-28 rounded-md border px-2 text-[13px]"
               />
             </label>
             {triggers.length > 1 ? (
@@ -570,7 +570,7 @@ function MacroEditor({
         ))}
         <button
           onClick={() => setTriggers([...triggers, { prefix: triggers[0]?.prefix ?? ".", command: "" }])}
-          className="rounded-md bg-zinc-800 px-2 py-1 text-[12px] text-zinc-300 transition hover:bg-zinc-700 hover:text-white"
+          className="rounded-md bg-white/[0.06] px-2 py-1 text-[12px] text-zinc-300 hover:bg-white/[0.1] hover:text-white"
         >
           + Dodaj wyzwalacz
         </button>
@@ -637,7 +637,7 @@ function StepBlock({
   if (nested) {
     return (
       <div
-        className={`overflow-hidden rounded-xl border bg-gradient-to-br ${style.glow} via-syn-card to-syn-card p-3 shadow-[inset_0_1px_0_rgba(255,255,255,.04)] ${style.border}`}
+        className={`overflow-hidden rounded-xl border bg-gradient-to-br ${style.glow} via-black to-black p-3 ${style.border}`}
         onDragOver={(event) => event.preventDefault()}
         onDrop={(event) => {
           event.preventDefault();
@@ -697,7 +697,7 @@ function StepBlock({
         event.dataTransfer.effectAllowed = "move";
         onDragStart(step.id);
       }}
-      className={`group relative overflow-hidden rounded-xl border bg-gradient-to-r ${style.glow} via-syn-card to-syn-card p-3 shadow-[inset_0_1px_0_rgba(255,255,255,.035)] transition hover:-translate-y-px hover:bg-syn-elevated ${style.border}`}
+      className={`group relative overflow-hidden rounded-xl border bg-gradient-to-r ${style.glow} via-black to-black p-3 transition hover:bg-white/[0.02] ${style.border}`}
     >
       <div className="mb-2 flex items-center justify-between text-[12px] text-zinc-400">
         <span className="flex items-center gap-2">
@@ -713,21 +713,21 @@ function StepBlock({
           value={step.text}
           onChange={(e) => onPatch(step.id, { text: e.target.value })}
           rows={compact ? 2 : 4}
-          className="w-full rounded-md border border-syn-border bg-[#0c0c0e] px-3 py-2 text-[13px] outline-none"
+          className="w-full rounded-md border px-3 py-2 text-[13px]"
         />
       ) : step.type === "wait" ? (
         <input
           type="number"
           value={step.waitMs ?? 500}
           onChange={(e) => onPatch(step.id, { waitMs: Number(e.target.value) })}
-          className="h-9 w-40 rounded-md border border-syn-border bg-[#0c0c0e] px-3 text-[13px] outline-none"
+          className="h-9 w-40 rounded-md border px-3 text-[13px]"
         />
       ) : step.type === "key-press" ? (
         <input
           value={step.key ?? ""}
           onChange={(e) => onPatch(step.id, { key: e.target.value, text: e.target.value })}
           placeholder="Enter, T, ..."
-          className="h-9 w-full rounded-md border border-syn-border bg-[#0c0c0e] px-3 text-[13px] outline-none"
+          className="h-9 w-full rounded-md border px-3 text-[13px]"
         />
       ) : step.type === "counter" ? (
         <>
@@ -745,8 +745,7 @@ function StepBlock({
         <input
           value={step.text}
           onChange={(e) => onPatch(step.id, { text: e.target.value })}
-          className="h-9 w-full rounded-md border border-syn-border bg-[#0c0c0e] px-3 text-[13px] outline-none"
-          placeholder="Tekst do wstawienia"
+          className="h-9 w-full rounded-md border px-3 text-[13px]"
         />
       )}
       {step.type === "insert-text" || step.type === "multiline-text" ? (

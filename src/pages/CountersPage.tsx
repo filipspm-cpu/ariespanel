@@ -1,4 +1,3 @@
-import { Card } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
 import {
   addDays,
@@ -58,7 +57,7 @@ function MiniChart({ points, color }: { points: { label: string; value: number }
             <rect x={x - barW / 2} y={pad.t + innerH - bh} width={barW} height={Math.max(0, bh)} rx="2" fill={color}>
               <title>{`${p.label}: ${p.value}`}</title>
             </rect>
-            <text x={x} y={h - 4} textAnchor="middle" fill="#52525b" fontSize="8">
+            <text x={x} y={h - 4} textAnchor="middle" fill="#6e6e6e" fontSize="8">
               {i % labelEvery === 0 ? p.label : ""}
             </text>
           </g>
@@ -108,7 +107,7 @@ export function CountersPage() {
 
   if (!selected) {
     return (
-      <div className="p-6 text-[13px] text-zinc-500">
+      <div className="ink-page p-6 text-[13px] text-zinc-500">
         Brak statystyk.
       </div>
     );
@@ -126,8 +125,8 @@ export function CountersPage() {
   const barColor = selected.color === "green" ? "#22c55e" : "#8b5cf6";
 
   return (
-    <div className="flex h-full min-h-0">
-      <div className="flex w-[240px] shrink-0 flex-col border-r border-syn-line">
+    <div className="ink-page flex min-h-0">
+      <div className="ink-side flex w-[240px] shrink-0 flex-col">
         <div className="flex items-center justify-between px-3 py-3">
           <div className="text-[14px] font-medium">Statystyki</div>
         </div>
@@ -136,7 +135,7 @@ export function CountersPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Szukaj"
-            className="h-8 w-full rounded-md border border-syn-border bg-[#0c0c0e] px-2 text-[12px] outline-none"
+            className="h-8 w-full rounded-md border px-2 text-[12px]"
           />
         </div>
         <div className="space-y-1 overflow-auto px-2">
@@ -147,7 +146,7 @@ export function CountersPage() {
                 key={c.id}
                 onClick={() => setSelectedId(c.id)}
                 className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left ${
-                  c.id === selected.id ? "bg-[#1c1c1f]" : "hover:bg-white/[0.03]"
+                  c.id === selected.id ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"
                 }`}
               >
                 <span
@@ -177,14 +176,14 @@ export function CountersPage() {
           </div>
           <button
             onClick={() => bumpCounter(selected.id, 1)}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-500 text-white"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-black"
           >
             <Plus size={18} />
           </button>
         </div>
 
         <div className="mt-4 grid shrink-0 grid-cols-2 gap-3 xl:grid-cols-4">
-          <Card className="p-4">
+          <div className="ink-card p-4">
             <div className="text-[12px] text-zinc-500">W okresie · {periodLabel}</div>
             <div className="mt-2 text-[26px] font-semibold tabular-nums">{totals?.inPeriod ?? 0}</div>
             <div className={`mt-1 flex items-center gap-1 text-[11px] ${(totals?.change ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"}`}>
@@ -192,21 +191,21 @@ export function CountersPage() {
               {totals && totals.change > 0 ? "+" : ""}
               {totals?.change ?? 0}% vs poprzedni okres
             </div>
-          </Card>
-          <Card className="p-4">
+          </div>
+          <div className="ink-card p-4">
             <div className="text-[12px] text-zinc-500">Razem</div>
             <div className="mt-2 text-[26px] font-semibold tabular-nums">{selected.value}</div>
             <div className="text-[11px] text-zinc-600">Poprzedni okres: {totals?.previous ?? 0}</div>
-          </Card>
-          <Card className="p-4">
+          </div>
+          <div className="ink-card p-4">
             <div className="text-[12px] text-zinc-500">Średnio / dzień</div>
             <div className="mt-2 text-[26px] font-semibold tabular-nums">{(totals?.avg ?? 0).toFixed(1)}</div>
             <div className="flex items-center gap-1 text-[11px] text-zinc-600">
               <Flame size={12} className="text-orange-400" />
               Seria {totals?.streak ?? 0} dni
             </div>
-          </Card>
-          <Card className="p-4">
+          </div>
+          <div className="ink-card p-4">
             <div className="text-[12px] text-zinc-500">Okres</div>
             <Select
               className="mt-3"
@@ -218,10 +217,10 @@ export function CountersPage() {
                 { value: "month", label: "Miesiąc" },
               ]}
             />
-          </Card>
+          </div>
         </div>
 
-        <Card className="mt-4 shrink-0 p-3">
+        <div className="ink-card mt-4 shrink-0 p-3">
           <div className="mb-1 flex items-center justify-between">
             <div className="text-[12px] text-zinc-500">
               {hourly ? "Rozkład godzinowy" : "Rozkład dzienny"} · szczyt {totals?.peak.value ?? 0}
@@ -229,7 +228,7 @@ export function CountersPage() {
             <div className="text-[11px] text-zinc-600">{totals?.activeDays ?? 0} dni z aktywnością</div>
           </div>
           <MiniChart points={chart} color={barColor} />
-        </Card>
+        </div>
 
         <div className="mt-4 flex shrink-0 flex-wrap gap-2">
           <IconBtn onClick={() => bumpCounter(selected.id, 1)} icon={<Plus size={14} />} label="Zwiększ" />
@@ -246,7 +245,7 @@ export function CountersPage() {
           />
         </div>
 
-        <Card className="mt-4 flex min-h-0 flex-1 flex-col p-4">
+        <div className="ink-card mt-4 flex min-h-0 flex-1 flex-col p-4">
           <div className="mb-3 flex shrink-0 items-center justify-between">
             <div>
               <div className="text-[13px] font-medium text-white">Historia</div>
@@ -286,7 +285,7 @@ export function CountersPage() {
               </div>
             )}
           </div>
-        </Card>
+        </div>
       </div>
     </div>
   );
@@ -296,7 +295,7 @@ function IconBtn({ onClick, icon, label }: { onClick: () => void; icon: ReactNod
   return (
     <button
       onClick={onClick}
-      className="flex h-8 items-center gap-1.5 rounded-md border border-syn-border px-3 text-[12px] text-zinc-300 hover:bg-white/5"
+      className="ink-btn"
     >
       {icon}
       {label}
