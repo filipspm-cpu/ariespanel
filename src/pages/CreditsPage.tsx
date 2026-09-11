@@ -1,22 +1,25 @@
+import filipek from "@/assets/credits/filipek.webp";
+import rysiasty from "@/assets/credits/rysiasty.webp";
+import wisniowka from "@/assets/credits/wisniowka.webp";
+
 const PEOPLE = [
   {
     role: "Main developer",
     name: "Filipek",
     featured: true,
-    avatar:
-      "https://cdn.discordapp.com/avatars/1305449847125708811/a_0f4b5d7a05b58415a1c2dd8522c45363.webp?size=256",
+    avatar: filipek,
   },
   {
     role: "Developer",
     name: "rysiasty",
     featured: false,
-    avatar: "https://cdn.discordapp.com/avatars/1039967564664676412/ed332cc74ab76bf8c0df6f4b54b53f65.webp?size=256",
+    avatar: rysiasty,
   },
   {
     role: "Beta tester",
     name: "wiśniófka",
     featured: false,
-    avatar: "https://cdn.discordapp.com/avatars/1200264556354752565/d4567453494fbc904a919d3ec08696fb.webp?size=256",
+    avatar: wisniowka,
   },
 ] as const;
 
@@ -29,7 +32,7 @@ function CreditRow({
   return (
     <div className={`credits-row ${person.featured ? "credits-row-featured" : ""}`}>
       <div className="credits-avatar-wrap" style={{ width: size, height: size }}>
-        <img src={person.avatar} alt="" width={size} height={size} draggable={false} />
+        <img src={person.avatar} alt="" width={size} height={size} draggable={false} referrerPolicy="no-referrer" />
       </div>
       <div className="credits-meta">
         <div className="credits-role">{person.role}</div>
