@@ -1,5 +1,6 @@
 import { Copyright } from "@/components/Copyright";
 import { RankBadge, useAccountRank } from "@/components/RankBadge";
+import { APP_VERSION } from "@/data/appVersion";
 import testersFile from "@/data/testers.txt?raw";
 import { isBetaTester, parseTesters } from "@/data/testers";
 import { useAppStore } from "@/store/useAppStore";
@@ -13,7 +14,6 @@ export function SettingsPage() {
   const patchSettings = useAppStore((s) => s.patchSettings);
   const macros = useAppStore((s) => s.macros);
   const setMacros = useAppStore((s) => s.setMacros);
-  const [version, setVersion] = useState("—");
   const [update, setUpdate] = useState<UpdateStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [packMsg, setPackMsg] = useState("");
@@ -22,7 +22,6 @@ export function SettingsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    void window.synvity?.appVersion().then((v) => setVersion(v));
     void window.synvity?.updateStatus().then((s) => setUpdate(s));
     const off = window.synvity?.onUpdateStatus((s) => setUpdate(s));
     return () => off?.();
@@ -163,7 +162,7 @@ export function SettingsPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.22em] text-zinc-500">Aktualizacja</div>
-              <div className="mt-2 text-[22px] font-semibold text-white">v{version}</div>
+              <div className="mt-2 text-[22px] font-semibold text-white">v{APP_VERSION}</div>
               <div className="mt-1 text-[12px] text-zinc-500">Zainstalowana wersja</div>
             </div>
             <span className={`settings-pill ${available ? "on" : ""} ${update?.status === "error" ? "warn" : ""}`}>

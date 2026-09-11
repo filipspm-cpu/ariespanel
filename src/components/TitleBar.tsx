@@ -1,6 +1,7 @@
 import { Bell, Minus, Square, Wifi, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { breadcrumbs } from "@/data/navigation";
+import { APP_VERSION } from "@/data/appVersion";
 import { useAppStore } from "@/store/useAppStore";
 import type { UpdateNotice, UpdateStatus } from "@/types";
 
@@ -30,14 +31,12 @@ export function TitleBar() {
   const route = useAppStore((s) => s.route);
   const setRoute = useAppStore((s) => s.setRoute);
   const crumbs = breadcrumbs[route];
-  const [version, setVersion] = useState("");
   const [update, setUpdate] = useState<UpdateStatus | null>(null);
   const [notices, setNotices] = useState<UpdateNotice[]>([]);
   const [openNotices, setOpenNotices] = useState(false);
   const noticeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    void window.synvity?.appVersion().then((v) => setVersion(v));
     void window.synvity?.updateStatus().then((s) => setUpdate(s));
     void window.synvity?.updateNotices().then((rows) => setNotices(rows ?? []));
     const off = window.synvity?.onUpdateStatus((s) => {
@@ -79,7 +78,7 @@ export function TitleBar() {
             <span className={i === crumbs.length - 1 ? "text-zinc-400" : ""}>{c}</span>
           </span>
         ))}
-        {version ? <span className="ml-2 text-[10px] text-zinc-600">v{version}</span> : null}
+        <span className="ml-2 text-[10px] text-zinc-600">v{APP_VERSION}</span>
       </div>
       <Clock />
       <div className="no-drag z-10 ml-auto flex items-center gap-1">

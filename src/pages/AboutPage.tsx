@@ -1,7 +1,7 @@
 import { Command, Gauge, Layers, RefreshCw } from "lucide-react";
-import { useEffect, useState } from "react";
 import logo from "@/assets/aries-logo.png";
 import { Copyright } from "@/components/Copyright";
+import { APP_VERSION } from "@/data/appVersion";
 
 const FEATURES = [
   {
@@ -27,12 +27,6 @@ const FEATURES = [
 ] as const;
 
 export function AboutPage() {
-  const [version, setVersion] = useState("—");
-
-  useEffect(() => {
-    void window.synvity?.appVersion().then((v) => setVersion(v));
-  }, []);
-
   return (
     <div className="studio-page">
       <div className="studio-header">
@@ -47,7 +41,7 @@ export function AboutPage() {
           <img src={logo} alt="ARIES" className="about-logo" draggable={false} />
           <div className="font-ethnocentric mt-6 text-[34px] tracking-[0.32em] text-white">ARIES</div>
           <div className="font-mokoto mt-2 text-[11px] uppercase tracking-[0.46em] text-zinc-500">panel</div>
-          <div className="about-version">v{version}</div>
+          <div className="about-version">v{APP_VERSION}</div>
           <p className="about-lead">
             Prywatny panel do makr, nakładki, komend i statystyk na serwerach GTA RP.
           </p>
