@@ -14,16 +14,16 @@ export type CraftItem = {
 
 export const CRAFT_FRACTIONS: { id: string; label: string; color: string; gameId: number }[] = [
   { id: "lspd", label: "LSPD", color: "#FFC130", gameId: 1 },
-  { id: "lscsd", label: "LSCSD", color: "#D9B47C", gameId: 2 },
-  { id: "fib", label: "FIB", color: "#808080", gameId: 3 },
+  { id: "ems", label: "EMS", color: "#E12020", gameId: 2 },
+  { id: "lscsd", label: "LSCSD", color: "#D9B47C", gameId: 3 },
   { id: "army", label: "SANG", color: "#BBAA7E", gameId: 4 },
-  { id: "ems", label: "EMS", color: "#E12020", gameId: 5 },
-  { id: "gov", label: "GOV", color: "#1A6FC4", gameId: 6 },
-  { id: "wn", label: "WN", color: "#E85D75", gameId: 7 },
-  { id: "ballas", label: "Ballas", color: "#7B3FA0", gameId: 8 },
+  { id: "gov", label: "GOV", color: "#1A6FC4", gameId: 5 },
+  { id: "wn", label: "WN", color: "#E85D75", gameId: 6 },
+  { id: "fib", label: "FIB", color: "#808080", gameId: 7 },
+  { id: "bloods", label: "Bloods", color: "#C41E3A", gameId: 8 },
   { id: "vagos", label: "Vagos", color: "#E6C200", gameId: 9 },
-  { id: "families", label: "Rodziny", color: "#2E9B45", gameId: 10 },
-  { id: "bloods", label: "Bloods", color: "#C41E3A", gameId: 11 },
+  { id: "ballas", label: "Ballas", color: "#7B3FA0", gameId: 10 },
+  { id: "families", label: "Rodziny", color: "#2E9B45", gameId: 11 },
   { id: "marabunta", label: "Marabunta", color: "#2BB3C7", gameId: 12 },
 ];
 
