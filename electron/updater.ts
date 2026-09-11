@@ -40,6 +40,10 @@ function send(patch: Partial<UpdateStatus>) {
   getWindow()?.webContents.send("update:status", last);
 }
 
+function isRetiredLine(version: string | undefined) {
+  return /^1\.1\.\d+/.test(String(version || "").replace(/^v/i, ""));
+}
+
 function applyFeed() {
   const token = loadState().settings.githubToken?.trim();
   const beta = isBetaTesterId(loadState().settings.discordId);
@@ -158,6 +162,10 @@ async function applyUpdate() {
     return last;
   }
   if (applying) return last;
+  if (isRetiredLine(last.version)) {
+    send({ status: "not-available", version: undefined, message: undefined });
+    return last;
+  }
   if (last.status !== "available" && last.status !== "downloaded") {
     await checkNow(true);
   }
@@ -227,6 +235,10 @@ export function registerUpdater(opts: {
     if (!applying) send({ status: "checking" });
   });
   autoUpdater.on("update-available", (info: UpdateInfo) => {
+    if (isRetiredLine(info.version)) {
+      send({ status: "not-available", version: undefined, message: undefined });
+      return;
+    }
     send({ status: "available", version: info.version, message: undefined });
     notifyAvailable(info.version);
   });
