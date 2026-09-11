@@ -1,5 +1,6 @@
 import type { UpdateStatus } from "@/types";
 import { useAppStore } from "@/store/useAppStore";
+import { Download } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function UpdateBanner() {
@@ -12,15 +13,20 @@ export function UpdateBanner() {
     return () => off?.();
   }, []);
 
-  if (!status || status.status !== "available") return null;
+  if (!status || (status.status !== "available" && status.status !== "downloaded")) return null;
 
   return (
-    <div className="flex h-9 shrink-0 items-center justify-between gap-3 border-b border-violet-500/20 bg-violet-500/10 px-4 text-[12px] text-violet-100">
-      <span>Dostępna aktualizacja {status.version}. Wejdź w ustawienia i kliknij Zaktualizuj.</span>
-      <button
-        onClick={() => setRoute("settings")}
-        className="rounded bg-violet-500 px-2 py-1 text-[11px] font-medium text-white"
-      >
+    <div className="update-banner">
+      <div className="update-banner-mark">
+        <Download size={13} strokeWidth={2.2} />
+      </div>
+      <div className="update-banner-copy">
+        <span className="update-banner-kicker">Aktualizacja</span>
+        <span className="update-banner-text">
+          v{status.version} jest gotowa. Zainstaluj ją w ustawieniach.
+        </span>
+      </div>
+      <button type="button" className="update-banner-btn" onClick={() => setRoute("settings")}>
         Ustawienia
       </button>
     </div>

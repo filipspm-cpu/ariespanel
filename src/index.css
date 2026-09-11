@@ -71,6 +71,70 @@ textarea {
   -webkit-app-region: no-drag;
 }
 
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 42px;
+  flex-shrink: 0;
+  padding: 0 14px 0 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: linear-gradient(180deg, #0c0c0c, #050505);
+}
+
+.update-banner-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: #111;
+  color: #fff;
+}
+
+.update-banner-copy {
+  min-width: 0;
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.update-banner-kicker {
+  flex-shrink: 0;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #6b6b6b;
+}
+
+.update-banner-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #d4d4d8;
+}
+
+.update-banner-btn {
+  flex-shrink: 0;
+  height: 26px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 7px;
+  background: #f4f4f5;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0a0a0a;
+}
+
+.update-banner-btn:hover {
+  background: #fff;
+}
+
 .toggle-track {
   width: 36px;
   height: 20px;
