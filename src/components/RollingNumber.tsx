@@ -19,49 +19,34 @@ export function RollingNumber({
 }) {
   const [shown, setShown] = useState(0);
   const played = useRef(false);
-  const current = useRef(0);
 
   useEffect(() => {
     if (!ready) return;
     if (played.current) {
-      current.current = value;
       setShown(value);
       return;
     }
     played.current = true;
     let raf = 0;
     let finished = false;
-    const ceiling = Math.max(24, Math.abs(value) * 4, 99);
-    const scrambleUntil = duration * 0.62;
     const startAt = performance.now() + delay;
-    let lastFlip = 0;
-    let settleFrom: number | null = null;
+    const span = Math.abs(value);
+    const runMs = span <= 1 ? 220 : Math.min(duration, 280 + span * 1.15);
 
     const tick = (now: number) => {
       if (now < startAt) {
         raf = requestAnimationFrame(tick);
         return;
       }
-      const elapsed = now - startAt;
-      if (elapsed < scrambleUntil) {
-        if (now - lastFlip > 28) {
-          lastFlip = now;
-          const sign = value < 0 ? -1 : 1;
-          current.current = sign * Math.floor(Math.random() * ceiling);
-          setShown(current.current);
-        }
+      const t = Math.min(1, (now - startAt) / runMs);
+      const next = Math.round(value * easeOut(t));
+      setShown(next);
+      if (t < 1) {
         raf = requestAnimationFrame(tick);
         return;
       }
-      if (settleFrom === null) settleFrom = current.current;
-      const t = Math.min(1, (elapsed - scrambleUntil) / Math.max(90, duration - scrambleUntil));
-      current.current = Math.round(settleFrom + (value - settleFrom) * easeOut(t));
-      if (t >= 1) {
-        current.current = value;
-        finished = true;
-      }
-      setShown(current.current);
-      if (t < 1) raf = requestAnimationFrame(tick);
+      setShown(value);
+      finished = true;
     };
 
     raf = requestAnimationFrame(tick);
