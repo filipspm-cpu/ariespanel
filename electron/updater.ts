@@ -44,6 +44,7 @@ function applyFeed() {
   const token = loadState().settings.githubToken?.trim();
   const beta = isBetaTesterId(loadState().settings.discordId);
   autoUpdater.allowPrerelease = beta;
+  autoUpdater.allowDowngrade = true;
   autoUpdater.setFeedURL({
     provider: "github",
     owner: GITHUB_OWNER,
