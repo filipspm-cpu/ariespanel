@@ -96,7 +96,6 @@ function createMainWindow() {
       nodeIntegration: false,
       sandbox: false,
       backgroundThrottling: false,
-      webviewTag: true,
     },
   });
 

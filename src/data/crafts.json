@@ -1,0 +1,1137 @@
+[
+  {
+    "description": "Pudełko z amunicją 9mm.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 1,
+    "id": 37,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/37.webp",
+    "materialType": "green",
+    "materials": 1,
+    "maxStack": 100,
+    "name": "9x19mm",
+    "type": "ammunition",
+    "weight": 5
+  },
+  {
+    "description": "Pudełko ze śrutem. Kaliber 12.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 1,
+    "id": 38,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/38.webp",
+    "materialType": "green",
+    "materials": 1,
+    "maxStack": 50,
+    "name": "Śrut 12 ga (Buckshot)",
+    "type": "ammunition",
+    "weight": 30
+  },
+  {
+    "description": "Pudełko z nabojami 7.62 mm.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 1,
+    "id": 39,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/39.webp",
+    "materialType": "green",
+    "materials": 8,
+    "maxStack": 200,
+    "name": "7.62x39mm",
+    "type": "ammunition",
+    "weight": 10
+  },
+  {
+    "description": "Pudełko z nabojami 5.62 mm.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 1,
+    "id": 172,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/172.webp",
+    "materialType": "green",
+    "materials": 6,
+    "maxStack": 200,
+    "name": "5.56x45mm",
+    "type": "ammunition",
+    "weight": 9
+  },
+  {
+    "description": "Pudełko śrutu. 12 gauge Rifled Slugs. Pociski przypominające kule, które po wystrzeleniu zachowują energię kinetyczną.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 1,
+    "id": 253,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/253.webp",
+    "materialType": "green",
+    "materials": 4,
+    "maxStack": 50,
+    "name": "12ga Rifled",
+    "type": "ammunition",
+    "weight": 30
+  },
+  {
+    "description": "Pudełko z nabojami .45 ACP.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 1,
+    "id": 254,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/254.webp",
+    "materialType": "green",
+    "materials": 5,
+    "maxStack": 250,
+    "name": ".45ACP",
+    "type": "ammunition",
+    "weight": 8
+  },
+  {
+    "description": "Strzela nabojami kalibru 9x19mm. Odporny na wstrząsy pistolet, który zapewnia ogromną moc, ale z wyjątkowo silnym odrzutem.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 2,
+    "id": 249,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/249.webp",
+    "materialType": "green",
+    "materials": 15,
+    "maxStack": 1,
+    "name": "Pistolet Mk2",
+    "type": "ammunition",
+    "weight": 600
+  },
+  {
+    "description": "Strzela do 12ga Buckshotów. Odrzut jest prawie tak śmiertelny jak strzał.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 2,
+    "id": 256,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/256.webp",
+    "materialType": "green",
+    "materials": 20,
+    "maxStack": 1,
+    "name": "Strzelba pompowa Mk2",
+    "type": "ammunition",
+    "weight": 3600
+  },
+  {
+    "description": "Strzela śrutem 12ga Buckshots. W pełni automatyczna strzelba z 8 nabojami i dużą szybkostrzelnością.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 2,
+    "id": 257,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/257.webp",
+    "materialType": "green",
+    "materials": 35,
+    "maxStack": 1,
+    "name": "Strzelba szturmowa",
+    "type": "ammunition",
+    "weight": 3100
+  },
+  {
+    "description": "Strzela śrutem 12ga Rifled. Broń, do której należy się zwrócić, gdy trzeba zrobić bałagan w pokoju.",
+    "fractions": [
+      "ballas",
+      "families",
+      "bloods",
+      "vagos",
+      "marabunta",
+      "army",
+      "lscsd",
+      "fib",
+      "gov",
+      "lspd"
+    ],
+    "groupId": 2,
+    "id": 259,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/259.webp",
+    "materialType": "green",
+    "materials": 40,
+    "maxStack": 1,
+    "name": "Ciężka strzelba",
+    "type": "ammunition",
+    "weight": 3400
+  },
+  {
+    "description": "Strzela nabojami .357 Magnum. Bo czasami zemsta to danie, które najlepiej podać sześć razy z rzędu, prosto między oczy. Unikalna broń LSCSD",
+    "fractions": [
+      "lscsd"
+    ],
+    "groupId": 2,
+    "id": 265,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/265.webp",
+    "materialType": "green",
+    "materials": 440,
+    "maxStack": 1,
+    "name": "Rewolwer z nagrodą",
+    "type": "ammunition",
+    "weight": 1500
+  },
+  {
+    "description": "Strzela nabojami 7,62x39 mm. Specjalista od wszystkiego właśnie otrzymał poważny awans: ukłoń się mistrzowi.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 2,
+    "id": 272,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/272.webp",
+    "materialType": "green",
+    "materials": 50,
+    "maxStack": 1,
+    "name": "Karabin specjalny Mk2",
+    "type": "ammunition",
+    "weight": 3000
+  },
+  {
+    "description": "Wystrzeliwuje amunicję 5,56x45 mm. Wykonana na zamówienie, niestandardowa siła ognia, zapewnia grad pocisków z większą miłością i troską. Unikalna broń LSPD",
+    "fractions": [
+      "lspd"
+    ],
+    "groupId": 2,
+    "id": 274,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/274.webp",
+    "materialType": "green",
+    "materials": 40,
+    "maxStack": 1,
+    "name": "Karabin Mk2",
+    "type": "ammunition",
+    "weight": 2300
+  },
+  {
+    "description": "Strzela nabojami .50 BMG. Jedną z cech pocisków przeciwpancernych są ciężkie uszkodzenia. W wyposażeniu standardowym znajduje się celownik laserowy.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 2,
+    "id": 279,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/279.webp",
+    "materialType": "green",
+    "materials": 10000,
+    "maxStack": 1,
+    "name": "Ciężki karabin snajperski",
+    "type": "ammunition",
+    "weight": 4500
+  },
+  {
+    "description": "Strzela pociskami .50 BMG. Zużywa pociski przeciwpancerne, które zadają duże obrażenia. W standardzie celownik laserowy.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 2,
+    "id": 328,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/328.webp",
+    "materialType": "green",
+    "materials": 20000,
+    "maxStack": 1,
+    "name": "Ciężki karabin snajperski Mk2",
+    "type": "ammunition",
+    "weight": 8000
+  },
+  {
+    "description": "Strzela nabojami 5, 56x45mm. Nigdy nie będziesz w stanie uzyskać zbyt wielu dobrych rzeczy",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 2,
+    "id": 333,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/333.webp",
+    "materialType": "green",
+    "materials": 2500,
+    "maxStack": 1,
+    "name": "Pistolet maszynowy Mk2",
+    "type": "ammunition",
+    "weight": 5700
+  },
+  {
+    "description": "Strzela nabojami 7,62x39 mm. Znany w kręgach wojskowych jako \"Dislocator\", karabin ten zniszczy wszystkich wrogów. Unikalna broń FIB",
+    "fractions": [
+      "fib"
+    ],
+    "groupId": 2,
+    "id": 337,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/337.webp",
+    "materialType": "green",
+    "materials": 3000,
+    "maxStack": 1,
+    "name": "Karabin Marksman Mk2",
+    "type": "ammunition",
+    "weight": 3700
+  },
+  {
+    "description": "Strzela nabojami 5,56x45 mm. Specjalista od wszystkiego właśnie awansował: ukłoń się mistrzowi. Unikalna broń SANG",
+    "fractions": [
+      "army"
+    ],
+    "groupId": 2,
+    "id": 433,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/433.webp",
+    "materialType": "green",
+    "materials": 30,
+    "maxStack": 1,
+    "name": "Karabin wojskowy",
+    "type": "ammunition",
+    "weight": 2000
+  },
+  {
+    "description": "Strzela nabojami 7, 62x39mm. Ten standardowy karabin szturmowy oferuje magazynek o dużej pojemności i dokładnośći na duże odległości.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 2,
+    "id": 595,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/595.webp",
+    "materialType": "green",
+    "materials": 50,
+    "maxStack": 1,
+    "name": "Ciężki karabin",
+    "type": "ammunition",
+    "weight": 3300
+  },
+  {
+    "description": "Wystrzeliwuje naboje kalibru .45ACP. Pistolet automatyczny do skrytego noszenia dla sił specjalnych.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 2,
+    "id": 820,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/820.webp",
+    "materialType": "green",
+    "materials": 20,
+    "maxStack": 1,
+    "name": "Taktyczny SMG",
+    "type": "ammunition",
+    "weight": 1500
+  },
+  {
+    "description": "Strzela nabojami 9x19mm. Odporny na wstrząsy pistolet, który zapewnia ogromną moc, ale z wyjątkowo silnym odrzutem. Mieści 9 nabojów w magazynku.",
+    "fractions": [
+      "families",
+      "vagos",
+      "marabunta",
+      "bloods",
+      "ballas"
+    ],
+    "groupId": 3,
+    "id": 243,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/243.webp",
+    "materialType": "green",
+    "materials": 15,
+    "maxStack": 1,
+    "name": "Pistolet szturmowy",
+    "type": "ammunition",
+    "weight": 1000
+  },
+  {
+    "description": "Strzela z 12ga Buckshots. Jednolufowa, skrócona strzelba. Daje niesamowitą skuteczność w walce na krótki dystans.",
+    "fractions": [
+      "families",
+      "vagos",
+      "marabunta",
+      "bloods",
+      "ballas"
+    ],
+    "groupId": 3,
+    "id": 247,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/247.webp",
+    "materialType": "green",
+    "materials": 10,
+    "maxStack": 1,
+    "name": "Shotgun krótki",
+    "type": "ammunition",
+    "weight": 2000
+  },
+  {
+    "description": "Strzela nabojami kalibru .357 Magnum. Pistolet z wystarczającą siłą, aby zrzucić szalonego nosorożca, jeśli nie masz amunicji.",
+    "fractions": [
+      "families",
+      "vagos",
+      "marabunta",
+      "bloods",
+      "ballas"
+    ],
+    "groupId": 3,
+    "id": 263,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/263.webp",
+    "materialType": "green",
+    "materials": 30,
+    "maxStack": 1,
+    "name": "Rewolwer",
+    "type": "ammunition",
+    "weight": 2000
+  },
+  {
+    "description": "Strzela nabojami 7, 62x39mm. Ostateczny przegląd klasyki wszechczasów: wystarczy trochę pracy, a wygląd może w końcu zabić.",
+    "fractions": [
+      "families",
+      "vagos",
+      "marabunta",
+      "bloods",
+      "ballas"
+    ],
+    "groupId": 3,
+    "id": 271,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/271.webp",
+    "materialType": "green",
+    "materials": 50,
+    "maxStack": 1,
+    "name": "Karabin szturmowy Mk2",
+    "type": "ammunition",
+    "weight": 2900
+  },
+  {
+    "description": "Strzela nabojami 5, 56x45mm. Lekki, kompaktowy karabin maszynowy, który łączy w sobie doskonałą zwrotność z dużą szybkostrzelnością.",
+    "fractions": [
+      "families",
+      "vagos",
+      "marabunta",
+      "bloods",
+      "ballas"
+    ],
+    "groupId": 3,
+    "id": 332,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/332.webp",
+    "materialType": "green",
+    "materials": 2000,
+    "maxStack": 1,
+    "name": "Ręczny karabin maszynowy",
+    "type": "ammunition",
+    "weight": 6100
+  },
+  {
+    "description": "Wystrzeliwuje amunicję kalibru .45ACP. Jest to tak zwany dobry, uniwersalny pistolet - karabin maszynowy. Lekki, z celnymi przyrządami celowniczymi i 30-sto nabojowym magazynkiem.",
+    "fractions": [
+      "families",
+      "vagos",
+      "marabunta",
+      "bloods",
+      "ballas"
+    ],
+    "groupId": 3,
+    "id": 472,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/472.webp",
+    "materialType": "green",
+    "materials": 20,
+    "maxStack": 1,
+    "name": "Micro PP",
+    "type": "ammunition",
+    "weight": 1400
+  },
+  {
+    "description": "Wystrzeliwuje pociski 5,56x45mm. Karabin wojskowy oparty na M16; jest hybrydą, opartą głównie na wczesnym XM16E1 i nowoczesnym M16A4.",
+    "fractions": [
+      "families",
+      "vagos",
+      "marabunta",
+      "bloods",
+      "ballas"
+    ],
+    "groupId": 3,
+    "id": 629,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/629.webp",
+    "materialType": "green",
+    "materials": 30,
+    "maxStack": 1,
+    "name": "Karabin taktyczny",
+    "type": "ammunition",
+    "weight": 2200
+  },
+  {
+    "description": "Strzela nabojami 5,56x45 mm. Wszechstronna broń nadająca się do każdego stylu walki. Jest to prawdopodobnie jedyna broń, której nie można użyć do zestrzelenia asteroidy.",
+    "fractions": [
+      "families",
+      "vagos",
+      "marabunta",
+      "bloods",
+      "ballas"
+    ],
+    "groupId": 3,
+    "id": 1009,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/1009.webp",
+    "materialType": "green",
+    "materials": 40,
+    "maxStack": 1,
+    "name": "Karabin bojowy",
+    "type": "ammunition",
+    "weight": 3000
+  },
+  {
+    "description": "Element ochrony indywidualnej człowieka zapewniający częściową ochronę górnej części tułowia.",
+    "fractions": [
+      "ballas",
+      "vagos",
+      "bloods",
+      "families",
+      "marabunta"
+    ],
+    "groupId": 4,
+    "id": 57,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/57.webp",
+    "materialType": "blue",
+    "materials": 15,
+    "maxStack": 1,
+    "name": "Lekka kamizelka kuloodporna",
+    "type": "ammunition",
+    "weight": 2000
+  },
+  {
+    "description": "Element ochrony indywidualnej zapewniający zwiększoną ochronę górnej części tułowia.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "gov",
+      "fib"
+    ],
+    "groupId": 4,
+    "id": 347,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/347.webp",
+    "materialType": "blue",
+    "materials": 30,
+    "maxStack": 1,
+    "name": "Ciężka służbowa kamizelka kuloodporna",
+    "type": "ammunition",
+    "weight": 4000
+  },
+  {
+    "description": "Element ochrony indywidualnej człowieka zapewniający częściową ochronę górnej części tułowia.",
+    "fractions": [
+      "lspd",
+      "ems",
+      "lscsd",
+      "army",
+      "gov",
+      "wn",
+      "fib"
+    ],
+    "groupId": 4,
+    "id": 456,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/456.webp",
+    "materialType": "blue",
+    "materials": 15,
+    "maxStack": 1,
+    "name": "Lekka służbowa kamizelka kuloodporna",
+    "type": "ammunition",
+    "weight": 2000
+  },
+  {
+    "description": "Granat odłamkowy, przeznaczony do zagwarantowanego unieszkodliwienia lub ciężkiego uszkodzenia sił żywych przeciwnika. Przy detonacji tworzy skierowaną chmurę szybko poruszających się śmiercionośnych elementów, zadających liczne rany śmiertelne, uniemożliwiające dalszy opór.",
+    "fractions": [
+      "army"
+    ],
+    "groupId": 4,
+    "id": 615,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/615.webp",
+    "materialType": "green",
+    "materials": 250,
+    "maxStack": 1,
+    "name": "Granat",
+    "type": "ammunition",
+    "weight": 500
+  },
+  {
+    "description": "Granat taktyczny o działaniu nieletalnym, który wywołuje pieczenie oczu, duszący kaszel i podrażnienie skóry, zmuszając przeciwnika do opuszczenia kryjówki lub całkowicie pozbawiając go zdolności bojowej bez zadawania śmiertelnych obrażeń.",
+    "fractions": [
+      "fib"
+    ],
+    "groupId": 4,
+    "id": 616,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/616.webp",
+    "materialType": "green",
+    "materials": 200,
+    "maxStack": 1,
+    "name": "Gaz łzawiący",
+    "type": "ammunition",
+    "weight": 500
+  },
+  {
+    "description": "Improwizowany granat zapalający, tworzący silne ognisko pożaru, używany do blokowania dróg podejścia.",
+    "fractions": [
+      "ballas",
+      "vagos",
+      "bloods",
+      "families",
+      "marabunta"
+    ],
+    "groupId": 4,
+    "id": 617,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/617.webp",
+    "materialType": "green",
+    "materials": 150,
+    "maxStack": 1,
+    "name": "Koktajl Mołotowa",
+    "type": "ammunition",
+    "weight": 500
+  },
+  {
+    "description": "Kompaktowy granat taktyczny z ładunkiem pirotechnicznym szybkiego zadymiania, który utrudnia celowanie i daje szansę na bezpieczne wycofanie się lub przejęcie pozycji.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib"
+    ],
+    "groupId": 4,
+    "id": 1095,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/1095.webp",
+    "materialType": "green",
+    "materials": 300,
+    "maxStack": 1,
+    "name": "Granat dymny",
+    "type": "ammunition",
+    "weight": 500
+  },
+  {
+    "description": "Taktyczny granat ogłuszający, który tymczasowo dezorientuje przeciwnika potężnym błyskiem światła i głośnym hukiem.",
+    "fractions": [
+      "lspd",
+      "lscsd"
+    ],
+    "groupId": 4,
+    "id": 1096,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/1096.webp",
+    "materialType": "green",
+    "materials": 300,
+    "maxStack": 1,
+    "name": "Granat hukowo-błyskowy",
+    "type": "ammunition",
+    "weight": 500
+  },
+  {
+    "description": "Lek medyczny zwalczający wirusa COVID.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "wn",
+      "army",
+      "fib",
+      "gov",
+      "ems"
+    ],
+    "groupId": 5,
+    "id": 124,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/124.webp",
+    "materialType": "red",
+    "materials": 1,
+    "maxStack": 1,
+    "name": "Szczepionka przeciwwirusowa",
+    "type": "medical",
+    "weight": 4
+  },
+  {
+    "description": "Półsyntetyczny antybiotyk o szerokim spektrum działania z grupy makrolidów azalidowych.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "wn",
+      "army",
+      "fib",
+      "gov",
+      "ems"
+    ],
+    "groupId": 5,
+    "id": 168,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/168.webp",
+    "materialType": "red",
+    "materials": 10,
+    "maxStack": 24,
+    "name": "Azytromycyna",
+    "type": "medical",
+    "weight": 5
+  },
+  {
+    "description": "Porowaty materiał wytwarzany z węgla drzewnego.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "wn",
+      "army",
+      "ems",
+      "gov",
+      "fib"
+    ],
+    "groupId": 5,
+    "id": 169,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/169.webp",
+    "materialType": "red",
+    "materials": 10,
+    "maxStack": 24,
+    "name": "Węgiel aktywny",
+    "type": "medical",
+    "weight": 5
+  },
+  {
+    "description": "Silny środek przeciwbólowy i przeciwgorączkowy do leczenia obywateli.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "wn",
+      "army",
+      "fib",
+      "gov",
+      "ems"
+    ],
+    "groupId": 5,
+    "id": 170,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/170.webp",
+    "materialType": "red",
+    "materials": 1,
+    "maxStack": 24,
+    "name": "Tabletki kodeinowe",
+    "type": "medical",
+    "weight": 5
+  },
+  {
+    "description": "Służy do przywracania osoby do przytomności i przywraca jego zdrowie do maksimum.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "wn",
+      "army",
+      "fib",
+      "gov",
+      "ems"
+    ],
+    "groupId": 5,
+    "id": 252,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/252.webp",
+    "materialType": "red",
+    "materials": 10,
+    "maxStack": 5,
+    "name": "Epinefryna",
+    "type": "medical",
+    "weight": 150
+  },
+  {
+    "description": "Urządzenie stosowane w medycynie do elektroimpulsowej terapii zaburzeń rytmu serca.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "wn",
+      "army",
+      "ems",
+      "gov",
+      "fib"
+    ],
+    "groupId": 5,
+    "id": 281,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/281.webp",
+    "materialType": "red",
+    "materials": 400,
+    "maxStack": 1,
+    "name": "Defibrylator",
+    "type": "medical",
+    "weight": 500
+  },
+  {
+    "description": "Spersonalizowana dieta przeznaczona dla personelu wojskowego.",
+    "fractions": [
+      "army"
+    ],
+    "groupId": 5,
+    "id": 334,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/334.webp",
+    "materialType": "blue",
+    "materials": 5,
+    "maxStack": 3,
+    "name": "US Army IRP",
+    "type": "food",
+    "weight": 600
+  },
+  {
+    "description": "Stymulator służy do przywracania osoby do przytomności.",
+    "fractions": [
+      "families",
+      "vagos",
+      "marabunta",
+      "bloods",
+      "ballas"
+    ],
+    "groupId": 5,
+    "id": 571,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/571.webp",
+    "materialType": "red",
+    "materials": 35,
+    "maxStack": 5,
+    "name": "Przeterminowana epinefryna",
+    "type": "medical",
+    "weight": 150
+  },
+  {
+    "description": "Urządzenie stosowane w medycynie do elektroimpulsowej terapii zaburzeń rytmu serca.",
+    "fractions": [
+      "families",
+      "vagos",
+      "marabunta",
+      "bloods",
+      "ballas"
+    ],
+    "groupId": 5,
+    "id": 573,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/573.webp",
+    "materialType": "red",
+    "materials": 800,
+    "maxStack": 1,
+    "name": "Wycofany defibrylator",
+    "type": "medical",
+    "weight": 500
+  },
+  {
+    "description": "Szlifierka do cięcia, szlifowania i skrobania kamienia, metalu i innych materiałów. Idealna do odcinania zamków pojazdów do transportu materiałów.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "gov",
+      "fib",
+      "army",
+      "ballas",
+      "families",
+      "bloods",
+      "vagos",
+      "marabunta"
+    ],
+    "groupId": 6,
+    "id": 92,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/92.webp",
+    "materialType": "blue",
+    "materials": 2000,
+    "maxStack": 1,
+    "name": "Szlifierka ",
+    "type": "tool",
+    "weight": 3500
+  },
+  {
+    "description": "Urządzenie w postaci dwóch zamykanych metalowych bransoletek połączonych małym łańcuszkiem.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "wn",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 6,
+    "id": 112,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/112.webp",
+    "materialType": "blue",
+    "materials": 2,
+    "maxStack": 1,
+    "name": "Kajdanki",
+    "type": "ammunition",
+    "weight": 350
+  },
+  {
+    "description": "Przedmiot służący do samoobrony policjanta, lub do obezwładniania chuliganów.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 6,
+    "id": 216,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/216.webp",
+    "materialType": "blue",
+    "materials": 5,
+    "maxStack": 1,
+    "name": "Pałka policyjna",
+    "type": "ammunition",
+    "weight": 750
+  },
+  {
+    "description": "Wystrzeliwuje pocisk, który może tymczasowo ogłuszyć napastnika.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 6,
+    "id": 244,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/244.webp",
+    "materialType": "blue",
+    "materials": 5,
+    "maxStack": 1,
+    "name": "Taser",
+    "type": "ammunition",
+    "weight": 220
+  },
+  {
+    "description": "Mając to wiertło, możesz włamać się do chronionych obiektów, na przykład do banku.",
+    "fractions": [
+      "families",
+      "vagos",
+      "marabunta",
+      "bloods",
+      "ballas"
+    ],
+    "groupId": 6,
+    "id": 443,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/443.webp",
+    "materialType": "blue",
+    "materials": 2000,
+    "maxStack": 1,
+    "name": "Wiertarka 1500W",
+    "type": "tool",
+    "weight": 8000
+  },
+  {
+    "description": "Zdalny dron powietrzny wyposażony w noktowizor i kamerę termowizyjną (E - aby aktywować).",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "wn",
+      "army",
+      "fib",
+      "gov",
+      "ems"
+    ],
+    "groupId": 6,
+    "id": 451,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/451.webp",
+    "materialType": "blue",
+    "materials": 2000,
+    "maxStack": 1,
+    "name": "Dron policyjny",
+    "type": "facilities",
+    "weight": 1200
+  },
+  {
+    "description": "Automatycznie wykrywa przekroczenie prędkości i odczytuje tablice rejestracyjne przejeżdżających pojazdów. Może być obsługiwany ręcznie, umożliwiając operatorom kontrolowanie procesu monitorowania.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 6,
+    "id": 833,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/833.webp",
+    "materialType": "blue",
+    "materials": 100,
+    "maxStack": 1,
+    "name": "Fotoradar",
+    "type": "tool",
+    "weight": 5000
+  },
+  {
+    "description": "Służy do monitorowania prędkości na drogach, pomagając zapewnić bezpieczeństwo na drogach. Wykorzystuje zasadę Dopplera do dokładnego określania prędkości pojazdów.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 6,
+    "id": 834,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/834.webp",
+    "materialType": "blue",
+    "materials": 150,
+    "maxStack": 1,
+    "name": "Radar do pomiaru prędkości",
+    "type": "tool",
+    "weight": 700
+  },
+  {
+    "description": "Nowoczesne narzędzie do samoobrony, które łączy w sobie broń uderzeniową i paralizator.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "gov",
+      "fib"
+    ],
+    "groupId": 6,
+    "id": 1006,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/1006.webp",
+    "materialType": "blue",
+    "materials": 10,
+    "maxStack": 1,
+    "name": "Pałka elektryczna",
+    "type": "ammunition",
+    "weight": 580
+  },
+  {
+    "description": "Uniwerslana modyfikacja do każdego rodzaju broni. Zwiększa liczbę pocisków w magazynku.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 8,
+    "id": 760,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/760.webp",
+    "materialType": "green",
+    "materials": 10,
+    "maxStack": 1,
+    "name": "Powiększony magazynek",
+    "type": "ammunition",
+    "weight": 700
+  },
+  {
+    "description": "Uniwersalny moduł odpowiedni do każdego rodzaju broni. Zwiększa celność podczas strzelania.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 8,
+    "id": 761,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/761.webp",
+    "materialType": "green",
+    "materials": 10,
+    "maxStack": 1,
+    "name": "Uchwyt",
+    "type": "ammunition",
+    "weight": 500
+  },
+  {
+    "description": "Uniwersalna modyfikacja do rodzaju długiej broni Mk2. Celowanie hologramem w postaci stempla celowniczego do celowania bronią w cel w pierwszej osobie.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 8,
+    "id": 762,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/762.webp",
+    "materialType": "green",
+    "materials": 4,
+    "maxStack": 1,
+    "name": "Celownik holograficzny",
+    "type": "ammunition",
+    "weight": 300
+  },
+  {
+    "description": "Uniwersalna modyfikacja do każdego rodzaju broni długiej. Urządzenie optyczne przeznaczone do celowania bronią w cel w pierwszej osobie.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 8,
+    "id": 763,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/763.webp",
+    "materialType": "green",
+    "materials": 4,
+    "maxStack": 1,
+    "name": "Celownik optyczny",
+    "type": "ammunition",
+    "weight": 300
+  },
+  {
+    "description": "Uniwersalny moduł odpowiedni do każdego rodzaju broni. Mechaniczne urządzenie wylotowe, które usuwa dźwięk strzału.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 8,
+    "id": 764,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/764.webp",
+    "materialType": "green",
+    "materials": 6,
+    "maxStack": 1,
+    "name": "Tłumik",
+    "type": "ammunition",
+    "weight": 200
+  },
+  {
+    "description": "Uniwersalna modyfikacja do każdego rodzaju broni długiej. Źródło światła używane w połączeniu z bronią palną do oświetlania celu w nocy.",
+    "fractions": [
+      "lspd",
+      "lscsd",
+      "army",
+      "fib",
+      "gov"
+    ],
+    "groupId": 8,
+    "id": 765,
+    "imageUrl": "https://cdn.majestic-files.net/public/master/static/img/inventory/items/765.webp",
+    "materialType": "green",
+    "materials": 2,
+    "maxStack": 1,
+    "name": "Latarka",
+    "type": "ammunition",
+    "weight": 200
+  }
+]
