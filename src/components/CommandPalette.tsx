@@ -9,14 +9,17 @@ export function CommandPalette() {
   const query = useAppStore((s) => s.searchQuery);
   const setQuery = useAppStore((s) => s.setSearchQuery);
   const setRoute = useAppStore((s) => s.setRoute);
+  const setForumRuleId = useAppStore((s) => s.setForumRuleId);
   const [index, setIndex] = useState(0);
 
   const items = useMemo(() => {
-    const flat: { id: RouteId; label: string }[] = [];
+    const flat: { id: RouteId; label: string; forumRuleId?: string }[] = [];
     for (const g of navGroups) {
       for (const item of g.items) {
         if (item.children) {
-          for (const c of item.children) flat.push({ id: c.id, label: c.label });
+          for (const c of item.children) {
+            flat.push({ id: c.id, label: c.label, forumRuleId: c.forumRuleId });
+          }
         } else {
           flat.push({ id: item.id, label: item.label });
         }
@@ -47,14 +50,16 @@ export function CommandPalette() {
         setIndex((i) => Math.max(0, i - 1));
       }
       if (e.key === "Enter" && items[index]) {
-        setRoute(items[index].id);
+        const pick = items[index];
+        if (pick.forumRuleId) setForumRuleId(pick.forumRuleId);
+        else setRoute(pick.id);
         setOpen(false);
         setQuery("");
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, items, index, setOpen, setRoute, setQuery]);
+  }, [open, items, index, setOpen, setRoute, setForumRuleId, setQuery]);
 
   if (!open) return null;
 
@@ -80,7 +85,8 @@ export function CommandPalette() {
               }`}
               onMouseEnter={() => setIndex(i)}
               onClick={() => {
-                setRoute(item.id);
+                if (item.forumRuleId) setForumRuleId(item.forumRuleId);
+                else setRoute(item.id);
                 setOpen(false);
                 setQuery("");
               }}

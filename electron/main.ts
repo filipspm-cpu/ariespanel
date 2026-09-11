@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, nativeImage } from "electron";
+import { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, nativeImage, shell } from "electron";
 import fs from "fs";
 import path from "path";
 import { loadState, saveState, AppState } from "./storage";
@@ -10,6 +10,7 @@ import { runMacroById, triggersFromMacros } from "./runMacro";
 import { registerUpdater } from "./updater";
 import { fetchMajesticServerStatuses } from "./majesticStatus";
 import { trustPublisherCert } from "./trustPublisher";
+import { fetchForumThreadText } from "./forum";
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 let mainWindow: BrowserWindow | null = null;
@@ -35,6 +36,22 @@ function appIcon() {
     }
   }
   return nativeImage.createEmpty();
+}
+
+function assertForumUrl(url: string) {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error("Nieprawidłowy adres forum.");
+  }
+  if (parsed.protocol !== "https:" || parsed.hostname !== "forum.gta5majestic.com") {
+    throw new Error("Dozwolone jest tylko forum.gta5majestic.com.");
+  }
+  if (!parsed.pathname.startsWith("/threads/")) {
+    throw new Error("Dozwolone są tylko wątki forum.");
+  }
+  return parsed.toString();
 }
 
 function persistOverlay(patch: Partial<AppState["overlay"]>) {
@@ -266,6 +283,8 @@ function registerIpc() {
   ipcMain.handle("spotify:now", () => getSpotifyTrack());
   ipcMain.handle("majestic:servers", () => fetchMajesticServerStatuses());
   ipcMain.handle("discord:connect", () => connectDiscord());
+  ipcMain.handle("forum:text", (_e, url: string) => fetchForumThreadText(assertForumUrl(url)));
+  ipcMain.handle("forum:open", (_e, url: string) => shell.openExternal(assertForumUrl(url)));
 
   ipcMain.handle("displays:list", () =>
     screen.getAllDisplays().map((d, i) => ({

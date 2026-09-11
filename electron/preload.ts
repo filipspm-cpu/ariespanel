@@ -79,6 +79,8 @@ const api = {
   },
   majesticServers: () => ipcRenderer.invoke("majestic:servers"),
   discordConnect: () => ipcRenderer.invoke("discord:connect"),
+  forumText: (url: string) => ipcRenderer.invoke("forum:text", url) as Promise<string>,
+  forumOpen: (url: string) => ipcRenderer.invoke("forum:open", url),
 };
 
 contextBridge.exposeInMainWorld("synvity", api);

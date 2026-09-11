@@ -1352,6 +1352,19 @@ textarea {
   background: #1a1a1a;
 }
 
+.forum-card {
+  padding: 22px 24px 28px;
+}
+
+.forum-text {
+  margin-top: 18px;
+  white-space: pre-wrap;
+  user-select: text;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #d4d4d8;
+}
+
 @media (max-width: 1100px) {
   .about-features {
     grid-template-columns: repeat(2, minmax(0, 1fr));

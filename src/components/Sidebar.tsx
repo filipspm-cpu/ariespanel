@@ -6,6 +6,8 @@ import {
   Home,
   Info,
   Layers,
+  MessagesSquare,
+  ScrollText,
   Search,
   Settings,
   Terminal,
@@ -29,6 +31,8 @@ const icons: Record<string, LucideIcon> = {
   settings: Settings,
   info: Info,
   heart: Heart,
+  messages: MessagesSquare,
+  scroll: ScrollText,
 };
 
 function NavButton({
@@ -82,6 +86,10 @@ export function Sidebar() {
   const setRoute = useAppStore((s) => s.setRoute);
   const gameOpen = useAppStore((s) => s.gameOpen);
   const setGameOpen = useAppStore((s) => s.setGameOpen);
+  const forumOpen = useAppStore((s) => s.forumOpen);
+  const setForumOpen = useAppStore((s) => s.setForumOpen);
+  const forumRuleId = useAppStore((s) => s.forumRuleId);
+  const setForumRuleId = useAppStore((s) => s.setForumRuleId);
   const setSearchOpen = useAppStore((s) => s.setSearchOpen);
   const settings = useAppStore((s) => s.settings);
   const nick = settings.discordGlobalName || settings.username || "Konto";
@@ -110,25 +118,41 @@ export function Sidebar() {
             </div>
             {group.items.map((item) => {
               if (item.children) {
+                const expanded = item.id === "forum" ? forumOpen : gameOpen;
                 return (
                   <div key={item.label}>
                     <NavButton
                       label={item.label}
                       icon={item.icon}
                       chevron
-                      open={gameOpen}
-                      onClick={() => setGameOpen(!gameOpen)}
+                      open={expanded}
+                      onClick={() => {
+                        if (item.id === "forum") {
+                          const next = !forumOpen;
+                          setForumOpen(next);
+                          if (next) setRoute("forum");
+                          return;
+                        }
+                        setGameOpen(!gameOpen);
+                      }}
                     />
-                    {gameOpen
+                    {expanded
                       ? item.children.map((child) => (
                           <NavButton
-                            key={child.id}
+                            key={`${child.id}-${child.forumRuleId ?? child.label}`}
                             label={child.label}
                             icon={child.icon}
                             badge={child.badge}
                             indented
-                            active={route === child.id}
-                            onClick={() => setRoute(child.id)}
+                            active={
+                              child.forumRuleId
+                                ? route === "forum" && forumRuleId === child.forumRuleId
+                                : route === child.id
+                            }
+                            onClick={() => {
+                              if (child.forumRuleId) setForumRuleId(child.forumRuleId);
+                              else setRoute(child.id);
+                            }}
                           />
                         ))
                       : null}

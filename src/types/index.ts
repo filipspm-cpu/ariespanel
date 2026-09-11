@@ -4,6 +4,7 @@ export type RouteId =
   | "overlay"
   | "macros"
   | "counters"
+  | "forum"
   | "settings"
   | "about"
   | "credits";
@@ -13,6 +14,7 @@ export interface NavItem {
   label: string;
   icon: string;
   badge?: string;
+  forumRuleId?: string;
 }
 
 export interface NavGroup {

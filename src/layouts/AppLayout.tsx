@@ -10,6 +10,7 @@ import { CountersPage } from "@/pages/CountersPage";
 import { CreditsPage } from "@/pages/CreditsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { AboutPage } from "@/pages/AboutPage";
+import { ForumPage } from "@/pages/ForumPage";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { useAppStore } from "@/store/useAppStore";
 import type { RouteId } from "@/types";
@@ -23,6 +24,7 @@ const pages: Record<RouteId, ComponentType> = {
   settings: SettingsPage,
   about: AboutPage,
   credits: CreditsPage,
+  forum: ForumPage,
 };
 
 export function AppLayout() {
