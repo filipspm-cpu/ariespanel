@@ -1,6 +1,7 @@
 import { app, ipcMain, BrowserWindow, Tray, Notification } from "electron";
 import { autoUpdater, type UpdateInfo, type ProgressInfo } from "electron-updater";
 import { loadState } from "./storage";
+import { isBetaTesterId } from "./testers";
 import { closeUpdateProgressWindow, openUpdateProgressWindow, setUpdateProgress } from "./updateProgress";
 import { listUpdateNotices, markUpdateNoticesRead, pushUpdateNotice } from "./updateNotices";
 import { nativeImage } from "electron";
@@ -18,6 +19,7 @@ export type UpdateStatus = {
   detail?: string;
   left?: string;
   message?: string;
+  channel?: "stable" | "beta";
 };
 
 let last: UpdateStatus = { status: "idle", currentVersion: "0.0.0" };
@@ -29,8 +31,26 @@ let getTray: () => Tray | null = () => null;
 let getIcon: () => Electron.NativeImage = () => nativeImage.createEmpty();
 
 function send(patch: Partial<UpdateStatus>) {
-  last = { ...last, ...patch, currentVersion: app.getVersion() };
+  last = {
+    ...last,
+    ...patch,
+    currentVersion: app.getVersion(),
+    channel: isBetaTesterId(loadState().settings.discordId) ? "beta" : "stable",
+  };
   getWindow()?.webContents.send("update:status", last);
+}
+
+function applyFeed() {
+  const token = loadState().settings.githubToken?.trim();
+  const beta = isBetaTesterId(loadState().settings.discordId);
+  autoUpdater.allowPrerelease = beta;
+  autoUpdater.setFeedURL({
+    provider: "github",
+    owner: GITHUB_OWNER,
+    repo: GITHUB_REPO,
+    private: Boolean(token),
+    token: token || undefined,
+  });
 }
 
 function friendlyUpdateError(err: unknown) {
@@ -43,18 +63,6 @@ function friendlyUpdateError(err: unknown) {
   }
   if (raw.length > 160) return "Nie udało się sprawdzić aktualizacji.";
   return raw;
-}
-
-function applyFeed() {
-  const token = loadState().settings.githubToken?.trim();
-  // Always use the fixed public feed — ignore stale settings like githubRepo=aries.
-  autoUpdater.setFeedURL({
-    provider: "github",
-    owner: GITHUB_OWNER,
-    repo: GITHUB_REPO,
-    private: Boolean(token),
-    token: token || undefined,
-  });
 }
 
 function formatBytes(n: number) {
@@ -204,8 +212,8 @@ export function registerUpdater(opts: {
 
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
-  autoUpdater.allowPrerelease = false;
   autoUpdater.autoRunAppAfterInstall = true;
+  applyFeed();
   last = { status: "idle", currentVersion: app.getVersion() };
   listUpdateNotices(app.getVersion());
   try {

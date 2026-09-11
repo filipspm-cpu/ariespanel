@@ -1,7 +1,7 @@
 {
   "name": "aries",
   "productName": "ARIES",
-  "version": "1.1.55",
+  "version": "1.1.56",
   "description": "ARIES — prywatny panel administracyjny",
   "author": "ARIES",
   "copyright": "Copyright © 2026 ARIES",
@@ -66,6 +66,10 @@
       {
         "from": "src/assets/aries-logo.png",
         "to": "aries-logo.png"
+      },
+      {
+        "from": "src/data/testers.txt",
+        "to": "testers.txt"
       }
     ],
     "win": {

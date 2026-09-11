@@ -5,6 +5,14 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      channel:
+        description: Kanał wydania na GitHubie
+        type: choice
+        options:
+          - stable
+          - beta
+        default: stable
 
 permissions:
   contents: write
@@ -15,6 +23,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Align GitHub publish target
+        env:
+          RELEASE_CHANNEL: ${{ github.event.inputs.channel || '' }}
         run: node scripts/align-publish-target.js
       - uses: actions/setup-node@v4
         with:

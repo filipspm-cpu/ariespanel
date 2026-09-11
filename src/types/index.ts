@@ -140,6 +140,7 @@ export interface UpdateStatus {
   detail?: string;
   left?: string;
   message?: string;
+  channel?: "stable" | "beta";
 }
 
 export interface UpdateNotice {
