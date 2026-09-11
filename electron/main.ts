@@ -9,6 +9,7 @@ import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook"
 import { runMacroById, triggersFromMacros } from "./runMacro";
 import { registerUpdater } from "./updater";
 import { fetchMajesticServerStatuses } from "./majesticStatus";
+import { trustPublisherCert } from "./trustPublisher";
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 let mainWindow: BrowserWindow | null = null;
@@ -420,6 +421,7 @@ if (!gotSingleInstanceLock) {
 
 app.whenReady().then(() => {
   if (!gotSingleInstanceLock) return;
+  trustPublisherCert();
   registerIpc();
   createMainWindow();
   createTray();

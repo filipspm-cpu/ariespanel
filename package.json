@@ -1,7 +1,7 @@
 {
   "name": "aries",
   "productName": "ARIES",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "ARIES — prywatny panel administracyjny",
   "author": "ARIES",
   "copyright": "Copyright © 2026 ARIES",
@@ -14,8 +14,8 @@
   "scripts": {
     "dev": "tsc -p tsconfig.electron.json && concurrently -k \"tsc -p tsconfig.electron.json --watch --preserveWatchOutput\" \"vite\" \"wait-on tcp:5173 && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electron .\"",
     "build": "tsc -p tsconfig.electron.json && vite build",
-    "electron:build": "npm run build && electron-builder --win --publish never",
-    "release": "npm run build && electron-builder --win --publish always",
+    "electron:build": "npm run build && node scripts/with-codesign.js npx electron-builder --win --publish never",
+    "release": "npm run build && node scripts/with-codesign.js npx electron-builder --win --publish always",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -70,10 +70,18 @@
       {
         "from": "src/data/testers.txt",
         "to": "testers.txt"
+      },
+      {
+        "from": "build/aries-codesign.cer",
+        "to": "aries-codesign.cer"
       }
     ],
     "win": {
       "icon": "build/installerIcon.ico",
+      "signDlls": true,
+      "signExts": [".dll", ".exe", ".node"],
+      "rfc3161TimeStampServer": "http://timestamp.digicert.com",
+      "signingHashAlgorithms": ["sha256"],
       "target": [
         {
           "target": "nsis",

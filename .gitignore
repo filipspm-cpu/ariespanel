@@ -7,4 +7,7 @@ release
 Thumbs.db
 .vscode
 .env
+*.pfx
+build/aries-codesign.pfx
+build/aries-codesign.password
 *.map

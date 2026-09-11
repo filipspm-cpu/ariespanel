@@ -1,70 +1,94 @@
 import { clipboard } from "electron";
-import koffi from "koffi";
 
-const user32 = koffi.load("user32.dll");
-const kernel32 = koffi.load("kernel32.dll");
+import type koffiDefault from "koffi";
 
-const KEYBDINPUT = koffi.struct("KEYBDINPUT", {
-  wVk: "uint16",
-  wScan: "uint16",
-  dwFlags: "uint32",
-  time: "uint32",
-  dwExtraInfo: "uintptr",
-});
-const MOUSEINPUT = koffi.struct("MOUSEINPUT", {
-  dx: "long",
-  dy: "long",
-  mouseData: "uint32",
-  dwFlags: "uint32",
-  time: "uint32",
-  dwExtraInfo: "uintptr",
-});
-const HARDWAREINPUT = koffi.struct("HARDWAREINPUT", {
-  uMsg: "uint32",
-  wParamL: "uint16",
-  wParamH: "uint16",
-});
-const INPUT = koffi.struct("INPUT", {
-  type: "uint32",
-  u: koffi.union({
-    mi: MOUSEINPUT,
-    ki: KEYBDINPUT,
-    hi: HARDWAREINPUT,
-  }),
-});
+let koffi: typeof koffiDefault;
+let SendInput: (n: number, p: unknown, cb: number) => number;
+let MapVirtualKeyW: (code: number, type: number) => number;
+let SetForegroundWindow: (h: unknown) => boolean;
+let ShowWindow: (h: unknown, n: number) => boolean;
+let GetForegroundWindow: () => unknown;
+let GetWindowThreadProcessId: (h: unknown, pid: Buffer) => number;
+let AttachThreadInput: (a: number, b: number, f: boolean) => boolean;
+let GetCurrentThreadId: () => number;
+let AllowSetForegroundWindow: (pid: number) => boolean;
+let IsWindowVisible: (h: unknown) => boolean;
+let GetWindowTextW: (h: unknown, buf: Buffer, n: number) => number;
+let EnumWindowsProc: unknown;
+let EnumWindows: (cb: unknown, lp: number) => boolean;
+let IsIconic: (h: unknown) => boolean;
+let INPUT: unknown;
+let nativeReady = false;
 
-const SendInput = user32.func(
-  "uint32 __stdcall SendInput(uint32 nInputs, INPUT *pInputs, int cbSize)",
-) as (n: number, p: unknown, cb: number) => number;
-const MapVirtualKeyW = user32.func("uint32 __stdcall MapVirtualKeyW(uint32 uCode, uint32 uMapType)") as (
-  code: number,
-  type: number,
-) => number;
-const SetForegroundWindow = user32.func("bool __stdcall SetForegroundWindow(void *hWnd)") as (h: unknown) => boolean;
-const ShowWindow = user32.func("bool __stdcall ShowWindow(void *hWnd, int nCmdShow)") as (h: unknown, n: number) => boolean;
-const GetForegroundWindow = user32.func("void * __stdcall GetForegroundWindow()") as () => unknown;
-const GetWindowThreadProcessId = user32.func(
-  "uint32 __stdcall GetWindowThreadProcessId(void *hWnd, _Out_ uint32 *lpdwProcessId)",
-) as (h: unknown, pid: Buffer) => number;
-const AttachThreadInput = user32.func(
-  "bool __stdcall AttachThreadInput(uint32 idAttach, uint32 idAttachTo, bool fAttach)",
-) as (a: number, b: number, f: boolean) => boolean;
-const GetCurrentThreadId = kernel32.func("uint32 __stdcall GetCurrentThreadId()") as () => number;
-const AllowSetForegroundWindow = user32.func("bool __stdcall AllowSetForegroundWindow(uint32 dwProcessId)") as (
-  pid: number,
-) => boolean;
-const IsWindowVisible = user32.func("bool __stdcall IsWindowVisible(void *hWnd)") as (h: unknown) => boolean;
-const GetWindowTextW = user32.func("int __stdcall GetWindowTextW(void *hWnd, _Out_ uint16 *lpString, int nMaxCount)") as (
-  h: unknown,
-  buf: Buffer,
-  n: number,
-) => number;
-const EnumWindowsProc = koffi.proto("bool __stdcall EnumWindowsProc(void *hwnd, intptr lParam)");
-const EnumWindows = user32.func("bool __stdcall EnumWindows(EnumWindowsProc *lpEnumFunc, intptr lParam)") as (
-  cb: unknown,
-  lp: number,
-) => boolean;
-const IsIconic = user32.func("bool __stdcall IsIconic(void *hWnd)") as (h: unknown) => boolean;
+function ensureNative() {
+  if (nativeReady) return;
+  koffi = require("koffi") as typeof koffiDefault;
+  const user32 = koffi.load("user32.dll");
+  const kernel32 = koffi.load("kernel32.dll");
+
+  const KEYBDINPUT = koffi.struct("KEYBDINPUT", {
+    wVk: "uint16",
+    wScan: "uint16",
+    dwFlags: "uint32",
+    time: "uint32",
+    dwExtraInfo: "uintptr",
+  });
+  const MOUSEINPUT = koffi.struct("MOUSEINPUT", {
+    dx: "long",
+    dy: "long",
+    mouseData: "uint32",
+    dwFlags: "uint32",
+    time: "uint32",
+    dwExtraInfo: "uintptr",
+  });
+  const HARDWAREINPUT = koffi.struct("HARDWAREINPUT", {
+    uMsg: "uint32",
+    wParamL: "uint16",
+    wParamH: "uint16",
+  });
+  INPUT = koffi.struct("INPUT", {
+    type: "uint32",
+    u: koffi.union({
+      mi: MOUSEINPUT,
+      ki: KEYBDINPUT,
+      hi: HARDWAREINPUT,
+    }),
+  });
+
+  SendInput = user32.func(
+    "uint32 __stdcall SendInput(uint32 nInputs, INPUT *pInputs, int cbSize)",
+  ) as (n: number, p: unknown, cb: number) => number;
+  MapVirtualKeyW = user32.func("uint32 __stdcall MapVirtualKeyW(uint32 uCode, uint32 uMapType)") as (
+    code: number,
+    type: number,
+  ) => number;
+  SetForegroundWindow = user32.func("bool __stdcall SetForegroundWindow(void *hWnd)") as (h: unknown) => boolean;
+  ShowWindow = user32.func("bool __stdcall ShowWindow(void *hWnd, int nCmdShow)") as (h: unknown, n: number) => boolean;
+  GetForegroundWindow = user32.func("void * __stdcall GetForegroundWindow()") as () => unknown;
+  GetWindowThreadProcessId = user32.func(
+    "uint32 __stdcall GetWindowThreadProcessId(void *hWnd, _Out_ uint32 *lpdwProcessId)",
+  ) as (h: unknown, pid: Buffer) => number;
+  AttachThreadInput = user32.func(
+    "bool __stdcall AttachThreadInput(uint32 idAttach, uint32 idAttachTo, bool fAttach)",
+  ) as (a: number, b: number, f: boolean) => boolean;
+  GetCurrentThreadId = kernel32.func("uint32 __stdcall GetCurrentThreadId()") as () => number;
+  AllowSetForegroundWindow = user32.func("bool __stdcall AllowSetForegroundWindow(uint32 dwProcessId)") as (
+    pid: number,
+  ) => boolean;
+  IsWindowVisible = user32.func("bool __stdcall IsWindowVisible(void *hWnd)") as (h: unknown) => boolean;
+  GetWindowTextW = user32.func("int __stdcall GetWindowTextW(void *hWnd, _Out_ uint16 *lpString, int nMaxCount)") as (
+    h: unknown,
+    buf: Buffer,
+    n: number,
+  ) => number;
+  EnumWindowsProc = koffi.proto("bool __stdcall EnumWindowsProc(void *hwnd, intptr lParam)");
+  EnumWindows = user32.func("bool __stdcall EnumWindows(EnumWindowsProc *lpEnumFunc, intptr lParam)") as (
+    cb: unknown,
+    lp: number,
+  ) => boolean;
+  IsIconic = user32.func("bool __stdcall IsIconic(void *hWnd)") as (h: unknown) => boolean;
+  nativeReady = true;
+}
 
 const KEYEVENTF_KEYUP = 0x0002;
 const INPUT_KEYBOARD = 1;
@@ -97,6 +121,7 @@ export function listWindows(): ProcessInfo[] {
 }
 
 function listWindowsNative(): ProcessInfo[] {
+  ensureNative();
   const result: ProcessInfo[] = [];
   const cb = koffi.register((hWnd: unknown) => {
     if (!IsWindowVisible(hWnd)) return true;
@@ -128,6 +153,7 @@ export function findGameProcess(): ProcessInfo | null {
 }
 
 function focusWindow(hwnd: unknown | null) {
+  ensureNative();
   if (!hwnd) return;
   try {
     if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
@@ -167,6 +193,7 @@ function keyboardEvent(wVk: number, wScan: number, dwFlags: number) {
 }
 
 function sendEvents(events: unknown[]) {
+  ensureNative();
   if (!events.length) return;
   SendInput(events.length, events, koffi.sizeof(INPUT));
 }
@@ -182,6 +209,7 @@ export function isMacroInjecting() {
 }
 
 export async function pressBackspace(count: number) {
+  ensureNative();
   const vk = 0x08;
   const scan = MapVirtualKeyW(vk, 0);
   for (let i = 0; i < count; i++) {
@@ -191,6 +219,7 @@ export async function pressBackspace(count: number) {
 }
 
 function keyTap(key: string) {
+  ensureNative();
   const vkMap: Record<string, number> = { T: 0x54, Enter: VK_RETURN };
   const vk = vkMap[key] ?? key.toUpperCase().charCodeAt(0);
   const scan = MapVirtualKeyW(vk, 0);
@@ -198,6 +227,7 @@ function keyTap(key: string) {
 }
 
 async function tapVk(vk: number) {
+  ensureNative();
   const scan = MapVirtualKeyW(vk, 0);
   sendEvents([keyboardEvent(vk, scan, 0)]);
   await sleep(15);
@@ -205,6 +235,7 @@ async function tapVk(vk: number) {
 }
 
 async function pasteText(text: string) {
+  ensureNative();
   if (!text) return;
   const previous = clipboard.readText();
   clipboard.writeText(text);

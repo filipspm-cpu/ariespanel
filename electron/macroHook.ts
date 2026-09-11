@@ -1,10 +1,17 @@
-import koffi from "koffi";
 import { isMacroInjecting } from "./windows";
 
-/* Electron may delay callbacks from WH_KEYBOARD_LL. Reading the global key
- * state on a short interval works regardless of which program has focus. */
-const user32 = koffi.load("user32.dll");
-const GetAsyncKeyState = user32.func("short __stdcall GetAsyncKeyState(int vKey)") as (key: number) => number;
+import type koffiDefault from "koffi";
+
+let GetAsyncKeyState: (key: number) => number;
+let nativeReady = false;
+
+function ensureNative() {
+  if (nativeReady) return;
+  const koffi = require("koffi") as typeof koffiDefault;
+  const user32 = koffi.load("user32.dll");
+  GetAsyncKeyState = user32.func("short __stdcall GetAsyncKeyState(int vKey)") as (key: number) => number;
+  nativeReady = true;
+}
 
 type Trigger = { id: string; sequence: string };
 
@@ -69,6 +76,7 @@ function recordCharacter(character: string) {
 }
 
 function pollKeyboard() {
+  ensureNative();
   for (const [virtualKey, character] of watchedKeys) {
     const down = (GetAsyncKeyState(virtualKey) & 0x8000) !== 0;
     const wasDown = keyDown.get(virtualKey) ?? false;
@@ -79,6 +87,7 @@ function pollKeyboard() {
 }
 
 export function startMacroHook(handler: (id: string, eraseCount: number) => void) {
+  ensureNative();
   onFire = handler;
   if (timer) return;
   keyDown.clear();
