@@ -1,4 +1,6 @@
 import arbatskyIcon from "../assets/servers/arbatsky.svg?url";
+import tverskoyIcon from "../assets/servers/tverskoy.png?url";
+import kutuzovskyIcon from "../assets/servers/kutuzovsky.png?url";
 
 const majesticIcons = import.meta.glob("../assets/servers/*.svg", {
   eager: true,
@@ -6,11 +8,17 @@ const majesticIcons = import.meta.glob("../assets/servers/*.svg", {
   import: "default",
 }) as Record<string, string>;
 
-const majesticEmoji = import.meta.glob("../assets/servers/*.webp", {
+const majesticEmoji = import.meta.glob("../assets/servers/*.{webp,png}", {
   eager: true,
   query: "?url",
   import: "default",
 }) as Record<string, string>;
+
+const extraAvatars: Record<string, string> = {
+  arbatsky: arbatskyIcon,
+  tverskoy: tverskoyIcon,
+  kutuzovsky: kutuzovskyIcon,
+};
 
 function slugFromEndpoint(endpoint: string) {
   if (endpoint.includes("/join/")) return (endpoint.split("/join/")[1] ?? "").toLowerCase();
@@ -24,6 +32,5 @@ function assetUrl(files: Record<string, string>, slug: string, ext: string) {
 
 export function serverAvatarUrl(endpoint: string) {
   const slug = slugFromEndpoint(endpoint);
-  if (slug === "arbatsky") return arbatskyIcon;
-  return assetUrl(majesticEmoji, slug, "webp") || assetUrl(majesticIcons, slug, "svg");
+  return extraAvatars[slug] || assetUrl(majesticEmoji, slug, "webp") || assetUrl(majesticEmoji, slug, "png") || assetUrl(majesticIcons, slug, "svg");
 }
