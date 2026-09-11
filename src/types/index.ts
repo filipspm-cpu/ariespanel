@@ -6,7 +6,8 @@ export type RouteId =
   | "counters"
   | "settings"
   | "about"
-  | "credits";
+  | "credits"
+  | "craft";
 
 export interface NavItem {
   id: RouteId | "forum";
@@ -14,6 +15,7 @@ export interface NavItem {
   icon: string;
   badge?: string;
   href?: string;
+  devOnly?: boolean;
 }
 
 export interface NavGroup {

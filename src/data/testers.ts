@@ -32,6 +32,10 @@ export function accountRank(discordId: string | undefined, testers: Tester[]): A
   return rankFromRole(row.role);
 }
 
+export function isDeveloper(discordId: string | undefined, testers: Tester[]) {
+  return accountRank(discordId, testers) === "developer";
+}
+
 export function isBetaTester(discordId: string | undefined, testers: Tester[]) {
   const rank = accountRank(discordId, testers);
   return rank === "beta" || rank === "developer";

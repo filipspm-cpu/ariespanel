@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { navGroups } from "@/data/navigation";
+import { useAccountRank } from "@/components/RankBadge";
+import { visibleNavGroups } from "@/data/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import type { RouteId } from "@/types";
 
@@ -17,11 +18,13 @@ export function CommandPalette() {
   const query = useAppStore((s) => s.searchQuery);
   const setQuery = useAppStore((s) => s.setSearchQuery);
   const setRoute = useAppStore((s) => s.setRoute);
+  const discordId = useAppStore((s) => s.settings.discordId);
+  const rank = useAccountRank(discordId);
   const [index, setIndex] = useState(0);
 
   const items = useMemo(() => {
     const flat: { id: RouteId | "forum"; label: string; href?: string }[] = [];
-    for (const g of navGroups) {
+    for (const g of visibleNavGroups(rank === "developer")) {
       for (const item of g.items) {
         if (item.children) {
           for (const c of item.children) {
@@ -34,7 +37,7 @@ export function CommandPalette() {
     }
     const q = query.trim().toLowerCase();
     return q ? flat.filter((i) => i.label.toLowerCase().includes(q)) : flat;
-  }, [query]);
+  }, [query, rank]);
 
   useEffect(() => {
     setIndex(0);

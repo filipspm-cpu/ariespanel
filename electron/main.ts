@@ -90,12 +90,13 @@ function createMainWindow() {
     autoHideMenuBar: true,
     frame: false,
     show: false,
-    webPreferences: {
+      webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
       backgroundThrottling: false,
+      webviewTag: true,
     },
   });
 

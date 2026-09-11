@@ -7,6 +7,7 @@ export const navGroups: NavGroup[] = [
     label: "Platforma",
     items: [
       { id: "home", label: "Główna", icon: "home" },
+      { id: "craft", label: "Craft", icon: "hammer", devOnly: true },
       {
         id: "cmd",
         label: "Gra",
@@ -42,6 +43,20 @@ export const navGroups: NavGroup[] = [
   },
 ];
 
+export function visibleNavGroups(isDev: boolean): NavGroup[] {
+  return navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items
+        .filter((item) => !item.devOnly || isDev)
+        .map((item) => ({
+          ...item,
+          children: item.children?.filter((child) => !child.devOnly || isDev),
+        })),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
 export const breadcrumbs: Record<RouteId, string[]> = {
   home: ["Dashboard"],
   cmd: ["Dashboard", "Game", "Cmd"],
@@ -51,6 +66,7 @@ export const breadcrumbs: Record<RouteId, string[]> = {
   settings: ["Dashboard", "Ustawienia systemu"],
   about: ["Dashboard", "O aplikacji"],
   credits: ["Dashboard", "Autorzy"],
+  craft: ["Dashboard", "Craft"],
 };
 
 export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
@@ -62,4 +78,5 @@ export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
   settings: { title: "Ustawienia systemu" },
   about: { title: "O aplikacji", subtitle: "ARIES — prywatny panel administracyjny" },
   credits: { title: "Autorzy" },
+  craft: { title: "Craft", subtitle: "Tabela krafta frakcji — Majestic Wiki" },
 };

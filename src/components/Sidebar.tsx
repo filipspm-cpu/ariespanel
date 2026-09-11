@@ -2,6 +2,7 @@ import {
   ChevronRight,
   Gamepad2,
   Gauge,
+  Hammer,
   Heart,
   Home,
   Info,
@@ -16,7 +17,7 @@ import {
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
 import { RankBadge, useAccountRank } from "@/components/RankBadge";
-import { navGroups } from "@/data/navigation";
+import { visibleNavGroups } from "@/data/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import type { RouteId } from "@/types";
 import { clsx } from "./ui/clsx";
@@ -33,6 +34,7 @@ const icons: Record<string, LucideIcon> = {
   heart: Heart,
   messages: MessagesSquare,
   scroll: ScrollText,
+  hammer: Hammer,
 };
 
 function NavButton({
@@ -109,7 +111,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 pb-3">
-        {navGroups.map((group) => (
+        {visibleNavGroups(rank === "developer").map((group) => (
           <div key={group.id} className="mb-3">
             <div className="px-2 pb-1 pt-2 text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-600">
               {group.label}
