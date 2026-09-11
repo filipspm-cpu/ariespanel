@@ -49,7 +49,7 @@ async function runStep(step: MacroStep, macros: Macro[], ctx: { inChat: boolean 
     await sendTextForeground(step.text, {
       pressEnter: Boolean(step.pressEnter) || chat,
       enterEachLine: chat,
-      pressT: chat,
+      pressT: false,
       skipFirstT: true,
     });
     if (chat) ctx.inChat = false;

@@ -191,7 +191,8 @@ export async function pressBackspace(count: number) {
 function keyTap(key: string) {
   const vkMap: Record<string, number> = { T: 0x54, Enter: VK_RETURN };
   const vk = vkMap[key] ?? key.toUpperCase().charCodeAt(0);
-  void tapVk(vk);
+  const scan = MapVirtualKeyW(vk, 0);
+  sendEvents([keyboardEvent(vk, scan, 0), keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
 }
 
 async function tapVk(vk: number) {
@@ -250,15 +251,11 @@ async function typeText(text: string, options: TypeTextOptions) {
     : text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
   for (let i = 0; i < toSend.length; i++) {
     const last = i === toSend.length - 1;
-    if (options.pressT && i > 0) {
-      await tapVk(0x54);
-      await sleep(250);
-    }
     await typeLine(toSend[i]);
-    await sleep(40);
+    await sleep(50);
     if (chatLines || (options.pressEnter && last)) {
       await tapVk(VK_RETURN);
-      if (!last) await sleep(420);
+      if (!last) await sleep(550);
     }
   }
 }

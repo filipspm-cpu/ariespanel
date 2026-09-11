@@ -757,7 +757,7 @@ function StepBlock({
           </div>
           {step.type === "multiline-text" ? (
             <div className="mt-2 flex items-center justify-between gap-3">
-              <span className="text-[12px] text-zinc-500">T i Enter po każdej linii</span>
+              <span className="text-[12px] text-zinc-500">Enter po każdej linii</span>
               <Toggle
                 checked={Boolean(step.pressT || step.enterEachLine)}
                 onChange={(v) => onPatch(step.id, { pressT: v, enterEachLine: v })}
@@ -766,7 +766,7 @@ function StepBlock({
           ) : null}
           {step.type === "multiline-text" && (step.pressT || step.enterEachLine) ? (
             <div className="mt-2 text-[11px] leading-snug text-zinc-500">
-              Każda linia: T, tekst, Enter. Np. Filipek / liniek / zegar → trzy osobne wiadomości na czacie.
+              Każda linia to osobna komenda na czacie: wpisuje linię i zatwierdza Enterem. Nie wciska T, żeby nie wpisywało litery t.
             </div>
           ) : (
             <div className="mt-2 text-[11px] leading-snug text-zinc-600">

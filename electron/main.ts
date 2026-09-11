@@ -401,7 +401,19 @@ function registerShortcuts() {
 app.commandLine.appendSwitch("enable-transparent-visuals");
 app.setAppUserModelId("com.aries.app");
 
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (!mainWindow) createMainWindow();
+    mainWindow?.show();
+    mainWindow?.focus();
+  });
+}
+
 app.whenReady().then(() => {
+  if (!gotSingleInstanceLock) return;
   registerIpc();
   createMainWindow();
   createTray();
