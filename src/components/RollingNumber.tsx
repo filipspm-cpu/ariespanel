@@ -7,7 +7,7 @@ function easeOut(t: number) {
 export function RollingNumber({
   value,
   delay = 0,
-  duration = 900,
+  duration = 1600,
   ready = true,
   format = (n) => Math.round(n).toLocaleString("pl-PL"),
 }: {
@@ -31,7 +31,7 @@ export function RollingNumber({
     let finished = false;
     const startAt = performance.now() + delay;
     const span = Math.abs(value);
-    const runMs = span <= 1 ? 220 : Math.min(duration, 280 + span * 1.15);
+    const runMs = span <= 1 ? 480 : Math.min(duration, 850 + Math.min(span, 500) * 1.5);
 
     const tick = (now: number) => {
       if (now < startAt) {
