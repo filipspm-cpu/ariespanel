@@ -1,3 +1,5 @@
+import arbatskyIcon from "../assets/servers/arbatsky.svg?url";
+
 const majesticIcons = import.meta.glob("../assets/servers/*.svg", {
   eager: true,
   query: "?url",
@@ -22,5 +24,6 @@ function assetUrl(files: Record<string, string>, slug: string, ext: string) {
 
 export function serverAvatarUrl(endpoint: string) {
   const slug = slugFromEndpoint(endpoint);
+  if (slug === "arbatsky") return arbatskyIcon;
   return assetUrl(majesticEmoji, slug, "webp") || assetUrl(majesticIcons, slug, "svg");
 }
