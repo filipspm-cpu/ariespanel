@@ -10,7 +10,6 @@ import { runMacroById, triggersFromMacros } from "./runMacro";
 import { registerUpdater } from "./updater";
 import { fetchMajesticServerStatuses } from "./majesticStatus";
 import { trustPublisherCert } from "./trustPublisher";
-import { fetchForumThreadText } from "./forum";
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 let mainWindow: BrowserWindow | null = null;
@@ -283,7 +282,6 @@ function registerIpc() {
   ipcMain.handle("spotify:now", () => getSpotifyTrack());
   ipcMain.handle("majestic:servers", () => fetchMajesticServerStatuses());
   ipcMain.handle("discord:connect", () => connectDiscord());
-  ipcMain.handle("forum:text", (_e, url: string) => fetchForumThreadText(assertForumUrl(url)));
   ipcMain.handle("forum:open", (_e, url: string) => shell.openExternal(assertForumUrl(url)));
 
   ipcMain.handle("displays:list", () =>

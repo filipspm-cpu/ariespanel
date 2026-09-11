@@ -82,6 +82,3 @@ export const FORUM_RULES: ForumRule[] = [
   },
 ];
 
-export function forumRuleById(id: string | undefined) {
-  return FORUM_RULES.find((row) => row.id === id) ?? FORUM_RULES[0];
-}

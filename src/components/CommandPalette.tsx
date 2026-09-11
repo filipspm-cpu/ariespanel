@@ -3,22 +3,29 @@ import { navGroups } from "@/data/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import type { RouteId } from "@/types";
 
+function openNavItem(item: { id: RouteId | "forum"; href?: string }, setRoute: (route: RouteId) => void) {
+  if (item.href) {
+    void window.synvity?.forumOpen(item.href);
+    return;
+  }
+  if (item.id !== "forum") setRoute(item.id);
+}
+
 export function CommandPalette() {
   const open = useAppStore((s) => s.searchOpen);
   const setOpen = useAppStore((s) => s.setSearchOpen);
   const query = useAppStore((s) => s.searchQuery);
   const setQuery = useAppStore((s) => s.setSearchQuery);
   const setRoute = useAppStore((s) => s.setRoute);
-  const setForumRuleId = useAppStore((s) => s.setForumRuleId);
   const [index, setIndex] = useState(0);
 
   const items = useMemo(() => {
-    const flat: { id: RouteId; label: string; forumRuleId?: string }[] = [];
+    const flat: { id: RouteId | "forum"; label: string; href?: string }[] = [];
     for (const g of navGroups) {
       for (const item of g.items) {
         if (item.children) {
           for (const c of item.children) {
-            flat.push({ id: c.id, label: c.label, forumRuleId: c.forumRuleId });
+            flat.push({ id: c.id, label: c.label, href: c.href });
           }
         } else {
           flat.push({ id: item.id, label: item.label });
@@ -50,16 +57,14 @@ export function CommandPalette() {
         setIndex((i) => Math.max(0, i - 1));
       }
       if (e.key === "Enter" && items[index]) {
-        const pick = items[index];
-        if (pick.forumRuleId) setForumRuleId(pick.forumRuleId);
-        else setRoute(pick.id);
+        openNavItem(items[index], setRoute);
         setOpen(false);
         setQuery("");
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, items, index, setOpen, setRoute, setForumRuleId, setQuery]);
+  }, [open, items, index, setOpen, setRoute, setQuery]);
 
   if (!open) return null;
 
@@ -85,8 +90,7 @@ export function CommandPalette() {
               }`}
               onMouseEnter={() => setIndex(i)}
               onClick={() => {
-                if (item.forumRuleId) setForumRuleId(item.forumRuleId);
-                else setRoute(item.id);
+                openNavItem(item, setRoute);
                 setOpen(false);
                 setQuery("");
               }}

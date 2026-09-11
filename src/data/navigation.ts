@@ -26,7 +26,7 @@ export const navGroups: NavGroup[] = [
           id: "forum" as const,
           label: rule.title,
           icon: "scroll",
-          forumRuleId: rule.id,
+          href: rule.url,
         })),
       },
     ],
@@ -51,7 +51,6 @@ export const breadcrumbs: Record<RouteId, string[]> = {
   settings: ["Dashboard", "Ustawienia systemu"],
   about: ["Dashboard", "O aplikacji"],
   credits: ["Dashboard", "Autorzy"],
-  forum: ["Dashboard", "Forum", "Regulamin"],
 };
 
 export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
@@ -63,5 +62,4 @@ export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
   settings: { title: "Ustawienia systemu" },
   about: { title: "O aplikacji", subtitle: "ARIES — prywatny panel administracyjny" },
   credits: { title: "Autorzy" },
-  forum: { title: "Forum", subtitle: "Regulamin serwera Majestic" },
 };

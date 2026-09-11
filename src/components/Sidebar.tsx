@@ -88,8 +88,6 @@ export function Sidebar() {
   const setGameOpen = useAppStore((s) => s.setGameOpen);
   const forumOpen = useAppStore((s) => s.forumOpen);
   const setForumOpen = useAppStore((s) => s.setForumOpen);
-  const forumRuleId = useAppStore((s) => s.forumRuleId);
-  const setForumRuleId = useAppStore((s) => s.setForumRuleId);
   const setSearchOpen = useAppStore((s) => s.setSearchOpen);
   const settings = useAppStore((s) => s.settings);
   const nick = settings.discordGlobalName || settings.username || "Konto";
@@ -128,9 +126,7 @@ export function Sidebar() {
                       open={expanded}
                       onClick={() => {
                         if (item.id === "forum") {
-                          const next = !forumOpen;
-                          setForumOpen(next);
-                          if (next) setRoute("forum");
+                          setForumOpen(!forumOpen);
                           return;
                         }
                         setGameOpen(!gameOpen);
@@ -139,19 +135,18 @@ export function Sidebar() {
                     {expanded
                       ? item.children.map((child) => (
                           <NavButton
-                            key={`${child.id}-${child.forumRuleId ?? child.label}`}
+                            key={`${child.id}-${child.href ?? child.label}`}
                             label={child.label}
                             icon={child.icon}
                             badge={child.badge}
                             indented
-                            active={
-                              child.forumRuleId
-                                ? route === "forum" && forumRuleId === child.forumRuleId
-                                : route === child.id
-                            }
+                            active={child.href ? false : route === child.id}
                             onClick={() => {
-                              if (child.forumRuleId) setForumRuleId(child.forumRuleId);
-                              else setRoute(child.id);
+                              if (child.href) {
+                                void window.synvity?.forumOpen(child.href);
+                                return;
+                              }
+                              setRoute(child.id as RouteId);
                             }}
                           />
                         ))

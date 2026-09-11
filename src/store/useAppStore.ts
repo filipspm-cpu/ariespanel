@@ -16,7 +16,6 @@ export interface AppSnapshot {
   route: RouteId;
   gameOpen: boolean;
   forumOpen: boolean;
-  forumRuleId: string;
   searchOpen: boolean;
   searchQuery: string;
   onlineCount: number;
@@ -33,7 +32,6 @@ export interface AppSnapshot {
 const defaultSnapshot = (): Omit<AppSnapshot, "route" | "searchOpen" | "searchQuery" | "onlineCount" | "hydrated"> => ({
   gameOpen: true,
   forumOpen: false,
-  forumRuleId: "ogolne",
   macros: [],
   folders: [],
   counters: [],
@@ -90,10 +88,9 @@ function snapshotHud(overlay: OverlaySettings): OverlayHudLayout {
 const defaultHud = (): OverlayHudLayout => snapshotHud(defaultSnapshot().overlay);
 
 type State = AppSnapshot & {
-  setRoute: (route: RouteId, extra?: { forumRuleId?: string }) => void;
+  setRoute: (route: RouteId) => void;
   setGameOpen: (open: boolean) => void;
   setForumOpen: (open: boolean) => void;
-  setForumRuleId: (id: string) => void;
   setSearchOpen: (open: boolean) => void;
   setSearchQuery: (q: string) => void;
   hydrateFromDisk: (data: Partial<AppSnapshot>) => void;
@@ -123,18 +120,15 @@ export const useAppStore = create<State>((set, get) => ({
   onlineCount: 2,
   hydrated: false,
   ...defaultSnapshot(),
-  setRoute: (route, extra) => {
+  setRoute: (route) => {
     const gameRoutes: RouteId[] = ["cmd", "overlay", "macros", "counters"];
     set({
       route,
       gameOpen: gameRoutes.includes(route) ? true : get().gameOpen,
-      forumOpen: route === "forum" ? true : get().forumOpen,
-      forumRuleId: extra?.forumRuleId ?? get().forumRuleId,
     });
   },
   setGameOpen: (gameOpen) => set({ gameOpen }),
   setForumOpen: (forumOpen) => set({ forumOpen }),
-  setForumRuleId: (forumRuleId) => set({ forumRuleId, route: "forum", forumOpen: true }),
   setSearchOpen: (searchOpen) => set({ searchOpen }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   hydrateFromDisk: (data) => {
