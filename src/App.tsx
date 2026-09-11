@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { AppLayout } from "@/layouts/AppLayout";
 import { BrandMark } from "@/components/BrandMark";
 import { hydrate } from "@/services/storageClient";
+import { overlayCounterItems } from "@/services/overlayCounters";
 import { useAppStore } from "@/store/useAppStore";
 
 export function App() {
@@ -69,25 +70,13 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
-    const ticket = counters.find((c) => c.id === "ticket")?.value ?? 0;
-    const specs = counters.find((c) => c.id === "event-specs")?.value ?? 0;
-    void window.synvity?.spotifyNow().then((track) => {
-      void window.synvity?.overlayPush({ overlay, ticket, specs, track, now: Date.now() });
+    if (!hydrated || !overlay.enabled) return;
+    void window.synvity?.overlayPush({
+      overlay,
+      overlayCounters: overlayCounterItems(counters),
+      now: Date.now(),
     });
   }, [counters, overlay, hydrated]);
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      const ticket = useAppStore.getState().counters.find((c) => c.id === "ticket")?.value ?? 0;
-      const specs = useAppStore.getState().counters.find((c) => c.id === "event-specs")?.value ?? 0;
-      const ov = useAppStore.getState().overlay;
-      void window.synvity?.spotifyNow().then((track) => {
-        void window.synvity?.overlayPush({ overlay: ov, ticket, specs, track, now: Date.now() });
-      }).catch(() => undefined);
-    }, 2000);
-    return () => clearInterval(t);
-  }, []);
 
   useEffect(() => {
     if (!hydrated) return;

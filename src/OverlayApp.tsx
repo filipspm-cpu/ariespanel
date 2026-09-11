@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { OverlaySettings, SpotifyTrack } from "@/types";
+import type { OverlayCounterItem, OverlaySettings, SpotifyTrack } from "@/types";
 
 interface OverlayPayload {
   overlay: OverlaySettings;
-  ticket: number;
-  specs: number;
-  track: SpotifyTrack | null;
+  overlayCounters?: OverlayCounterItem[];
+  ticket?: number;
+  specs?: number;
+  track?: SpotifyTrack | null;
 }
 
 const fallbackOverlay: OverlaySettings = {
@@ -49,8 +50,7 @@ function screenScale() {
 export function OverlayApp() {
   const [payload, setPayload] = useState<OverlayPayload>({
     overlay: fallbackOverlay,
-    ticket: 0,
-    specs: 0,
+    overlayCounters: [],
     track: null,
   });
   const [now, setNow] = useState(() => new Date());
@@ -68,7 +68,13 @@ export function OverlayApp() {
     return () => clearInterval(t);
   }, []);
 
-  const { overlay, ticket, specs, track } = payload;
+  const { overlay, overlayCounters, ticket, specs, track } = payload;
+  const pills =
+    overlayCounters ??
+    [
+      { id: "ticket", name: "Reporty", value: ticket ?? 0, color: "purple" as const },
+      { id: "event-specs", name: "Event Specs", value: specs ?? 0, color: "green" as const },
+    ];
   const time = now.toLocaleTimeString("pl-PL", {
     hour: "2-digit",
     minute: "2-digit",
@@ -84,11 +90,19 @@ export function OverlayApp() {
       const data = raw as OverlayPayload;
       if (!data?.overlay) return;
       const next = migratePositions(data.overlay);
-      if (dragging.current) {
-        setPayload({ ...data, overlay: { ...next, positions: overlayRef.current.positions } });
-      } else {
-        setPayload({ ...data, overlay: next });
-      }
+      setPayload((prev) => {
+        const merged: OverlayPayload = {
+          ...prev,
+          ...data,
+          overlay: next,
+          track: data.track === undefined ? prev.track : data.track,
+          overlayCounters: data.overlayCounters ?? prev.overlayCounters,
+        };
+        if (dragging.current) {
+          merged.overlay = { ...next, positions: overlayRef.current.positions };
+        }
+        return merged;
+      });
     });
   }, []);
 
@@ -123,7 +137,7 @@ export function OverlayApp() {
 
   return (
     <div className="relative h-screen w-screen overflow-visible" style={{ background: "transparent" }}>
-      {overlay.showReports ? (
+      {overlay.showReports && pills.length ? (
         <Draggable
           enabled={overlay.editMode}
           x={overlay.positions.reports.x}
@@ -135,9 +149,10 @@ export function OverlayApp() {
           }}
           onCommit={(x, y) => commitPos("reports", x, y)}
         >
-          <div className="flex gap-1.5">
-            <Pill label="Reporty" value={ticket} />
-            <Pill label="Event Specs" value={specs} />
+          <div className="flex max-w-[720px] flex-wrap justify-center gap-1.5">
+            {pills.length
+              ? pills.map((item) => <Pill key={item.id} label={item.name} value={item.value} />)
+              : null}
           </div>
         </Draggable>
       ) : null}
@@ -171,7 +186,7 @@ export function OverlayApp() {
           }}
           onCommit={(x, y) => commitPos("spotify", x, y)}
         >
-          <SpotifyWidget track={track} />
+          <SpotifyWidget track={track ?? null} />
         </Draggable>
       ) : null}
     </div>

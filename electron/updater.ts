@@ -233,7 +233,7 @@ export function registerUpdater(opts: {
   setInterval(() => {
     if (loadState().settings.autoUpdate === false) return;
     void checkNow(false);
-  }, 2 * 60 * 1000);
+  }, 4 * 60 * 60 * 1000);
 }
 
 export function checkUpdatesOnOpen() {

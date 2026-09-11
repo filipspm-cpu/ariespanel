@@ -1,5 +1,6 @@
 import { Select } from "@/components/ui/Select";
 import { Toggle } from "@/components/ui/Toggle";
+import { overlayCounterItems } from "@/services/overlayCounters";
 import { useAppStore } from "@/store/useAppStore";
 import type { DisplayInfo } from "@/types";
 import { Info, Monitor, RotateCcw, Undo2 } from "lucide-react";
@@ -22,10 +23,11 @@ export function OverlayPage() {
   }, [overlay.enabled]);
 
   const pushState = async () => {
-    const ticket = counters.find((c) => c.id === "ticket")?.value ?? 0;
-    const specs = counters.find((c) => c.id === "event-specs")?.value ?? 0;
-    const track = (await window.synvity?.spotifyNow()) ?? null;
-    await window.synvity?.overlayPush({ overlay, ticket, specs, track, now: Date.now() });
+    await window.synvity?.overlayPush({
+      overlay,
+      overlayCounters: overlayCounterItems(counters),
+      now: Date.now(),
+    });
   };
 
   const openOverlay = async () => {
@@ -115,6 +117,29 @@ export function OverlayPage() {
               <Row title="Spotify" checked={overlay.showSpotify} onChange={(v) => patchOverlay({ showSpotify: v })} />
               <Row title="Zegar" checked={overlay.showClock} onChange={(v) => patchOverlay({ showClock: v })} />
             </div>
+
+            <div className="ink-card p-4">
+              <div className="text-[13px] font-medium text-white">Statystyki na HUD</div>
+              <p className="mt-1 text-[12px] text-zinc-500">Wybierz, które liczniki pokazać na nakładce.</p>
+              <div className="mt-3 divide-y divide-white/[0.06]">
+                {counters.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between py-2">
+                    <div className="min-w-0 pr-3">
+                      <div className="truncate text-[13px] text-zinc-200">{c.name}</div>
+                      <div className="text-[11px] text-zinc-600">{c.value}</div>
+                    </div>
+                    <Toggle
+                      checked={c.showInOverlay}
+                      onChange={(v) =>
+                        useAppStore.getState().setCounters(
+                          useAppStore.getState().counters.map((row) => (row.id === c.id ? { ...row, showInOverlay: v } : row)),
+                        )
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="flex flex-col gap-3">
@@ -145,11 +170,11 @@ export function OverlayPage() {
             <div className="ink-card p-4">
               <div className="text-[13px] font-medium text-white">Rozmiar elementów</div>
               <p className="mt-1 text-[12px] text-zinc-500">
-                Suwakiem zmniejszasz lub powiększasz Reporty, Spotify i zegar na nakładce.
+                Suwakiem zmniejszasz lub powiększasz statystyki, Spotify i zegar na nakładce.
               </p>
               <div className="mt-4 grid gap-5">
                 <ScaleSlider
-                  label="Reporty / Event Specs"
+                  label="Statystyki"
                   value={overlay.positions.reports.scale}
                   onRemember={() => useAppStore.getState().rememberOverlayLayout()}
                   onChange={(scale) =>

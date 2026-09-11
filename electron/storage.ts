@@ -54,7 +54,7 @@ export interface Counter {
   name: string;
   description: string;
   value: number;
-  color: "purple" | "green";
+  color: "purple" | "green" | "blue" | "orange" | "red";
   shortcut: string;
   showInOverlay: boolean;
   history: { timestamp: number; delta: number }[];

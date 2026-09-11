@@ -67,19 +67,10 @@ async function fetchJson(url: string): Promise<unknown> {
   return res.json();
 }
 
-export async function fetchMajesticServerStatuses(): Promise<LiveServerStatus[]> {
-  const majesticByIp = new Map<string, MajesticApiServer>();
-  try {
-    const body = (await fetchJson("https://api.majestic-files.com/meta/servers")) as {
-      result?: { servers?: MajesticApiServer[] };
-    };
-    for (const s of body.result?.servers ?? []) {
-      if (s.ip) majesticByIp.set(s.ip.toLowerCase(), s);
-    }
-  } catch {
-    /* keep empty map */
-  }
+let majesticCache: { at: number; data: LiveServerStatus[] } | null = null;
+const MAJESTIC_TTL_MS = 90_000;
 
+function mapServers(majesticByIp: Map<string, MajesticApiServer>): LiveServerStatus[] {
   return ENDPOINTS.map((endpoint) => {
     const live = majesticByIp.get(endpoint.toLowerCase());
     return {
@@ -91,4 +82,26 @@ export async function fetchMajesticServerStatuses(): Promise<LiveServerStatus[]>
       region: live?.region,
     };
   });
+}
+
+export async function fetchMajesticServerStatuses(): Promise<LiveServerStatus[]> {
+  if (majesticCache && Date.now() - majesticCache.at < MAJESTIC_TTL_MS) {
+    return majesticCache.data;
+  }
+
+  const majesticByIp = new Map<string, MajesticApiServer>();
+  try {
+    const body = (await fetchJson("https://api.majestic-files.com/meta/servers")) as {
+      result?: { servers?: MajesticApiServer[] };
+    };
+    for (const s of body.result?.servers ?? []) {
+      if (s.ip) majesticByIp.set(s.ip.toLowerCase(), s);
+    }
+  } catch {
+    if (majesticCache) return majesticCache.data;
+  }
+
+  const data = mapServers(majesticByIp);
+  majesticCache = { at: Date.now(), data };
+  return data;
 }

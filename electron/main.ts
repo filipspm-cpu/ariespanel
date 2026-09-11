@@ -174,11 +174,15 @@ export function createOverlayWindow(displayId?: number) {
 async function pushOverlayState() {
   if (!overlayWindow || overlayWindow.isDestroyed()) return;
   const state = loadState();
+  const overlayCounters = state.counters
+    .filter((c) => c.showInOverlay)
+    .map((c) => ({ id: c.id, name: c.name, value: c.value, color: c.color }));
   const ticket = state.counters.find((c) => c.id === "ticket")?.value ?? 0;
   const specs = state.counters.find((c) => c.id === "event-specs")?.value ?? 0;
-  const track = await getSpotifyTrack();
+  const track = state.overlay.showSpotify ? await getSpotifyTrack() : null;
   overlayWindow.webContents.send("overlay:state", {
     overlay: state.overlay,
+    overlayCounters,
     ticket,
     specs,
     track,
@@ -191,7 +195,7 @@ function startOverlayFeed() {
   void pushOverlayState();
   overlayFeed = setInterval(() => {
     void pushOverlayState();
-  }, 1000);
+  }, 2500);
 }
 
 function stopOverlayFeed() {

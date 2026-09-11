@@ -68,15 +68,24 @@ export interface MacroFolder {
   name: string;
 }
 
+export type CounterColor = "purple" | "green" | "blue" | "orange" | "red";
+
 export interface Counter {
   id: string;
   name: string;
   description: string;
   value: number;
-  color: "purple" | "green";
+  color: CounterColor;
   shortcut: string;
   showInOverlay: boolean;
   history: { timestamp: number; delta: number }[];
+}
+
+export interface OverlayCounterItem {
+  id: string;
+  name: string;
+  value: number;
+  color: CounterColor;
 }
 
 export interface OverlayHudLayout {

@@ -352,12 +352,12 @@ function mergeTracks(smtc: SpotifyTrack | null, titled: SpotifyTrack | null, pre
 
 export async function getSpotifyTrack(): Promise<SpotifyTrack | null> {
   if (inflight) return inflight;
-  if (cache.track && Date.now() - cache.at < 800) return cache.track;
+  if (cache.track && Date.now() - cache.at < 2500) return cache.track;
   inflight = (async () => {
     const titled = fromWindowTitle();
     const smtc = await fromSmtc();
     let track = mergeTracks(smtc, titled, cache.track);
-    if (track) track = await enrichTrack(track);
+    if (track && !track.artwork) track = await enrichTrack(track);
     cache = { at: Date.now(), track };
     return track;
   })().finally(() => {

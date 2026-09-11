@@ -47,7 +47,7 @@ export function MajesticServersPanel() {
 
   useEffect(() => {
     void load();
-    const t = setInterval(() => void load(), 60_000);
+    const t = setInterval(() => void load(), 90_000);
     return () => clearInterval(t);
   }, []);
 

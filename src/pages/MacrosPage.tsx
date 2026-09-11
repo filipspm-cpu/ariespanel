@@ -730,17 +730,7 @@ function StepBlock({
           className="h-9 w-full rounded-md border px-3 text-[13px]"
         />
       ) : step.type === "counter" ? (
-        <>
-          <select
-            value={step.counterId ?? "ticket"}
-            onChange={(e) => onPatch(step.id, { counterId: e.target.value })}
-            className="h-9 rounded-md border border-emerald-500/30 bg-[#07110d] px-3 text-[13px] text-emerald-100 outline-none focus:border-emerald-400"
-          >
-            <option value="ticket">Reporty</option>
-            <option value="event-specs">Licznik spec eventów</option>
-          </select>
-          <div className="mt-2 text-[11px] text-emerald-200/65">Zwiększy wybrany licznik o 1 po uruchomieniu makra.</div>
-        </>
+        <CounterStepSelect step={step} onPatch={onPatch} />
       ) : (
         <input
           value={step.text}
@@ -775,5 +765,31 @@ function StepBlock({
         </>
       ) : null}
     </div>
+  );
+}
+
+function CounterStepSelect({
+  step,
+  onPatch,
+}: {
+  step: MacroStep;
+  onPatch: (id: string, patch: Partial<MacroStep>) => void;
+}) {
+  const counters = useAppStore((s) => s.counters);
+  return (
+    <>
+      <select
+        value={step.counterId ?? counters[0]?.id ?? "ticket"}
+        onChange={(e) => onPatch(step.id, { counterId: e.target.value })}
+        className="h-9 rounded-md border border-emerald-500/30 bg-[#07110d] px-3 text-[13px] text-emerald-100 outline-none focus:border-emerald-400"
+      >
+        {counters.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
+      <div className="mt-2 text-[11px] text-emerald-200/65">Zwiększy wybrany licznik o 1 po uruchomieniu makra.</div>
+    </>
   );
 }

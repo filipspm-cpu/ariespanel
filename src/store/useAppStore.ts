@@ -93,6 +93,8 @@ type State = AppSnapshot & {
   setMacros: (macros: Macro[]) => void;
   setFolders: (folders: MacroFolder[]) => void;
   setCounters: (counters: Counter[]) => void;
+  addCounter: (input: { name: string; description?: string; shortcut?: string; color?: Counter["color"]; showInOverlay?: boolean }) => string;
+  removeCounter: (id: string) => void;
   bumpCounter: (id: string, delta: number) => void;
   removeCounterEntry: (id: string, timestamp: number, delta: number) => void;
   clearCounterToday: (id: string) => void;
@@ -129,9 +131,11 @@ export const useAppStore = create<State>((set, get) => ({
       ...defaults,
       ...data,
       macros: Array.isArray(data.macros) ? data.macros.map((m) => migrateMacro(m as Macro)) : defaults.macros,
-      counters: (Array.isArray(data.counters) ? data.counters : defaults.counters).map((c) =>
-        c.id === "ticket" ? { ...c, name: "Reporty" } : c,
-      ),
+      counters: (Array.isArray(data.counters) ? data.counters : defaults.counters).map((c) => ({
+        ...c,
+        showInOverlay: c.showInOverlay !== false,
+        name: c.id === "ticket" ? "Reporty" : c.name,
+      })),
       overlay: {
         ...defaults.overlay,
         ...overlayIn,
@@ -161,6 +165,32 @@ export const useAppStore = create<State>((set, get) => ({
     void persist({ folders });
   },
   setCounters: (counters) => {
+    set({ counters });
+    void persist({ counters });
+  },
+  addCounter: (input) => {
+    const name = input.name.trim() || "Nowa statystyka";
+    const id = `counter-${crypto.randomUUID()}`;
+    const next: Counter[] = [
+      ...get().counters,
+      {
+        id,
+        name,
+        description: input.description?.trim() ?? "",
+        value: 0,
+        color: input.color ?? "blue",
+        shortcut: input.shortcut?.trim() ?? "",
+        showInOverlay: input.showInOverlay ?? true,
+        history: [],
+      },
+    ];
+    set({ counters: next });
+    void persist({ counters: next });
+    return id;
+  },
+  removeCounter: (id) => {
+    if (id === "ticket" || id === "event-specs") return;
+    const counters = get().counters.filter((c) => c.id !== id);
     set({ counters });
     void persist({ counters });
   },

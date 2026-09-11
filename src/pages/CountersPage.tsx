@@ -1,4 +1,5 @@
 import { Select } from "@/components/ui/Select";
+import { Toggle } from "@/components/ui/Toggle";
 import {
   addDays,
   counterPeriodTotals,
@@ -8,9 +9,31 @@ import {
   startOfWeek,
 } from "@/services/counterStats";
 import { useAppStore } from "@/store/useAppStore";
-import type { Counter } from "@/types";
-import { Flame, Minus, Plus, RotateCcw, Trash2, TrendingDown, TrendingUp } from "lucide-react";
+import type { Counter, CounterColor } from "@/types";
+import { Flame, Layers, Minus, Plus, RotateCcw, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+
+const COLORS: { id: CounterColor; label: string; className: string }[] = [
+  { id: "purple", label: "Fiolet", className: "bg-violet-500/15 text-violet-400" },
+  { id: "green", label: "Zieleń", className: "bg-emerald-500/15 text-emerald-400" },
+  { id: "blue", label: "Błękit", className: "bg-sky-500/15 text-sky-400" },
+  { id: "orange", label: "Pomarańcz", className: "bg-orange-500/15 text-orange-400" },
+  { id: "red", label: "Czerwień", className: "bg-rose-500/15 text-rose-400" },
+];
+
+const BUILTIN = new Set(["ticket", "event-specs"]);
+
+function colorClass(color: CounterColor) {
+  return COLORS.find((c) => c.id === color)?.className ?? COLORS[0].className;
+}
+
+function barFill(color: CounterColor) {
+  if (color === "green") return "#22c55e";
+  if (color === "blue") return "#38bdf8";
+  if (color === "orange") return "#fb923c";
+  if (color === "red") return "#f43f5e";
+  return "#8b5cf6";
+}
 
 function periodBounds(period: string) {
   const now = new Date();
@@ -70,12 +93,20 @@ function MiniChart({ points, color }: { points: { label: string; value: number }
 export function CountersPage() {
   const counters = useAppStore((s) => s.counters);
   const setCounters = useAppStore((s) => s.setCounters);
+  const addCounter = useAppStore((s) => s.addCounter);
+  const removeCounter = useAppStore((s) => s.removeCounter);
   const bumpCounter = useAppStore((s) => s.bumpCounter);
   const removeCounterEntry = useAppStore((s) => s.removeCounterEntry);
   const clearCounterToday = useAppStore((s) => s.clearCounterToday);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(counters[0]?.id ?? "");
   const [period, setPeriod] = useState("day");
+  const [adding, setAdding] = useState(false);
+  const [draftName, setDraftName] = useState("");
+  const [draftDesc, setDraftDesc] = useState("");
+  const [draftShortcut, setDraftShortcut] = useState("");
+  const [draftColor, setDraftColor] = useState<CounterColor>("blue");
+  const [draftOverlay, setDraftOverlay] = useState(true);
 
   const selected = counters.find((c) => c.id === selectedId) ?? counters[0];
   const visible = counters.filter((c) => c.name.toLowerCase().includes(query.toLowerCase()));
@@ -122,14 +153,85 @@ export function CountersPage() {
 
   const periodLabel = period === "week" ? "Tydzień" : period === "month" ? "Miesiąc" : "Dziś";
   const TrendIcon = (totals?.change ?? 0) >= 0 ? TrendingUp : TrendingDown;
-  const barColor = selected.color === "green" ? "#22c55e" : "#8b5cf6";
+  const barColor = barFill(selected.color);
+
+  const createCounter = () => {
+    if (!draftName.trim()) return;
+    const id = addCounter({
+      name: draftName,
+      description: draftDesc,
+      shortcut: draftShortcut,
+      color: draftColor,
+      showInOverlay: draftOverlay,
+    });
+    setSelectedId(id);
+    setDraftName("");
+    setDraftDesc("");
+    setDraftShortcut("");
+    setDraftColor("blue");
+    setDraftOverlay(true);
+    setAdding(false);
+  };
 
   return (
     <div className="ink-page flex min-h-0">
       <div className="ink-side flex w-[240px] shrink-0 flex-col">
         <div className="flex items-center justify-between px-3 py-3">
           <div className="text-[14px] font-medium">Statystyki</div>
+          <button
+            type="button"
+            onClick={() => setAdding((v) => !v)}
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-black"
+            title="Dodaj statystykę"
+          >
+            <Plus size={14} />
+          </button>
         </div>
+        {adding ? (
+          <div className="mx-2 mb-2 space-y-2 rounded-md border border-white/[0.08] bg-black/40 p-2">
+            <input
+              value={draftName}
+              onChange={(e) => setDraftName(e.target.value)}
+              placeholder="Nazwa"
+              className="h-8 w-full rounded-md border px-2 text-[12px]"
+            />
+            <input
+              value={draftDesc}
+              onChange={(e) => setDraftDesc(e.target.value)}
+              placeholder="Opis (opcjonalnie)"
+              className="h-8 w-full rounded-md border px-2 text-[12px]"
+            />
+            <input
+              value={draftShortcut}
+              onChange={(e) => setDraftShortcut(e.target.value)}
+              placeholder="Skrót, np. F7"
+              className="h-8 w-full rounded-md border px-2 text-[12px]"
+            />
+            <select
+              value={draftColor}
+              onChange={(e) => setDraftColor(e.target.value as CounterColor)}
+              className="h-8 w-full rounded-md border bg-black px-2 text-[12px]"
+            >
+              {COLORS.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <label className="flex items-center justify-between gap-2 text-[11px] text-zinc-400">
+              Na nakładce
+              <Toggle checked={draftOverlay} onChange={setDraftOverlay} />
+            </label>
+            <button
+              type="button"
+              onClick={createCounter}
+              disabled={!draftName.trim()}
+              className="ink-btn h-8 w-full justify-center text-[12px] disabled:opacity-40"
+            >
+              Dodaj
+            </button>
+          </div>
+        ) : null}
         <div className="px-3 pb-2">
           <input
             value={query}
@@ -149,11 +251,7 @@ export function CountersPage() {
                   c.id === selected.id ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"
                 }`}
               >
-                <span
-                  className={`flex h-7 w-7 items-center justify-center rounded-md ${
-                    c.color === "green" ? "bg-emerald-500/15 text-emerald-400" : "bg-violet-500/15 text-violet-400"
-                  }`}
-                >
+                <span className={`flex h-7 w-7 items-center justify-center rounded-md ${colorClass(c.color)}`}>
                   {c.name.slice(0, 1)}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -171,8 +269,17 @@ export function CountersPage() {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-5">
         <div className="flex shrink-0 items-start justify-between">
           <div>
-            <div className="text-[20px] font-semibold text-white">{selected.name}</div>
-            <div className="text-[12px] text-zinc-500">{selected.description}</div>
+            <input
+              value={selected.name}
+              onChange={(e) => update(selected.id, { name: e.target.value })}
+              className="bg-transparent text-[20px] font-semibold text-white outline-none"
+            />
+            <input
+              value={selected.description}
+              onChange={(e) => update(selected.id, { description: e.target.value })}
+              className="mt-0.5 w-full bg-transparent text-[12px] text-zinc-500 outline-none"
+              placeholder="Opis"
+            />
           </div>
           <button
             onClick={() => bumpCounter(selected.id, 1)}
@@ -230,7 +337,7 @@ export function CountersPage() {
           <MiniChart points={chart} color={barColor} />
         </div>
 
-        <div className="mt-4 flex shrink-0 flex-wrap gap-2">
+        <div className="mt-4 flex shrink-0 flex-wrap items-center gap-2">
           <IconBtn onClick={() => bumpCounter(selected.id, 1)} icon={<Plus size={14} />} label="Zwiększ" />
           <IconBtn onClick={() => bumpCounter(selected.id, -1)} icon={<Minus size={14} />} label="Zmniejsz" />
           <IconBtn
@@ -243,6 +350,25 @@ export function CountersPage() {
             icon={<RotateCcw size={14} />}
             label="Reset"
           />
+          <label className="ink-btn ml-auto">
+            <Layers size={14} />
+            Nakładka
+            <Toggle
+              checked={selected.showInOverlay}
+              onChange={(v) => update(selected.id, { showInOverlay: v })}
+            />
+          </label>
+          {!BUILTIN.has(selected.id) ? (
+            <IconBtn
+              onClick={() => {
+                const nextId = counters.find((c) => c.id !== selected.id)?.id ?? "";
+                removeCounter(selected.id);
+                setSelectedId(nextId);
+              }}
+              icon={<Trash2 size={14} />}
+              label="Usuń"
+            />
+          ) : null}
         </div>
 
         <div className="ink-card mt-4 flex min-h-0 flex-1 flex-col p-4">
