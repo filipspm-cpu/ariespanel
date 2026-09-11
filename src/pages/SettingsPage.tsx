@@ -166,7 +166,7 @@ export function SettingsPage() {
           </div>
 
           <div className="mt-3 text-[12px] text-zinc-500">
-            Aktualizacje schodzą z GitHuba jako zwykłe wydanie (latest). Ranga developera / beta nie cofa już do starych 1.1.x.
+            Aktualizacja schodzi z GitHuba. Zwykłe konto dostaje Forum i poprawki bez Crafta. Beta testerzy i developerzy widzą też Craft z czerwonym znaczkiem BETA.
           </div>
 
           <div className={`settings-status ${update?.status === "error" ? "warn" : available ? "on" : ""}`}>

@@ -34,7 +34,7 @@ function send(patch: Partial<UpdateStatus>) {
     ...last,
     ...patch,
     currentVersion: app.getVersion(),
-    channel: isBetaTesterId(loadState().settings.discordId) ? "beta" : "stable",
+    channel: isBetaUser() ? "beta" : "stable",
   };
   getWindow()?.webContents.send("update:status", last);
 }
@@ -51,6 +51,10 @@ function setupUrl(version?: string) {
 
 function openSetup(version?: string) {
   void shell.openExternal(setupUrl(version || last.version));
+}
+
+function isBetaUser() {
+  return isBetaTesterId(loadState().settings.discordId);
 }
 
 function applyFeed() {

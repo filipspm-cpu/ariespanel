@@ -1,4 +1,5 @@
 import { FORUM_RULES } from "@/data/forumRules";
+import { hasBetaAccess, type AccountRank } from "@/data/testers";
 import type { NavGroup, RouteId } from "@/types";
 
 export const navGroups: NavGroup[] = [
@@ -29,7 +30,7 @@ export const navGroups: NavGroup[] = [
           href: rule.url,
         })),
       },
-      { id: "craft", label: "Craft", icon: "hammer", devOnly: true },
+      { id: "craft", label: "Craft", icon: "hammer", betaOnly: true },
     ],
   },
   {
@@ -43,15 +44,31 @@ export const navGroups: NavGroup[] = [
   },
 ];
 
-export function visibleNavGroups(isDev: boolean): NavGroup[] {
+function canSeeNavItem(item: { devOnly?: boolean; betaOnly?: boolean }, rank: AccountRank | null) {
+  if (item.devOnly && rank !== "developer") return false;
+  if (item.betaOnly && !hasBetaAccess(rank)) return false;
+  return true;
+}
+
+function withBetaBadge<T extends { betaOnly?: boolean; badge?: string }>(item: T): T {
+  if (!item.betaOnly) return item;
+  return { ...item, badge: item.badge || "BETA" };
+}
+
+export function canAccessRoute(route: RouteId, rank: AccountRank | null) {
+  if (route === "craft") return hasBetaAccess(rank);
+  return true;
+}
+
+export function visibleNavGroups(rank: AccountRank | null): NavGroup[] {
   return navGroups
     .map((group) => ({
       ...group,
       items: group.items
-        .filter((item) => !item.devOnly || isDev)
+        .filter((item) => canSeeNavItem(item, rank))
         .map((item) => ({
-          ...item,
-          children: item.children?.filter((child) => !child.devOnly || isDev),
+          ...withBetaBadge(item),
+          children: item.children?.filter((child) => canSeeNavItem(child, rank)).map(withBetaBadge),
         })),
     }))
     .filter((group) => group.items.length > 0);

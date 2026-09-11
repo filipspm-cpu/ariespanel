@@ -69,7 +69,12 @@ function NavButton({
       <Icon size={15} strokeWidth={1.7} className={active ? "text-white" : "text-zinc-500"} />
       <span className="flex-1 truncate">{label}</span>
       {badge ? (
-        <span className="rounded-[4px] bg-syn-green px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-black">
+        <span
+          className={clsx(
+            "rounded-[4px] px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide",
+            badge.toLowerCase() === "beta" ? "bg-red-500 text-white" : "bg-syn-green text-black",
+          )}
+        >
           {badge}
         </span>
       ) : null}
@@ -111,7 +116,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 pb-3">
-        {visibleNavGroups(rank === "developer").map((group) => (
+        {visibleNavGroups(rank).map((group) => (
           <div key={group.id} className="mb-3">
             <div className="px-2 pb-1 pt-2 text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-600">
               {group.label}
@@ -161,6 +166,7 @@ export function Sidebar() {
                   key={item.id}
                   label={item.label}
                   icon={item.icon}
+                  badge={item.badge}
                   active={route === item.id}
                   onClick={() => setRoute(item.id as RouteId)}
                 />

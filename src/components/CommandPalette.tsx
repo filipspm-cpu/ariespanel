@@ -24,14 +24,17 @@ export function CommandPalette() {
 
   const items = useMemo(() => {
     const flat: { id: RouteId | "forum"; label: string; href?: string }[] = [];
-    for (const g of visibleNavGroups(rank === "developer")) {
+    for (const g of visibleNavGroups(rank)) {
       for (const item of g.items) {
         if (item.children) {
           for (const c of item.children) {
             flat.push({ id: c.id, label: c.label, href: c.href });
           }
         } else {
-          flat.push({ id: item.id, label: item.label });
+          flat.push({
+            id: item.id,
+            label: item.badge ? `${item.label} (${item.badge})` : item.label,
+          });
         }
       }
     }

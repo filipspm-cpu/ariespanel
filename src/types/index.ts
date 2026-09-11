@@ -16,6 +16,7 @@ export interface NavItem {
   badge?: string;
   href?: string;
   devOnly?: boolean;
+  betaOnly?: boolean;
 }
 
 export interface NavGroup {

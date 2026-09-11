@@ -38,5 +38,9 @@ export function isDeveloper(discordId: string | undefined, testers: Tester[]) {
 
 export function isBetaTester(discordId: string | undefined, testers: Tester[]) {
   const rank = accountRank(discordId, testers);
+  return hasBetaAccess(rank);
+}
+
+export function hasBetaAccess(rank: AccountRank | null) {
   return rank === "beta" || rank === "developer";
 }
