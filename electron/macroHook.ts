@@ -11,6 +11,7 @@ type Trigger = { id: string; sequence: string };
 let timer: ReturnType<typeof setInterval> | null = null;
 let buffer = "";
 let lastInputAt = 0;
+let lastFireAt = 0;
 let triggers: Trigger[] = [];
 let onFire: ((id: string, eraseCount: number) => void) | null = null;
 const keyDown = new Map<number, boolean>();
@@ -58,8 +59,12 @@ function recordCharacter(character: string) {
   buffer = (buffer + character).slice(-48);
   const hit = triggers.find((trigger) => buffer.endsWith(`${trigger.sequence} `));
   if (!hit) return;
+  if (now - lastFireAt < 1500) {
+    buffer = "";
+    return;
+  }
+  lastFireAt = now;
   buffer = "";
-  // The space is already present in the game input, so remove it too.
   onFire?.(hit.id, hit.sequence.length + 1);
 }
 

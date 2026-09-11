@@ -191,16 +191,14 @@ export async function pressBackspace(count: number) {
 function keyTap(key: string) {
   const vkMap: Record<string, number> = { T: 0x54, Enter: VK_RETURN };
   const vk = vkMap[key] ?? key.toUpperCase().charCodeAt(0);
-  const scan = MapVirtualKeyW(vk, 0);
-  sendEvents([
-    keyboardEvent(vk, scan, 0),
-    keyboardEvent(vk, scan, KEYEVENTF_KEYUP),
-  ]);
+  void tapVk(vk);
 }
 
-function tapVk(vk: number) {
+async function tapVk(vk: number) {
   const scan = MapVirtualKeyW(vk, 0);
-  sendEvents([keyboardEvent(vk, scan, 0), keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
+  sendEvents([keyboardEvent(vk, scan, 0)]);
+  await sleep(25);
+  sendEvents([keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
 }
 
 async function typeUnicode(text: string) {
@@ -212,7 +210,7 @@ async function typeUnicode(text: string) {
       keyboardEvent(0, code, KEYEVENTF_UNICODE),
       keyboardEvent(0, code, KEYEVENTF_UNICODE | KEYEVENTF_KEYUP),
     ]);
-    await sleep(8);
+    await sleep(12);
   }
 }
 
@@ -220,24 +218,17 @@ async function typeLine(text: string) {
   const parts = text.split(/\{tab\}/gi);
   for (let i = 0; i < parts.length; i++) {
     if (parts[i]) await typeUnicode(parts[i]);
-    if (i < parts.length - 1) tapVk(VK_TAB);
+    if (i < parts.length - 1) await tapVk(VK_TAB);
   }
 }
 
 function splitChatLines(text: string): string[] {
-  const rows = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-  const out: string[] = [];
-  for (const row of rows) {
-    const line = row.trim();
-    if (!line) continue;
-    const slashCmds = line.split(/(?=\/)/).map((part) => part.trim()).filter(Boolean);
-    if (slashCmds.length > 1 && slashCmds.every((part) => part.startsWith("/"))) {
-      out.push(...slashCmds);
-    } else {
-      out.push(line);
-    }
-  }
-  return out;
+  return text
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 export type TypeTextOptions = {
@@ -253,24 +244,21 @@ function asTypeOptions(value: boolean | TypeTextOptions | undefined): TypeTextOp
 }
 
 async function typeText(text: string, options: TypeTextOptions) {
-  const slashParts = splitChatLines(text);
-  const slashBurst = slashParts.length > 1 && slashParts.every((part) => part.startsWith("/"));
-  const chatLines = Boolean(options.pressT || options.enterEachLine || slashBurst);
+  const chatLines = Boolean(options.pressT || options.enterEachLine);
   const toSend = chatLines
-    ? slashParts
+    ? splitChatLines(text)
     : text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
   for (let i = 0; i < toSend.length; i++) {
     const last = i === toSend.length - 1;
-    const needT = Boolean(options.pressT || slashBurst) && !(options.skipFirstT && i === 0);
-    if (needT) {
-      keyTap("T");
-      await sleep(140);
+    if (options.pressT && i > 0) {
+      await tapVk(0x54);
+      await sleep(250);
     }
     await typeLine(toSend[i]);
-    await sleep(25);
+    await sleep(40);
     if (chatLines || (options.pressEnter && last)) {
-      tapVk(VK_RETURN);
-      if (!last) await sleep(160);
+      await tapVk(VK_RETURN);
+      if (!last) await sleep(420);
     }
   }
 }

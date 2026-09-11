@@ -45,12 +45,12 @@ async function runStep(step: MacroStep, macros: Macro[], ctx: { inChat: boolean 
     return;
   }
   if (step.text) {
-    const chat = Boolean(step.pressT || step.enterEachLine);
+    const chat = step.type === "multiline-text" || Boolean(step.pressT || step.enterEachLine);
     await sendTextForeground(step.text, {
-      pressEnter: Boolean(step.pressEnter),
+      pressEnter: Boolean(step.pressEnter) || chat,
       enterEachLine: chat,
-      pressT: Boolean(step.pressT),
-      skipFirstT: ctx.inChat,
+      pressT: chat,
+      skipFirstT: true,
     });
     if (chat) ctx.inChat = false;
     await sleep(40);
@@ -80,20 +80,25 @@ export function triggersFromMacros(macros: Macro[]): { id: string; sequence: str
     });
 }
 
+let running = false;
+
 export async function runMacroById(macroId: string, eraseCount: number): Promise<void> {
+  if (running) return;
   const macros = loadState().macros;
   const macro = macros.find((m) => m.id === macroId);
   if (!macro || !macro.enabled) return;
+  running = true;
   setMacroInjecting(true);
   try {
     if (eraseCount > 0) {
-      await sleep(8);
+      await sleep(30);
       await pressBackspace(eraseCount);
-      await sleep(12);
+      await sleep(80);
     }
-    await runSteps(macro.steps, macros, { inChat: eraseCount > 0 });
+    await runSteps(macro.steps, macros, { inChat: true });
   } finally {
-    await sleep(20);
+    await sleep(80);
     setMacroInjecting(false);
+    running = false;
   }
 }
