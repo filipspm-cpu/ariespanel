@@ -5,15 +5,15 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function runStep(step: MacroStep, macros: Macro[]): Promise<void> {
+async function runStep(step: MacroStep, macros: Macro[], ctx: { inChat: boolean }): Promise<void> {
   if (step.type === "random") {
     const kids = step.children?.filter(Boolean) ?? [];
     if (!kids.length) return;
-    await runStep(kids[Math.floor(Math.random() * kids.length)], macros);
+    await runStep(kids[Math.floor(Math.random() * kids.length)], macros, ctx);
     return;
   }
   if (step.type === "if" || step.type === "if-else") {
-    await runSteps(step.children ?? [], macros);
+    await runSteps(step.children ?? [], macros, ctx);
     return;
   }
   if (step.type === "wait") {
@@ -45,18 +45,21 @@ async function runStep(step: MacroStep, macros: Macro[]): Promise<void> {
     return;
   }
   if (step.text) {
+    const chat = Boolean(step.pressT || step.enterEachLine);
     await sendTextForeground(step.text, {
       pressEnter: Boolean(step.pressEnter),
-      enterEachLine: Boolean(step.enterEachLine),
+      enterEachLine: chat,
       pressT: Boolean(step.pressT),
+      skipFirstT: ctx.inChat,
     });
-    await sleep(12);
+    if (chat) ctx.inChat = false;
+    await sleep(40);
   }
 }
 
-async function runSteps(steps: MacroStep[], macros: Macro[]) {
+async function runSteps(steps: MacroStep[], macros: Macro[], ctx: { inChat: boolean }) {
   for (const step of steps.filter(Boolean)) {
-    await runStep(step, macros);
+    await runStep(step, macros, ctx);
   }
 }
 
@@ -88,7 +91,7 @@ export async function runMacroById(macroId: string, eraseCount: number): Promise
       await pressBackspace(eraseCount);
       await sleep(12);
     }
-    await runSteps(macro.steps, macros);
+    await runSteps(macro.steps, macros, { inChat: eraseCount > 0 });
   } finally {
     await sleep(20);
     setMacroInjecting(false);

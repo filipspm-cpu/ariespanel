@@ -1,4 +1,3 @@
-import { clipboard } from "electron";
 import koffi from "koffi";
 
 const user32 = koffi.load("user32.dll");
@@ -72,8 +71,6 @@ const INPUT_KEYBOARD = 1;
 const SW_RESTORE = 9;
 const VK_RETURN = 0x0d;
 const VK_TAB = 0x09;
-const VK_CONTROL = 0x11;
-const VK_V = 0x56;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -206,47 +203,48 @@ function tapVk(vk: number) {
   sendEvents([keyboardEvent(vk, scan, 0), keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
 }
 
-function typeUnicode(text: string) {
-  const events: unknown[] = [];
+async function typeUnicode(text: string) {
   for (const ch of [...text]) {
     if (ch === "\n" || ch === "\r") continue;
     const code = ch.codePointAt(0) ?? 0;
     if (code > 0xffff) continue;
-    events.push(keyboardEvent(0, code, KEYEVENTF_UNICODE));
-    events.push(keyboardEvent(0, code, KEYEVENTF_UNICODE | KEYEVENTF_KEYUP));
+    sendEvents([
+      keyboardEvent(0, code, KEYEVENTF_UNICODE),
+      keyboardEvent(0, code, KEYEVENTF_UNICODE | KEYEVENTF_KEYUP),
+    ]);
+    await sleep(8);
   }
-  sendEvents(events);
-}
-
-async function pasteText(text: string) {
-  const previous = clipboard.readText();
-  clipboard.writeText(text);
-  sendEvents([
-    keyboardEvent(VK_CONTROL, MapVirtualKeyW(VK_CONTROL, 0), 0),
-    keyboardEvent(VK_V, MapVirtualKeyW(VK_V, 0), 0),
-    keyboardEvent(VK_V, MapVirtualKeyW(VK_V, 0), KEYEVENTF_KEYUP),
-    keyboardEvent(VK_CONTROL, MapVirtualKeyW(VK_CONTROL, 0), KEYEVENTF_KEYUP),
-  ]);
-  await sleep(8);
-  clipboard.writeText(previous);
 }
 
 async function typeLine(text: string) {
   const parts = text.split(/\{tab\}/gi);
   for (let i = 0; i < parts.length; i++) {
-    const chunk = parts[i];
-    if (chunk) {
-      if (chunk.length >= 8) await pasteText(chunk);
-      else typeUnicode(chunk);
-    }
+    if (parts[i]) await typeUnicode(parts[i]);
     if (i < parts.length - 1) tapVk(VK_TAB);
   }
+}
+
+function splitChatLines(text: string): string[] {
+  const rows = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  const out: string[] = [];
+  for (const row of rows) {
+    const line = row.trim();
+    if (!line) continue;
+    const slashCmds = line.split(/(?=\/)/).map((part) => part.trim()).filter(Boolean);
+    if (slashCmds.length > 1 && slashCmds.every((part) => part.startsWith("/"))) {
+      out.push(...slashCmds);
+    } else {
+      out.push(line);
+    }
+  }
+  return out;
 }
 
 export type TypeTextOptions = {
   pressEnter?: boolean;
   enterEachLine?: boolean;
   pressT?: boolean;
+  skipFirstT?: boolean;
 };
 
 function asTypeOptions(value: boolean | TypeTextOptions | undefined): TypeTextOptions {
@@ -255,19 +253,24 @@ function asTypeOptions(value: boolean | TypeTextOptions | undefined): TypeTextOp
 }
 
 async function typeText(text: string, options: TypeTextOptions) {
-  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-  const chatLines = Boolean(options.pressT || options.enterEachLine);
-  const toSend = chatLines ? lines.map((l) => l.trimEnd()).filter((l) => l.length > 0) : lines;
+  const slashParts = splitChatLines(text);
+  const slashBurst = slashParts.length > 1 && slashParts.every((part) => part.startsWith("/"));
+  const chatLines = Boolean(options.pressT || options.enterEachLine || slashBurst);
+  const toSend = chatLines
+    ? slashParts
+    : text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
   for (let i = 0; i < toSend.length; i++) {
     const last = i === toSend.length - 1;
-    if (options.pressT) {
+    const needT = Boolean(options.pressT || slashBurst) && !(options.skipFirstT && i === 0);
+    if (needT) {
       keyTap("T");
-      await sleep(90);
+      await sleep(140);
     }
     await typeLine(toSend[i]);
+    await sleep(25);
     if (chatLines || (options.pressEnter && last)) {
       tapVk(VK_RETURN);
-      if (!last) await sleep(80);
+      if (!last) await sleep(160);
     }
   }
 }

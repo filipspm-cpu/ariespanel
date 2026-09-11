@@ -364,12 +364,13 @@ function registerIpc() {
       _e,
       text: string,
       pressEnter: boolean,
-      extra?: { pressT?: boolean; enterEachLine?: boolean },
+      extra?: { pressT?: boolean; enterEachLine?: boolean; skipFirstT?: boolean },
     ) => {
       await sendTextForeground(text, {
         pressEnter,
         pressT: Boolean(extra?.pressT),
         enterEachLine: Boolean(extra?.enterEachLine),
+        skipFirstT: Boolean(extra?.skipFirstT),
       });
       return true;
     },
