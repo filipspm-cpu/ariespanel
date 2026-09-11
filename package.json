@@ -1,7 +1,7 @@
 {
   "name": "aries",
   "productName": "ARIES",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "ARIES — prywatny panel administracyjny",
   "author": "ARIES",
   "copyright": "Copyright © 2026 ARIES",
@@ -78,10 +78,11 @@
     ],
     "win": {
       "icon": "build/installerIcon.ico",
-      "signDlls": true,
       "signExts": [".dll", ".exe", ".node"],
-      "rfc3161TimeStampServer": "http://timestamp.digicert.com",
-      "signingHashAlgorithms": ["sha256"],
+      "signtoolOptions": {
+        "rfc3161TimeStampServer": "http://timestamp.digicert.com",
+        "signingHashAlgorithms": ["sha256"]
+      },
       "target": [
         {
           "target": "nsis",
