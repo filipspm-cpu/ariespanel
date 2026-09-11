@@ -137,7 +137,7 @@ export function MajesticServersPanel() {
                     <img
                       src={avatar}
                       alt=""
-                      className="h-8 w-8 shrink-0 rounded-md object-cover bg-[#111]"
+                      className="h-8 w-8 shrink-0 object-contain"
                       draggable={false}
                     />
                   ) : (
