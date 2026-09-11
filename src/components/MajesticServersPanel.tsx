@@ -1,4 +1,5 @@
 import { serverAvatarUrl } from "@/data/serverAvatars";
+import { RollingNumber } from "@/components/RollingNumber";
 import type { LiveServerStatus } from "@/types";
 import { ChevronDown, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -65,8 +66,12 @@ export function MajesticServersPanel() {
       <div className="home-servers-head">
         <div>
           <div className="home-servers-title">Serwery Majestic</div>
-          <div className="home-servers-sub">{onlineCount} online</div>
-          <div className="home-servers-meta">Gracze: {playersTotal.toLocaleString("pl-PL")}</div>
+          <div className="home-servers-sub">
+            <RollingNumber value={onlineCount} ready={!loading} delay={120} /> online
+          </div>
+          <div className="home-servers-meta">
+            Gracze: <RollingNumber value={playersTotal} ready={!loading} delay={180} />
+          </div>
         </div>
         <div>
           <div className="home-servers-tools">
@@ -109,7 +114,7 @@ export function MajesticServersPanel() {
           <div className="home-servers-empty">Ładowanie serwerów…</div>
         ) : (
           <ul>
-            {filtered.map((s) => {
+            {filtered.map((s, i) => {
               const avatar = serverAvatarUrl(s.endpoint);
               return (
                 <li key={s.endpoint} className="home-servers-row">
@@ -128,7 +133,11 @@ export function MajesticServersPanel() {
                   </div>
                   <div className={`home-servers-count ${playerTone(s.players)}`}>
                     <span className={`mr-2 inline-block h-1.5 w-1.5 rounded-full ${playerDot(s.players)}`} />
-                    {s.online ? s.players.toLocaleString("pl-PL") : "—"}
+                    {s.online ? (
+                      <RollingNumber value={s.players} ready={!loading} delay={220 + i * 22} />
+                    ) : (
+                      "—"
+                    )}
                   </div>
                 </li>
               );

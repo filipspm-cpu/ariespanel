@@ -1,4 +1,5 @@
 import { MajesticServersPanel } from "@/components/MajesticServersPanel";
+import { RollingNumber } from "@/components/RollingNumber";
 import { formatDuration } from "@/services/api";
 import { counterPeriodTotals, startOfDay, startOfWeek } from "@/services/counterStats";
 import { useAppStore } from "@/store/useAppStore";
@@ -11,19 +12,25 @@ function StatCard({
   unit,
   hint,
   trend,
+  delay = 0,
+  format,
 }: {
   title: string;
-  value: string | number;
+  value: number;
   unit?: string;
   hint?: string;
   trend?: number;
+  delay?: number;
+  format?: (n: number) => string;
 }) {
   const TrendIcon = (trend ?? 0) >= 0 ? TrendingUp : TrendingDown;
   return (
     <div className="home-stat">
       <div className="home-stat-label">{title}</div>
       <div className="home-stat-value">
-        <strong className="tabular-nums">{value}</strong>
+        <strong className="tabular-nums">
+          <RollingNumber value={value} delay={delay} format={format} />
+        </strong>
         {unit ? <span>{unit}</span> : null}
       </div>
       <div className="home-stat-foot">
@@ -32,7 +39,7 @@ function StatCard({
           <span className={`home-stat-trend ${trend >= 0 ? "up" : "down"}`}>
             <TrendIcon size={12} />
             {trend > 0 ? "+" : ""}
-            {trend}%
+            <RollingNumber value={trend} delay={delay + 80} format={(n) => `${Math.round(n)}`} />%
           </span>
         ) : null}
       </div>
@@ -51,6 +58,7 @@ export function HomePage() {
   }, []);
 
   const onlineMs = stats.appOnlineMs + (Date.now() - stats.sessionStartedAt) + tick * 0;
+  const onlineMin = Math.max(0, Math.floor(onlineMs / 60000));
   const ticket = counters.find((c) => c.id === "ticket");
   const specs = counters.find((c) => c.id === "event-specs");
   const todayStart = startOfDay().getTime();
@@ -68,6 +76,7 @@ export function HomePage() {
           unit="Reporty"
           hint={`Łącznie ${ticketToday.total} · wczoraj ${ticketToday.previous}`}
           trend={ticketToday.change}
+          delay={40}
         />
         <StatCard
           title="Reporty w tym tygodniu"
@@ -75,6 +84,7 @@ export function HomePage() {
           unit="Reporty"
           hint={`Śr. ${ticketWeek.avg.toFixed(1)} / dzień · ${ticketWeek.activeDays} dni aktywności`}
           trend={ticketWeek.change}
+          delay={110}
         />
         <StatCard
           title="Event Specs dziś"
@@ -82,11 +92,14 @@ export function HomePage() {
           unit="Event Specs"
           hint={`Łącznie ${specsToday.total} · seria ${specsToday.streak} dni`}
           trend={specsToday.change}
+          delay={180}
         />
         <StatCard
           title="Czas w aplikacji"
-          value={formatDuration(onlineMs)}
+          value={onlineMin}
           hint="Czas pracy tej instalacji, bez przerw między sesjami."
+          delay={250}
+          format={(n) => formatDuration(Math.max(0, n) * 60000)}
         />
       </div>
 
