@@ -23,14 +23,12 @@ function iconColor(endpoint: string) {
   return `hsl(${hues[h % hues.length]} 70% 55%)`;
 }
 
-type ProjectFilter = "all" | "majestic" | "gta5rp";
 type RegionFilter = "all" | "ru" | "eu";
 
 export function MajesticServersPanel() {
   const [servers, setServers] = useState<LiveServerStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [project, setProject] = useState<ProjectFilter>("all");
   const [region, setRegion] = useState<RegionFilter>("all");
   const [sortDesc, setSortDesc] = useState(true);
 
@@ -55,11 +53,10 @@ export function MajesticServersPanel() {
 
   const filtered = useMemo(() => {
     let list = [...servers];
-    if (project !== "all") list = list.filter((s) => s.project === project);
     if (region !== "all") list = list.filter((s) => (s.region || "ru") === region);
     list.sort((a, b) => (sortDesc ? b.players - a.players : a.players - b.players));
     return list;
-  }, [servers, project, region, sortDesc]);
+  }, [servers, region, sortDesc]);
 
   const onlineCount = filtered.filter((s) => s.online).length;
   const playersTotal = filtered.reduce((sum, s) => sum + (s.online ? s.players : 0), 0);
@@ -85,15 +82,6 @@ export function MajesticServersPanel() {
                 { value: "all", label: "Wszystkie regiony" },
                 { value: "ru", label: "RU" },
                 { value: "eu", label: "EU" },
-              ]}
-            />
-            <FilterSelect
-              value={project}
-              onChange={(v) => setProject(v as ProjectFilter)}
-              options={[
-                { value: "all", label: "Wszystkie projekty" },
-                { value: "majestic", label: "Majestic" },
-                { value: "gta5rp", label: "GTA5RP" },
               ]}
             />
             <button
@@ -138,7 +126,7 @@ export function MajesticServersPanel() {
         ) : (
           <ul>
             {filtered.map((s) => {
-              const avatar = serverAvatarUrl(s.endpoint, s.project);
+              const avatar = serverAvatarUrl(s.endpoint);
               return (
               <li
                 key={s.endpoint}

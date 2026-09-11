@@ -164,7 +164,7 @@ export interface ProcessInfo {
 export interface LiveServerStatus {
   endpoint: string;
   name: string;
-  project: "majestic" | "gta5rp";
+  project: "majestic";
   players: number;
   online: boolean;
   region?: string;
