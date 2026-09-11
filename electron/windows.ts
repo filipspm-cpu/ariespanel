@@ -254,16 +254,21 @@ function asTypeOptions(value: boolean | TypeTextOptions | undefined): TypeTextOp
 
 async function typeText(text: string, options: TypeTextOptions) {
   const chatLines = Boolean(options.pressT || options.enterEachLine);
+  const reopenChat = Boolean(options.pressT) || chatLines;
   const toSend = chatLines
     ? splitChatLines(text)
     : text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
   for (let i = 0; i < toSend.length; i++) {
     const last = i === toSend.length - 1;
+    if (reopenChat && i > 0) {
+      await tapVk(0x54);
+      await sleep(280);
+    }
     await typeLine(toSend[i]);
     await sleep(50);
     if (chatLines || (options.pressEnter && last)) {
       await tapVk(VK_RETURN);
-      if (!last) await sleep(550);
+      if (!last) await sleep(650);
     }
   }
 }
