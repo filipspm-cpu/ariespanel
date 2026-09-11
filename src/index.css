@@ -254,9 +254,9 @@ textarea {
 
 @keyframes credits-down {
   from {
-    transform: translateY(-72%);
+    transform: translateY(-100%);
   }
   to {
-    transform: translateY(6%);
+    transform: translateY(12px);
   }
 }
