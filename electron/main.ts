@@ -4,6 +4,7 @@ import path from "path";
 import { loadState, saveState, AppState } from "./storage";
 import { sendTextToWindow, sendTextForeground, pressKey, findGameProcess, listWindows } from "./windows";
 import { getSpotifyTrack } from "./spotify";
+import { connectDiscord } from "./discord";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
 import { runMacroById, triggersFromMacros } from "./runMacro";
 import { registerUpdater } from "./updater";
@@ -259,6 +260,7 @@ function registerIpc() {
   ipcMain.handle("process:list", () => listWindows());
   ipcMain.handle("spotify:now", () => getSpotifyTrack());
   ipcMain.handle("majestic:servers", () => fetchMajesticServerStatuses());
+  ipcMain.handle("discord:connect", () => connectDiscord());
 
   ipcMain.handle("displays:list", () =>
     screen.getAllDisplays().map((d, i) => ({

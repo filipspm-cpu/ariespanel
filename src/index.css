@@ -414,7 +414,8 @@ textarea {
   grid-column: 1 / -1;
 }
 
-.settings-avatar {
+.settings-avatar,
+.settings-avatar-img {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -427,6 +428,20 @@ textarea {
   font-size: 28px;
   font-weight: 600;
   color: #fff;
+}
+
+.settings-avatar-img {
+  object-fit: cover;
+}
+
+.settings-btn.discord {
+  background: #5865f2;
+  border-color: #5865f2;
+  color: #fff;
+}
+
+.settings-btn.discord:hover {
+  background: #4752c4;
 }
 
 .settings-input {

@@ -114,6 +114,11 @@ export interface AppSettings {
   githubRepo: string;
   githubToken: string;
   autoUpdate: boolean;
+  discordId?: string;
+  discordUsername?: string;
+  discordGlobalName?: string;
+  discordAvatar?: string | null;
+  discordAvatarUrl?: string;
 }
 
 export interface UpdateStatus {

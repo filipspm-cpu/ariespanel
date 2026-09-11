@@ -45,6 +45,14 @@ export interface SynvityApi {
   updateInstall: () => Promise<unknown>;
   onUpdateStatus: (cb: (status: UpdateStatus) => void) => () => void;
   majesticServers: () => Promise<import("./index").LiveServerStatus[]>;
+  discordConnect: () => Promise<{
+    id: string;
+    username: string;
+    globalName: string;
+    discriminator: string;
+    avatar: string | null;
+    avatarUrl: string;
+  }>;
 }
 
 export {};
