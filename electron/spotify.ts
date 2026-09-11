@@ -1,5 +1,6 @@
 import { execFile } from "child_process";
 import fs from "fs";
+import https from "https";
 import path from "path";
 import { app } from "electron";
 import { listWindows } from "./windows";
@@ -159,11 +160,11 @@ function scriptPath() {
 }
 
 function parseTitle(raw: string): SpotifyTrack | null {
-  const cleaned = raw.replace(/\s+-\s+Spotify(?:\s+Premium)?\s*$/i, "").trim();
+  const cleaned = raw.replace(/\s+[-–—]\s+Spotify(?:\s+Premium)?\s*$/i, "").trim();
   if (!cleaned || /^spotify(?:\s+premium)?$/i.test(cleaned)) return null;
-  const parts = cleaned.split(/\s+[-–—]\s+/);
+  const parts = cleaned.split(/\s+[-–—]\s+/).map((p) => p.trim()).filter(Boolean);
   if (parts.length >= 2) {
-    return { title: parts[0].trim(), artist: parts.slice(1).join(" - ").trim(), playing: true };
+    return { title: parts.slice(0, -1).join(" - "), artist: parts[parts.length - 1], playing: true };
   }
   return { title: cleaned, artist: "", playing: true };
 }
@@ -183,17 +184,97 @@ function fromWindowTitle(): SpotifyTrack | null {
   return null;
 }
 
+function artworkMime(buf: Buffer) {
+  if (buf[0] === 0x89 && buf[1] === 0x50) return "image/png";
+  if (buf[0] === 0xff && buf[1] === 0xd8) return "image/jpeg";
+  if (buf[0] === 0x47 && buf[1] === 0x49) return "image/gif";
+  if (buf[0] === 0x52 && buf[8] === 0x57) return "image/webp";
+  return "image/jpeg";
+}
+
 function loadArtwork(filePath?: string): string | undefined {
   const file = filePath || artFilePath();
   try {
     if (!file || !fs.existsSync(file)) return undefined;
     const buf = fs.readFileSync(file);
     if (buf.length < 32) return undefined;
-    const mime = buf[0] === 0x89 ? "image/png" : "image/jpeg";
-    return `data:${mime};base64,${buf.toString("base64")}`;
+    return `data:${artworkMime(buf)};base64,${buf.toString("base64")}`;
   } catch {
     return undefined;
   }
+}
+
+function getJson(url: string): Promise<unknown> {
+  return new Promise((resolve) => {
+    const req = https.get(url, { timeout: 2500 }, (res) => {
+      const chunks: Buffer[] = [];
+      res.on("data", (chunk) => chunks.push(chunk as Buffer));
+      res.on("end", () => {
+        try {
+          resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+        } catch {
+          resolve(null);
+        }
+      });
+    });
+    req.on("error", () => resolve(null));
+    req.on("timeout", () => {
+      req.destroy();
+      resolve(null);
+    });
+  });
+}
+
+function norm(value: string) {
+  return value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+
+const metaCache = new Map<string, { title: string; artist: string; artwork?: string }>();
+
+async function lookupCover(title: string, artist: string) {
+  const key = `${norm(title)}|${norm(artist)}`;
+  const hit = metaCache.get(key);
+  if (hit) return hit;
+  const query = [title, artist].filter(Boolean).join(" ").trim();
+  if (!query) return null;
+  const data = (await getJson(
+    `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&entity=song&limit=5`,
+  )) as { results?: { trackName?: string; artistName?: string; artworkUrl100?: string }[] } | null;
+  const rows = data?.results ?? [];
+  if (!rows.length) return null;
+  const scored = rows
+    .map((row) => {
+      const trackName = row.trackName || "";
+      const artistName = row.artistName || "";
+      const nTitle = norm(title);
+      const nArtist = norm(artist);
+      const nTrack = norm(trackName);
+      const nRowArtist = norm(artistName);
+      let score = 0;
+      if (nTrack === nTitle || nTrack === nArtist) score += 3;
+      if (nRowArtist === nArtist || nRowArtist === nTitle) score += 3;
+      if (nTitle && nTrack.includes(nTitle)) score += 1;
+      if (nArtist && nRowArtist.includes(nArtist)) score += 1;
+      return { trackName, artistName, artwork: row.artworkUrl100?.replace("100x100bb", "300x300bb"), score };
+    })
+    .sort((a, b) => b.score - a.score);
+  const best = scored[0];
+  if (!best?.trackName) return null;
+  const resolved = { title: best.trackName, artist: best.artistName, artwork: best.artwork };
+  metaCache.set(key, resolved);
+  metaCache.set(`${norm(best.trackName)}|${norm(best.artistName)}`, resolved);
+  return resolved;
+}
+
+async function enrichTrack(track: SpotifyTrack): Promise<SpotifyTrack> {
+  const info = (await lookupCover(track.title, track.artist)) ?? (await lookupCover(track.artist, track.title));
+  if (!info) return track;
+  return {
+    ...track,
+    title: info.title || track.title,
+    artist: info.artist || track.artist,
+    artwork: track.artwork || info.artwork,
+  };
 }
 
 function parseSmtcOutput(stdout: string): SpotifyTrack | null {
@@ -245,16 +326,22 @@ function fromSmtc(): Promise<SpotifyTrack | null> {
 
 function sameSong(a?: SpotifyTrack | null, b?: SpotifyTrack | null) {
   if (!a || !b) return false;
-  return a.title === b.title && a.artist === b.artist;
+  const left = new Set([norm(a.title), norm(a.artist)]);
+  return left.has(norm(b.title)) && left.has(norm(b.artist));
 }
 
 function mergeTracks(smtc: SpotifyTrack | null, titled: SpotifyTrack | null, prev: SpotifyTrack | null): SpotifyTrack | null {
   const base = smtc ?? titled ?? prev;
   if (!base) return null;
-  const artwork = smtc?.artwork || (sameSong(base, prev) ? prev?.artwork : undefined);
+  const title = smtc?.title || titled?.title || base.title;
+  const artist = smtc?.artist || titled?.artist || base.artist;
+  const artwork =
+    smtc?.artwork ||
+    (sameSong({ title, artist, playing: true }, prev) ? prev?.artwork : undefined) ||
+    prev?.artwork;
   return {
-    title: smtc?.title || titled?.title || base.title,
-    artist: smtc?.artist || titled?.artist || base.artist,
+    title,
+    artist,
     album: smtc?.album || prev?.album,
     artwork,
     playing: smtc?.playing ?? titled?.playing ?? Boolean(base.playing),
@@ -265,10 +352,12 @@ function mergeTracks(smtc: SpotifyTrack | null, titled: SpotifyTrack | null, pre
 
 export async function getSpotifyTrack(): Promise<SpotifyTrack | null> {
   if (inflight) return inflight;
+  if (cache.track && Date.now() - cache.at < 800) return cache.track;
   inflight = (async () => {
     const titled = fromWindowTitle();
     const smtc = await fromSmtc();
-    const track = mergeTracks(smtc, titled, cache.track);
+    let track = mergeTracks(smtc, titled, cache.track);
+    if (track) track = await enrichTrack(track);
     cache = { at: Date.now(), track };
     return track;
   })().finally(() => {
