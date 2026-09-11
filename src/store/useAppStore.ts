@@ -57,7 +57,6 @@ const defaultSnapshot = (): Omit<AppSnapshot, "route" | "gameOpen" | "searchOpen
     githubRepo: "ariespanel",
     githubToken: "",
     autoUpdate: true,
-    startupSound: true,
   },
   stats: {
     reportsToday: 0,

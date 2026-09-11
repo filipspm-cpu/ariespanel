@@ -119,7 +119,6 @@ export interface AppSettings {
   discordGlobalName?: string;
   discordAvatar?: string | null;
   discordAvatarUrl?: string;
-  startupSound?: boolean;
 }
 
 export interface UpdateStatus {

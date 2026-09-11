@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { AppLayout } from "@/layouts/AppLayout";
 import { BrandMark } from "@/components/BrandMark";
-import introSound from "@/assets/sounds/intro.mp3";
 import { hydrate } from "@/services/storageClient";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -102,18 +101,6 @@ export function App() {
       });
     }, 30000);
     return () => clearInterval(t);
-  }, [hydrated]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    if (useAppStore.getState().settings.startupSound === false) return;
-    const audio = new Audio(introSound);
-    audio.volume = 0.85;
-    void audio.play().catch(() => undefined);
-    return () => {
-      audio.pause();
-      audio.removeAttribute("src");
-    };
   }, [hydrated]);
 
   if (!hydrated) {

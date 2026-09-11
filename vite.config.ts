@@ -24,7 +24,7 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     watch: {
-      ignored: ["**/release/**", "**/release-*/**", "**/dist-electron/**", "**/src/assets/credits/**", "**/src/assets/servers/**", "**/src/assets/sounds/**"],
+      ignored: ["**/release/**", "**/release-*/**", "**/dist-electron/**", "**/src/assets/credits/**", "**/src/assets/servers/**"],
     },
   },
 });
