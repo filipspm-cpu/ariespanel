@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/Card";
+import { serverAvatarUrl } from "@/data/serverAvatars";
 import type { LiveServerStatus } from "@/types";
 import { ChevronDown, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -136,18 +137,29 @@ export function MajesticServersPanel() {
           <div className="px-4 py-6 text-[13px] text-zinc-500">Ładowanie serwerów…</div>
         ) : (
           <ul>
-            {filtered.map((s) => (
+            {filtered.map((s) => {
+              const avatar = serverAvatarUrl(s.endpoint, s.project);
+              return (
               <li
                 key={s.endpoint}
                 className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-white/[0.04] px-4 py-2.5 hover:bg-white/[0.02]"
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <span
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[13px] font-bold text-black/80"
-                    style={{ background: iconColor(s.endpoint) }}
-                  >
-                    {s.name.slice(0, 1)}
-                  </span>
+                  {avatar ? (
+                    <img
+                      src={avatar}
+                      alt=""
+                      className="h-8 w-8 shrink-0 rounded-md object-cover bg-[#111]"
+                      draggable={false}
+                    />
+                  ) : (
+                    <span
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[13px] font-bold text-black/80"
+                      style={{ background: iconColor(s.endpoint) }}
+                    >
+                      {s.name.slice(0, 1)}
+                    </span>
+                  )}
                   <div className="min-w-0">
                     <div className="truncate text-[13px] font-medium text-white">{s.name}</div>
                     <div className="mt-0.5 truncate rounded bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] text-zinc-500">
@@ -160,7 +172,8 @@ export function MajesticServersPanel() {
                   {s.online ? s.players.toLocaleString("pl-PL") : "—"}
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </div>
