@@ -67,6 +67,7 @@ const api = {
   updateStatus: () => ipcRenderer.invoke("update:status"),
   updateCheck: () => ipcRenderer.invoke("update:check"),
   updateInstall: () => ipcRenderer.invoke("update:install"),
+  updateOpenSetup: (version?: string) => ipcRenderer.invoke("update:openSetup", version),
   updateNotices: () => ipcRenderer.invoke("update:notices") as Promise<
     { id: string; version: string; at: number; kind: "available" | "installed"; read: boolean }[]
   >,

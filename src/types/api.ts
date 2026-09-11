@@ -43,6 +43,7 @@ export interface SynvityApi {
   updateStatus: () => Promise<UpdateStatus>;
   updateCheck: () => Promise<UpdateStatus>;
   updateInstall: () => Promise<unknown>;
+  updateOpenSetup: (version?: string) => Promise<unknown>;
   onUpdateStatus: (cb: (status: UpdateStatus) => void) => () => void;
   updateNotices: () => Promise<UpdateNotice[]>;
   updateNoticesRead: () => Promise<UpdateNotice[]>;

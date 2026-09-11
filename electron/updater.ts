@@ -1,10 +1,9 @@
-import { app, ipcMain, BrowserWindow, Tray, Notification } from "electron";
+import { app, ipcMain, BrowserWindow, Tray, Notification, nativeImage, shell } from "electron";
 import { autoUpdater, type UpdateInfo, type ProgressInfo } from "electron-updater";
 import { loadState } from "./storage";
 import { isBetaTesterId } from "./testers";
 import { closeUpdateProgressWindow, openUpdateProgressWindow, setUpdateProgress } from "./updateProgress";
 import { listUpdateNotices, markUpdateNoticesRead, pushUpdateNotice } from "./updateNotices";
-import { nativeImage } from "electron";
 
 export const GITHUB_OWNER = "filipspm-cpu";
 export const GITHUB_REPO = "ariespanel";
@@ -44,10 +43,27 @@ function isRetiredLine(version: string | undefined) {
   return /^1\.1\.\d+/.test(String(version || "").replace(/^v/i, ""));
 }
 
+function setupUrl(version?: string) {
+  const ver = String(version || "").replace(/^v/i, "");
+  if (ver) return `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/v${ver}/ARIES-Setup-${ver}.exe`;
+  return `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
+}
+
+function openSetup(version?: string) {
+  void shell.openExternal(setupUrl(version || last.version));
+}
+
 function applyFeed() {
   autoUpdater.allowPrerelease = false;
   autoUpdater.allowDowngrade = true;
+  autoUpdater.disableDifferentialDownload = true;
+  autoUpdater.disableWebInstaller = true;
   autoUpdater.channel = "latest";
+  autoUpdater.requestHeaders = { "User-Agent": "ARIES-Updater" };
+  const nsis = autoUpdater as typeof autoUpdater & {
+    verifyUpdateCodeSignature?: (publisherNames: string[], path: string) => Promise<string | null>;
+  };
+  nsis.verifyUpdateCodeSignature = async () => null;
   autoUpdater.setFeedURL({
     provider: "github",
     owner: GITHUB_OWNER,
@@ -189,6 +205,7 @@ async function applyUpdate() {
     closeUpdateProgressWindow();
     showPanel();
     send({ status: "error", message: friendlyUpdateError(err) });
+    openSetup(last.version);
   }
   return last;
 }
@@ -223,7 +240,10 @@ export function registerUpdater(opts: {
   last = { status: "idle", currentVersion: app.getVersion() };
   listUpdateNotices(app.getVersion());
   try {
-    (autoUpdater as unknown as { verifyUpdateCodeSignature?: boolean }).verifyUpdateCodeSignature = false;
+    const nsis = autoUpdater as typeof autoUpdater & {
+      verifyUpdateCodeSignature?: (publisherNames: string[], path: string) => Promise<string | null>;
+    };
+    nsis.verifyUpdateCodeSignature = async () => null;
   } catch {
     /* unsigned */
   }
@@ -264,16 +284,22 @@ export function registerUpdater(opts: {
     finishInstall();
   });
   autoUpdater.on("error", (err) => {
+    const wasApplying = applying;
     applying = false;
     closeUpdateProgressWindow();
     showPanel();
     send({ status: "error", message: friendlyUpdateError(err) });
+    if (wasApplying) openSetup(last.version);
   });
 
   ipcMain.handle("app:version", () => app.getVersion());
   ipcMain.handle("update:status", () => ({ ...last, currentVersion: app.getVersion() }));
   ipcMain.handle("update:check", () => checkNow(true));
   ipcMain.handle("update:install", () => applyUpdate());
+  ipcMain.handle("update:openSetup", (_e, version?: string) => {
+    openSetup(typeof version === "string" ? version : last.version);
+    return true;
+  });
   ipcMain.handle("update:notices", () => listUpdateNotices(app.getVersion()));
   ipcMain.handle("update:noticesRead", () => markUpdateNoticesRead(app.getVersion()));
 
