@@ -1,6 +1,7 @@
 import filipek from "@/assets/credits/filipek.webp";
 import rysiasty from "@/assets/credits/rysiasty.webp";
-import wisniowka from "@/assets/credits/wisniowka.webp";
+import szczurek from "@/assets/credits/wisniowka.webp";
+import dorek from "@/assets/credits/dorek.webp";
 
 const PEOPLE = [
   {
@@ -11,15 +12,21 @@ const PEOPLE = [
   },
   {
     role: "Developer",
-    name: "rysiasty",
+    name: "Rysiasty",
     featured: false,
     avatar: rysiasty,
   },
   {
     role: "Beta tester",
-    name: "wiśniófka",
+    name: "Szczurek",
     featured: false,
-    avatar: wisniowka,
+    avatar: szczurek,
+  },
+  {
+    role: "Beta tester / Logo",
+    name: "Dorek Helper",
+    featured: false,
+    avatar: dorek,
   },
 ] as const;
 
@@ -43,7 +50,6 @@ function CreditRow({
 }
 
 export function CreditsPage() {
-  const loop = [...PEOPLE, ...PEOPLE, ...PEOPLE, ...PEOPLE];
   return (
     <div className="credits-page">
       <div className="credits-header">
@@ -54,8 +60,8 @@ export function CreditsPage() {
       <div className="credits-stage">
         <div className="credits-vignette" />
         <div className="credits-roll">
-          {loop.map((person, i) => (
-            <CreditRow key={`${person.name}-${i}`} person={person} />
+          {PEOPLE.map((person) => (
+            <CreditRow key={person.name} person={person} />
           ))}
         </div>
       </div>

@@ -187,10 +187,9 @@ textarea {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 28px;
-  padding: 8px 0 40px;
-  animation: credits-down 26s linear infinite;
-  will-change: transform;
+  gap: 20px;
+  padding: 12px 0 48px;
+  animation: credits-down 38s ease-out forwards;
 }
 
 .credits-row {
@@ -255,9 +254,9 @@ textarea {
 
 @keyframes credits-down {
   from {
-    transform: translateY(-55%);
+    transform: translateY(-72%);
   }
   to {
-    transform: translateY(42%);
+    transform: translateY(6%);
   }
 }
