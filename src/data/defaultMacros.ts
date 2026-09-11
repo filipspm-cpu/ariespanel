@@ -5,6 +5,7 @@ function uid(prefix: string) {
 }
 
 function parseTrigger(trigger: string): MacroTrigger {
+  if (trigger.startsWith("%")) return { prefix: "%", command: trigger.slice(1) };
   if (trigger.startsWith(".")) return { prefix: ".", command: trigger.slice(1) };
   return { prefix: "", command: trigger };
 }

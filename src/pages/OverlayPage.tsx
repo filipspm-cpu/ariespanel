@@ -152,6 +152,7 @@ export function OverlayPage() {
                 <ScaleSlider
                   label="Reporty / Event Specs"
                   value={overlay.positions.reports.scale}
+                  onRemember={() => useAppStore.getState().rememberOverlayLayout()}
                   onChange={(scale) =>
                     patchOverlay({
                       positions: {
@@ -164,6 +165,7 @@ export function OverlayPage() {
                 <ScaleSlider
                   label="Spotify"
                   value={overlay.positions.spotify.scale}
+                  onRemember={() => useAppStore.getState().rememberOverlayLayout()}
                   onChange={(scale) =>
                     patchOverlay({
                       positions: {
@@ -176,6 +178,7 @@ export function OverlayPage() {
                 <ScaleSlider
                   label="Zegar"
                   value={overlay.positions.clock.scale}
+                  onRemember={() => useAppStore.getState().rememberOverlayLayout()}
                   onChange={(scale) =>
                     patchOverlay({
                       positions: {
@@ -198,10 +201,12 @@ function ScaleSlider({
   label,
   value,
   onChange,
+  onRemember,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
+  onRemember: () => void;
 }) {
   const pct = Math.round((value || 1) * 100);
   return (
@@ -216,6 +221,7 @@ function ScaleSlider({
         max={250}
         step={5}
         value={pct}
+        onPointerDown={onRemember}
         onChange={(e) => onChange(Number(e.target.value) / 100)}
         className="hud-slider"
       />

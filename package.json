@@ -1,7 +1,7 @@
 {
   "name": "aries",
   "productName": "ARIES",
-  "version": "1.1.12",
+  "version": "1.1.13",
   "description": "ARIES — prywatny panel administracyjny",
   "author": "ARIES",
   "private": true,
@@ -56,8 +56,18 @@
     "asarUnpack": [
       "node_modules/koffi/**"
     ],
+    "extraResources": [
+      {
+        "from": "build/installerIcon.ico",
+        "to": "installerIcon.ico"
+      },
+      {
+        "from": "src/assets/aries-logo.png",
+        "to": "aries-logo.png"
+      }
+    ],
     "win": {
-      "icon": "src/assets/aries-logo.png",
+      "icon": "build/installerIcon.ico",
       "target": [
         {
           "target": "nsis",

@@ -15,11 +15,30 @@ let triggers: Trigger[] = [];
 let onFire: ((id: string, eraseCount: number) => void) | null = null;
 const keyDown = new Map<number, boolean>();
 
+const VK_SHIFT = 0x10;
+const VK_LSHIFT = 0xa0;
+const VK_RSHIFT = 0xa1;
+const VK_5 = 0x35;
+
 const watchedKeys: Array<[number, string]> = [
   [0x08, "\b"], [0x20, " "], [0xbe, "."], [0x6e, "."], [0xbd, "-"], [0xbc, ","],
+  [0xbf, "/"],
   ...Array.from({ length: 10 }, (_, i) => [0x30 + i, String(i)] as [number, string]),
   ...Array.from({ length: 26 }, (_, i) => [0x41 + i, String.fromCharCode(0x61 + i)] as [number, string]),
 ];
+
+function shiftDown() {
+  return (
+    (GetAsyncKeyState(VK_SHIFT) & 0x8000) !== 0 ||
+    (GetAsyncKeyState(VK_LSHIFT) & 0x8000) !== 0 ||
+    (GetAsyncKeyState(VK_RSHIFT) & 0x8000) !== 0
+  );
+}
+
+function mappedCharacter(virtualKey: number, fallback: string) {
+  if (virtualKey === VK_5 && shiftDown()) return "%";
+  return fallback;
+}
 
 export function updateMacroTriggers(next: Trigger[]) {
   triggers = next
@@ -50,7 +69,7 @@ function pollKeyboard() {
     const wasDown = keyDown.get(virtualKey) ?? false;
     keyDown.set(virtualKey, down);
     if (isMacroInjecting() || !down || wasDown) continue;
-    recordCharacter(character);
+    recordCharacter(mappedCharacter(virtualKey, character));
   }
 }
 

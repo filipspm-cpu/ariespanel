@@ -13,8 +13,6 @@ import {
   GripVertical,
   Hash,
   Keyboard,
-  LayoutGrid,
-  List,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -358,7 +356,6 @@ function MacroEditor({
 }) {
   const [addOpen, setAddOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [view, setView] = useState<"scratch" | "list">("scratch");
   const [draggedStepId, setDraggedStepId] = useState<string | null>(null);
   const addRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -508,22 +505,6 @@ function MacroEditor({
               </div>
             ) : null}
           </div>
-          <button
-            onClick={() => setView("scratch")}
-            className={`flex h-8 items-center gap-1 rounded-md border px-2 text-[12px] ${
-              view === "scratch" ? "border-white/20 bg-[#1c1c1f] text-white" : "border-syn-border text-zinc-400"
-            }`}
-          >
-            <LayoutGrid size={13} /> Scratch
-          </button>
-          <button
-            onClick={() => setView("list")}
-            className={`flex h-8 items-center gap-1 rounded-md border px-2 text-[12px] ${
-              view === "list" ? "border-white/20 bg-[#1c1c1f] text-white" : "border-syn-border text-zinc-400"
-            }`}
-          >
-            <List size={13} /> Lista
-          </button>
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setMenuOpen((v) => !v)}
@@ -606,7 +587,7 @@ function MacroEditor({
           <StepBlock
             key={step.id}
             step={step}
-            compact={view === "list"}
+            compact={false}
             onPatch={patchStep}
             onRemove={removeStep}
             onAddChild={addChild}

@@ -41,12 +41,12 @@ async function runStep(step: MacroStep, macros: Macro[]): Promise<void> {
   }
   if (step.type === "key-press") {
     pressKeyForeground(step.key || step.text || "Enter");
-    await sleep(40);
+    await sleep(12);
     return;
   }
   if (step.text) {
-    sendTextForeground(step.text, Boolean(step.pressEnter));
-    await sleep(40);
+    await sendTextForeground(step.text, Boolean(step.pressEnter) || step.type === "multiline-text");
+    await sleep(12);
   }
 }
 
@@ -80,13 +80,13 @@ export async function runMacroById(macroId: string, eraseCount: number): Promise
   setMacroInjecting(true);
   try {
     if (eraseCount > 0) {
-      await sleep(25);
-      pressBackspace(eraseCount);
-      await sleep(35);
+      await sleep(8);
+      await pressBackspace(eraseCount);
+      await sleep(12);
     }
     await runSteps(macro.steps, macros);
   } finally {
-    await sleep(80);
+    await sleep(20);
     setMacroInjecting(false);
   }
 }

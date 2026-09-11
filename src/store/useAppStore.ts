@@ -97,6 +97,7 @@ type State = AppSnapshot & {
   patchOverlay: (overlay: Partial<OverlaySettings>) => void;
   resetOverlayLayout: () => void;
   restoreOverlayPrevious: () => void;
+  rememberOverlayLayout: () => void;
   patchCmd: (cmd: Partial<CmdSettings>) => void;
   patchSettings: (settings: Partial<AppSettings>) => void;
   patchStats: (stats: Partial<AppStats>) => void;
@@ -207,6 +208,15 @@ export const useAppStore = create<State>((set, get) => ({
     const next: OverlaySettings = {
       ...current,
       ...current.previousLayout,
+      previousLayout: snapshotHud(current),
+    };
+    set({ overlay: next });
+    void persist({ overlay: next });
+  },
+  rememberOverlayLayout: () => {
+    const current = get().overlay;
+    const next: OverlaySettings = {
+      ...current,
       previousLayout: snapshotHud(current),
     };
     set({ overlay: next });

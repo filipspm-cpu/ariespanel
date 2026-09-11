@@ -1,3 +1,4 @@
+import { clipboard } from "electron";
 import koffi from "koffi";
 
 const user32 = koffi.load("user32.dll");
@@ -70,6 +71,13 @@ const KEYEVENTF_UNICODE = 0x0004;
 const INPUT_KEYBOARD = 1;
 const SW_RESTORE = 9;
 const VK_RETURN = 0x0d;
+const VK_TAB = 0x09;
+const VK_CONTROL = 0x11;
+const VK_V = 0x56;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export interface ProcessInfo {
   hwnd: unknown;
@@ -174,15 +182,13 @@ export function isMacroInjecting() {
   return injecting;
 }
 
-export function pressBackspace(count: number) {
+export async function pressBackspace(count: number) {
   const vk = 0x08;
   const scan = MapVirtualKeyW(vk, 0);
-  const events: unknown[] = [];
   for (let i = 0; i < count; i++) {
-    events.push(keyboardEvent(vk, scan, 0));
-    events.push(keyboardEvent(vk, scan, KEYEVENTF_KEYUP));
+    sendEvents([keyboardEvent(vk, scan, 0), keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
+    await sleep(4);
   }
-  sendEvents(events);
 }
 
 function keyTap(key: string) {
@@ -195,20 +201,59 @@ function keyTap(key: string) {
   ]);
 }
 
-function typeText(text: string, pressEnter: boolean) {
+function tapVk(vk: number) {
+  const scan = MapVirtualKeyW(vk, 0);
+  sendEvents([keyboardEvent(vk, scan, 0), keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
+}
+
+function typeUnicode(text: string) {
   const events: unknown[] = [];
   for (const ch of [...text]) {
+    if (ch === "\n" || ch === "\r") continue;
     const code = ch.codePointAt(0) ?? 0;
     if (code > 0xffff) continue;
     events.push(keyboardEvent(0, code, KEYEVENTF_UNICODE));
     events.push(keyboardEvent(0, code, KEYEVENTF_UNICODE | KEYEVENTF_KEYUP));
   }
-  if (pressEnter) {
-    const scan = MapVirtualKeyW(VK_RETURN, 0);
-    events.push(keyboardEvent(VK_RETURN, scan, 0));
-    events.push(keyboardEvent(VK_RETURN, scan, KEYEVENTF_KEYUP));
-  }
   sendEvents(events);
+}
+
+async function pasteText(text: string) {
+  const previous = clipboard.readText();
+  clipboard.writeText(text);
+  sendEvents([
+    keyboardEvent(VK_CONTROL, MapVirtualKeyW(VK_CONTROL, 0), 0),
+    keyboardEvent(VK_V, MapVirtualKeyW(VK_V, 0), 0),
+    keyboardEvent(VK_V, MapVirtualKeyW(VK_V, 0), KEYEVENTF_KEYUP),
+    keyboardEvent(VK_CONTROL, MapVirtualKeyW(VK_CONTROL, 0), KEYEVENTF_KEYUP),
+  ]);
+  await sleep(8);
+  clipboard.writeText(previous);
+}
+
+async function typeLine(text: string) {
+  const parts = text.split(/\{tab\}/gi);
+  for (let i = 0; i < parts.length; i++) {
+    const chunk = parts[i];
+    if (chunk) {
+      if (chunk.length >= 8) await pasteText(chunk);
+      else typeUnicode(chunk);
+    }
+    if (i < parts.length - 1) tapVk(VK_TAB);
+  }
+}
+
+async function typeText(text: string, pressEnter: boolean) {
+  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  const enterEachLine = lines.length > 1;
+  for (let i = 0; i < lines.length; i++) {
+    await typeLine(lines[i]);
+    const last = i === lines.length - 1;
+    if (enterEachLine || (pressEnter && last)) {
+      tapVk(VK_RETURN);
+      if (!last) await sleep(8);
+    }
+  }
 }
 
 export function pressKey(hwnd: unknown | null, key: string) {
@@ -216,13 +261,13 @@ export function pressKey(hwnd: unknown | null, key: string) {
   keyTap(key);
 }
 
-export function sendTextToWindow(hwnd: unknown | null, text: string, pressEnter: boolean) {
+export async function sendTextToWindow(hwnd: unknown | null, text: string, pressEnter: boolean) {
   focusWindow(hwnd);
-  typeText(text, pressEnter);
+  await typeText(text, pressEnter);
 }
 
-export function sendTextForeground(text: string, pressEnter: boolean) {
-  typeText(text, pressEnter);
+export async function sendTextForeground(text: string, pressEnter: boolean) {
+  await typeText(text, pressEnter);
 }
 
 export function pressKeyForeground(key: string) {

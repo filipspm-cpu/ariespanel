@@ -19,9 +19,12 @@ let overlayFeed: ReturnType<typeof setInterval> | null = null;
 
 function appIcon() {
   const candidates = [
-    path.join(__dirname, "..", "dist", "aries-logo.png"),
+    path.join(process.resourcesPath, "installerIcon.ico"),
+    path.join(process.resourcesPath, "aries-logo.png"),
+    path.join(__dirname, "..", "build", "installerIcon.ico"),
     path.join(__dirname, "..", "src", "assets", "aries-logo.png"),
     path.join(__dirname, "..", "public", "aries-logo.png"),
+    path.join(__dirname, "..", "dist", "aries-logo.png"),
   ];
   for (const file of candidates) {
     if (fs.existsSync(file)) {
@@ -66,6 +69,7 @@ function createMainWindow() {
     minHeight: 700,
     backgroundColor: "#09090b",
     icon: appIcon(),
+    autoHideMenuBar: true,
     frame: false,
     show: false,
     webPreferences: {
@@ -84,6 +88,8 @@ function createMainWindow() {
   }
 
   mainWindow.once("ready-to-show", () => {
+    const icon = appIcon();
+    if (!icon.isEmpty()) mainWindow?.setIcon(icon);
     mainWindow?.show();
   });
   mainWindow.on("close", (e) => {
@@ -329,13 +335,13 @@ function registerIpc() {
             pressKey(processInfo.hwnd, "T");
             await sleep(80);
           }
-          sendTextToWindow(processInfo.hwnd, command, payload.pressEnter);
+          await sendTextToWindow(processInfo.hwnd, command, payload.pressEnter);
         } else {
           if (payload.pressT) {
             pressKey(null, "T");
             await sleep(80);
           }
-          sendTextToWindow(null, command, payload.pressEnter);
+          await sendTextToWindow(null, command, payload.pressEnter);
         }
         mainWindow?.webContents.send("cmd:progress", { command });
         await sleep(interval);
@@ -352,8 +358,8 @@ function registerIpc() {
     return true;
   });
 
-  ipcMain.handle("macro:send", (_e, text: string, pressEnter: boolean) => {
-    sendTextForeground(text, pressEnter);
+  ipcMain.handle("macro:send", async (_e, text: string, pressEnter: boolean) => {
+    await sendTextForeground(text, pressEnter);
     return true;
   });
 
