@@ -366,6 +366,13 @@ textarea {
   color: #8a8a8a;
 }
 
+.app-copyright {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #52525b;
+}
+
 .about-features {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -412,6 +419,12 @@ textarea {
 
 .settings-macros {
   grid-column: 1 / -1;
+}
+
+.settings-copyright {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 4px 0 8px;
 }
 
 .settings-avatar,

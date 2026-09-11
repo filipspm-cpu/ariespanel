@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
+import { Copyright } from "@/components/Copyright";
 import { navGroups } from "@/data/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import type { RouteId } from "@/types";
@@ -171,6 +172,7 @@ export function Sidebar() {
           ) : null}
         </div>
       </button>
+      <Copyright className="px-4 pb-3 text-center" />
     </aside>
   );
 }

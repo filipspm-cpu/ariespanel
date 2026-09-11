@@ -1,3 +1,4 @@
+import { Copyright } from "@/components/Copyright";
 import { useAppStore } from "@/store/useAppStore";
 import { mergeImportedMacros, parseMacroFile } from "@/services/macroPack";
 import type { UpdateStatus } from "@/types";
@@ -202,6 +203,8 @@ export function SettingsPage() {
           </button>
           {packMsg ? <div className="mt-3 text-[12px] text-zinc-300">{packMsg}</div> : null}
         </div>
+
+        <Copyright className="settings-copyright" />
       </div>
     </div>
   );

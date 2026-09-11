@@ -1,6 +1,7 @@
 import { Command, Gauge, Layers, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import logo from "@/assets/aries-logo.png";
+import { Copyright } from "@/components/Copyright";
 
 const FEATURES = [
   {
@@ -50,6 +51,7 @@ export function AboutPage() {
           <p className="about-lead">
             Prywatny panel do makr, nakładki, komend i statystyk na serwerach GTA RP.
           </p>
+          <Copyright className="mt-5" />
         </div>
 
         <div className="about-features">

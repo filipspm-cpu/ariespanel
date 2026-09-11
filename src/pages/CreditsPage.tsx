@@ -1,3 +1,4 @@
+import { Copyright } from "@/components/Copyright";
 import filipek from "@/assets/credits/filipek.webp";
 import rysiasty from "@/assets/credits/rysiasty.webp";
 import szczurek from "@/assets/credits/wisniowka.webp";
@@ -56,6 +57,7 @@ export function CreditsPage() {
         <div className="credits-kicker">ARIES PANEL</div>
         <h1>Podziękowania</h1>
         <div className="credits-rule" />
+        <Copyright className="mt-3" />
       </div>
       <div className="credits-stage">
         <div className="credits-vignette" />
