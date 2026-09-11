@@ -29,7 +29,7 @@ export function AppLayout() {
   const route = useAppStore((s) => s.route);
   const Page = pages[route];
   return (
-    <div className="flex h-full flex-col bg-syn-bg">
+    <div className="flex h-full flex-col bg-black">
       <TitleBar />
       <UpdateBanner />
       <div className="flex min-h-0 flex-1">

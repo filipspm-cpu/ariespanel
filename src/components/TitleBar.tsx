@@ -26,7 +26,7 @@ export function TitleBar() {
   }, []);
 
   return (
-    <div className="drag-region relative flex h-10 shrink-0 items-center border-b border-syn-line bg-syn-bg px-3">
+    <div className="drag-region relative flex h-10 shrink-0 items-center border-b border-white/[0.06] bg-black px-3">
       <div className="no-drag z-10 flex items-center gap-1 text-[11px] text-syn-muted">
         {crumbs.map((c, i) => (
           <span key={`${c}-${i}`} className="flex items-center gap-1">

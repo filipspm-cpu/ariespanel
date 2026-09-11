@@ -56,7 +56,7 @@ function NavButton({
       className={clsx(
         "group flex h-[30px] w-full items-center gap-2 rounded-md px-2 text-left text-[13px] transition-colors",
         indented && "pl-8",
-        active ? "bg-[#1c1c1f] text-white" : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200",
+        active ? "bg-white/[0.06] text-white" : "text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-200",
       )}
     >
       <Icon size={15} strokeWidth={1.7} className={active ? "text-white" : "text-zinc-500"} />
@@ -87,16 +87,16 @@ export function Sidebar() {
   const letter = (nick || "A").trim().slice(0, 1).toUpperCase();
 
   return (
-    <aside className="flex w-[252px] shrink-0 flex-col border-r border-syn-line bg-syn-sidebar">
+    <aside className="app-sidebar flex w-[252px] shrink-0 flex-col border-r border-white/[0.06] bg-black">
       <div className="px-4 pb-3 pt-4">
         <BrandMark />
         <button
           onClick={() => setSearchOpen(true)}
-          className="mt-3 flex h-8 w-full items-center gap-2 rounded-md border border-syn-border bg-[#0a0a0c] px-2 text-[12px] text-zinc-500"
+          className="mt-3 flex h-8 w-full items-center gap-2 rounded-md border border-white/[0.07] bg-[#050505] px-2 text-[12px] text-zinc-500"
         >
           <Search size={13} />
           <span className="flex-1 text-left">Szukaj</span>
-          <span className="rounded border border-syn-border px-1 py-px text-[10px] text-zinc-600">Ctrl K</span>
+          <span className="rounded border border-white/[0.08] px-1 py-px text-[10px] text-zinc-600">Ctrl K</span>
         </button>
       </div>
 
@@ -150,7 +150,7 @@ export function Sidebar() {
       <button
         type="button"
         onClick={() => setRoute("settings")}
-        className="mx-2 mb-3 mt-auto flex items-center gap-2.5 rounded-lg border border-white/[0.06] bg-black/40 px-2.5 py-2 text-left hover:bg-white/[0.04]"
+        className="mx-2 mb-3 mt-auto flex items-center gap-2.5 rounded-lg border border-white/[0.06] bg-[#050505] px-2.5 py-2 text-left hover:bg-white/[0.04]"
       >
         {settings.discordAvatarUrl ? (
           <img
@@ -160,7 +160,7 @@ export function Sidebar() {
             draggable={false}
           />
         ) : (
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1c1c1f] text-[12px] font-semibold text-white">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[12px] font-semibold text-white">
             {letter}
           </div>
         )}
