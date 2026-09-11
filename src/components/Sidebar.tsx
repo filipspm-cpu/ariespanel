@@ -82,6 +82,9 @@ export function Sidebar() {
   const gameOpen = useAppStore((s) => s.gameOpen);
   const setGameOpen = useAppStore((s) => s.setGameOpen);
   const setSearchOpen = useAppStore((s) => s.setSearchOpen);
+  const settings = useAppStore((s) => s.settings);
+  const nick = settings.discordGlobalName || settings.username || "Konto";
+  const letter = (nick || "A").trim().slice(0, 1).toUpperCase();
 
   return (
     <aside className="flex w-[252px] shrink-0 flex-col border-r border-syn-line bg-syn-sidebar">
@@ -143,6 +146,31 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
+
+      <button
+        type="button"
+        onClick={() => setRoute("settings")}
+        className="mx-2 mb-3 mt-auto flex items-center gap-2.5 rounded-lg border border-white/[0.06] bg-black/40 px-2.5 py-2 text-left hover:bg-white/[0.04]"
+      >
+        {settings.discordAvatarUrl ? (
+          <img
+            src={settings.discordAvatarUrl}
+            alt=""
+            className="h-8 w-8 shrink-0 rounded-full object-cover"
+            draggable={false}
+          />
+        ) : (
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1c1c1f] text-[12px] font-semibold text-white">
+            {letter}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[13px] font-medium text-white">{nick}</div>
+          {settings.discordUsername ? (
+            <div className="truncate text-[11px] text-zinc-500">@{settings.discordUsername}</div>
+          ) : null}
+        </div>
+      </button>
     </aside>
   );
 }
