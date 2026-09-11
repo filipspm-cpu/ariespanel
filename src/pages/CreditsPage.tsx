@@ -57,7 +57,6 @@ export function CreditsPage() {
         <div className="credits-kicker">ARIES PANEL</div>
         <h1>Podziękowania</h1>
         <div className="credits-rule" />
-        <Copyright className="mt-3" />
       </div>
       <div className="credits-stage">
         <div className="credits-vignette" />
@@ -65,6 +64,7 @@ export function CreditsPage() {
           {PEOPLE.map((person) => (
             <CreditRow key={person.name} person={person} />
           ))}
+          <Copyright className="credits-copyright" />
         </div>
       </div>
     </div>

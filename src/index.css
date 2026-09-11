@@ -188,7 +188,7 @@ textarea {
   flex-direction: column;
   align-items: center;
   gap: 20px;
-  padding: 12px 0 48px;
+  padding: 12px 0 80px;
   animation: credits-up 38s ease-out forwards;
 }
 
@@ -250,6 +250,12 @@ textarea {
 
 .credits-row-featured .credits-name {
   font-size: 32px;
+}
+
+.credits-copyright {
+  margin-top: 8px;
+  padding-bottom: 8px;
+  text-align: center;
 }
 
 @keyframes credits-up {
