@@ -7,7 +7,6 @@ export const navGroups: NavGroup[] = [
     label: "Platforma",
     items: [
       { id: "home", label: "Główna", icon: "home" },
-      { id: "craft", label: "Craft", icon: "hammer", devOnly: true },
       {
         id: "cmd",
         label: "Gra",
@@ -30,6 +29,7 @@ export const navGroups: NavGroup[] = [
           href: rule.url,
         })),
       },
+      { id: "craft", label: "Craft", icon: "hammer", devOnly: true },
     ],
   },
   {

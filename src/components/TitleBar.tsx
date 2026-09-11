@@ -34,6 +34,7 @@ export function TitleBar() {
   const [update, setUpdate] = useState<UpdateStatus | null>(null);
   const [notices, setNotices] = useState<UpdateNotice[]>([]);
   const [openNotices, setOpenNotices] = useState(false);
+  const [moreNotices, setMoreNotices] = useState(false);
   const noticeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -57,11 +58,14 @@ export function TitleBar() {
 
   const netOk = update?.status !== "error";
   const unread = notices.filter((n) => !n.read).length;
+  const sortedNotices = [...notices].sort((a, b) => b.at - a.at);
+  const visibleNotices = moreNotices ? sortedNotices : sortedNotices.slice(0, 5);
 
   const toggleNotices = async () => {
     const next = !openNotices;
     setOpenNotices(next);
     if (next) {
+      setMoreNotices(false);
       const rows = (await window.synvity?.updateNotices()) ?? [];
       setNotices(rows);
       const marked = (await window.synvity?.updateNoticesRead()) ?? rows;
@@ -102,22 +106,33 @@ export function TitleBar() {
               {notices.length === 0 ? (
                 <div className="notice-empty">Brak powiadomień o aktualizacjach.</div>
               ) : (
-                notices.map((n) => (
-                  <button
-                    key={n.id}
-                    type="button"
-                    className="notice-row"
-                    onClick={() => {
-                      setOpenNotices(false);
-                      setRoute("settings");
-                    }}
-                  >
-                    <div className="notice-row-title">
-                      {n.kind === "installed" ? `Zainstalowano v${n.version}` : `Dostępna v${n.version}`}
-                    </div>
-                    <div className="notice-row-time">{formatNoticeTime(n.at)}</div>
-                  </button>
-                ))
+                <>
+                  {visibleNotices.map((n) => (
+                    <button
+                      key={n.id}
+                      type="button"
+                      className="notice-row"
+                      onClick={() => {
+                        setOpenNotices(false);
+                        setRoute("settings");
+                      }}
+                    >
+                      <div className="notice-row-title">
+                        {n.kind === "installed" ? `Zainstalowano v${n.version}` : `Dostępna v${n.version}`}
+                      </div>
+                      <div className="notice-row-time">{formatNoticeTime(n.at)}</div>
+                    </button>
+                  ))}
+                  {sortedNotices.length > 5 ? (
+                    <button
+                      type="button"
+                      className="notice-more"
+                      onClick={() => setMoreNotices((v) => !v)}
+                    >
+                      {moreNotices ? "Pokaż mniej" : "Pokaż więcej"}
+                    </button>
+                  ) : null}
+                </>
               )}
             </div>
           ) : null}

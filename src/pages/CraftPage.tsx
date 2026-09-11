@@ -28,7 +28,7 @@ export function CraftPage() {
   const [cart, setCart] = useState<Record<number, number>>({});
   const [qty, setQty] = useState<Record<number, string>>({});
   const [cmdFaction, setCmdFaction] = useState(CRAFT_FRACTIONS[0].id);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState("");
   const stocks = useAppStore((s) => s.settings.craftStocks) ?? {};
   const patchSettings = useAppStore((s) => s.patchSettings);
   const current = asStock(stocks[cmdFaction]);
@@ -87,11 +87,15 @@ export function CraftPage() {
     setCart({});
   }
 
+  async function copyText(text: string) {
+    await navigator.clipboard.writeText(text);
+    setCopied(text);
+    window.setTimeout(() => setCopied(""), 1600);
+  }
+
   async function copyCommands() {
     if (!commands.length) return;
-    await navigator.clipboard.writeText(commands.join("\n"));
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    await copyText(commands.join("\n"));
   }
 
   return (
@@ -149,14 +153,21 @@ export function CraftPage() {
           <div className="craft-formula-result">
             <div className="craft-formula-cmds">
               {commands.length ? (
-                commands.map((cmd) => <code key={cmd}>{cmd}</code>)
+                commands.map((cmd) => (
+                  <div key={cmd} className="craft-cmd-row">
+                    <code>{cmd}</code>
+                    <button type="button" className="craft-add" onClick={() => void copyText(cmd)}>
+                      {copied === cmd ? "OK" : "Kopiuj"}
+                    </button>
+                  </div>
+                ))
               ) : (
                 <span>Dodaj przedmioty z kart poniżej.</span>
               )}
             </div>
             <div className="craft-formula-actions">
               <button type="button" className="craft-add" disabled={!commands.length} onClick={() => void copyCommands()}>
-                {copied ? "Skopiowano" : "Kopiuj"}
+                {copied === commands.join("\n") ? "Skopiowano" : "Kopiuj wszystkie"}
               </button>
               <button type="button" className="craft-add" disabled={!commands.length} onClick={applyResult}>
                 Dodaj do stanu
