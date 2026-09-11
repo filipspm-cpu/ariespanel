@@ -1,4 +1,3 @@
-import { Card } from "@/components/ui/Card";
 import { useAppStore } from "@/store/useAppStore";
 import { mergeImportedMacros, parseMacroFile } from "@/services/macroPack";
 import type { UpdateStatus } from "@/types";
@@ -52,93 +51,79 @@ export function SettingsPage() {
     }
   };
 
-  return (
-    <div className="h-full overflow-auto p-6">
-      <h1 className="text-[26px] font-semibold tracking-tight text-white">Ustawienia</h1>
-      <p className="mt-1 text-[13px] text-zinc-500">Konto, aktualizacje i szybki import makr</p>
+  const statusText =
+    update?.status === "checking"
+      ? "Sprawdzanie…"
+      : update?.status === "not-available"
+        ? "Masz najnowszą wersję."
+        : update?.status === "error"
+          ? update.message || "Nie udało się sprawdzić aktualizacji."
+          : available
+            ? `Dostępna v${update?.version}`
+            : "Nie sprawdzono jeszcze aktualizacji.";
 
-      <div className="mt-6 max-w-lg space-y-4">
-        <Card className="p-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-violet-500/20 text-[16px] font-semibold text-violet-200">
-              {letter}
-            </div>
-            <div>
-              <div className="text-[12px] text-zinc-500">Nazwa użytkownika</div>
-              <div className="text-[15px] font-medium text-white">{settings.username || "—"}</div>
-            </div>
+  return (
+    <div className="studio-page">
+      <div className="studio-header">
+        <div className="credits-kicker">ARIES PANEL</div>
+        <h1>Ustawienia systemu</h1>
+        <div className="credits-rule" />
+      </div>
+
+      <div className="studio-body settings-body">
+        <div className="studio-card settings-profile">
+          <div className="settings-avatar">{letter}</div>
+          <div className="mt-4 text-[11px] uppercase tracking-[0.22em] text-zinc-500">Konto</div>
+          <div className="mt-2 text-center text-[22px] font-semibold text-white">
+            {settings.username || "Bez nazwy"}
           </div>
           <input
             value={settings.username}
             onChange={(e) => patchSettings({ username: e.target.value })}
-            className="mt-4 h-10 w-full rounded-lg border border-syn-border bg-[#0c0c0e] px-3 text-[13px] text-white outline-none focus:border-violet-500/50"
+            className="settings-input mt-5"
             placeholder="Twoja nazwa"
           />
-        </Card>
+        </div>
 
-        <Card className="overflow-hidden p-5">
+        <div className="studio-card settings-update">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[15px] font-medium text-white">Aktualizacja</div>
-              <div className="mt-1 text-[12px] text-zinc-500">Zainstalowana wersja v{version}</div>
+              <div className="text-[11px] uppercase tracking-[0.22em] text-zinc-500">Aktualizacja</div>
+              <div className="mt-2 text-[22px] font-semibold text-white">v{version}</div>
+              <div className="mt-1 text-[12px] text-zinc-500">Zainstalowana wersja</div>
             </div>
-            <span className="rounded-md bg-white/5 px-2 py-1 text-[11px] text-zinc-400">v{version}</span>
+            <span className={`settings-pill ${available ? "on" : ""} ${update?.status === "error" ? "warn" : ""}`}>
+              {available ? "Nowa" : update?.status === "error" ? "Błąd" : "OK"}
+            </span>
           </div>
 
-          {available ? (
-            <div className="mt-4 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-3">
-              <div className="text-[12px] text-violet-200/80">Dostępna aktualizacja</div>
-              <div className="mt-1 text-[20px] font-semibold tracking-tight text-white">v{update?.version}</div>
-            </div>
-          ) : (
-            <div
-              className={`mt-4 rounded-lg border px-3 py-3 text-[13px] leading-relaxed ${
-                update?.status === "error"
-                  ? "border-amber-500/25 bg-amber-500/10 text-amber-100/90"
-                  : "border-syn-border bg-[#0c0c0e] text-zinc-400"
-              }`}
-            >
-              {update?.status === "checking"
-                ? "Sprawdzanie…"
-                : update?.status === "not-available"
-                  ? "Masz najnowszą wersję."
-                  : update?.status === "error"
-                    ? update.message || "Nie udało się sprawdzić aktualizacji."
-                    : "Nie sprawdzono jeszcze aktualizacji."}
-            </div>
-          )}
+          <div className={`settings-status ${update?.status === "error" ? "warn" : available ? "on" : ""}`}>
+            {statusText}
+          </div>
 
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-            <button
-              onClick={() => void check()}
-              disabled={busy}
-              className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-syn-border text-[13px] text-zinc-200 hover:bg-white/5 disabled:opacity-40"
-            >
+            <button onClick={() => void check()} disabled={busy} className="settings-btn">
               <RefreshCw size={14} className={busy ? "animate-spin" : ""} />
-              Czy są dostępne aktualizacje?
+              Sprawdź aktualizacje
             </button>
             {available ? (
-              <button
-                onClick={() => void window.synvity?.updateInstall()}
-                className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-violet-500 text-[13px] font-medium text-white hover:bg-violet-400"
-              >
+              <button onClick={() => void window.synvity?.updateInstall()} className="settings-btn primary">
                 <Download size={14} />
                 Zaktualizuj
               </button>
             ) : null}
           </div>
-        </Card>
+        </div>
 
-        <Card className="p-5">
-          <div className="text-[15px] font-medium text-white">Szybkie makra z pliku</div>
-          <p className="mt-1 text-[12px] leading-relaxed text-zinc-500">
-            Wrzuć plik <span className="text-zinc-300">.txt</span> albo <span className="text-zinc-300">.ariesmacros</span>.
-            Wzór jednej linii:
+        <div className="studio-card settings-macros">
+          <div className="text-[11px] uppercase tracking-[0.22em] text-zinc-500">Import makr</div>
+          <div className="mt-2 text-[18px] font-medium text-white">Szybkie makra z pliku</div>
+          <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-zinc-500">
+            Wrzuć plik <span className="text-zinc-300">.txt</span> albo{" "}
+            <span className="text-zinc-300">.ariesmacros</span>. Jedna linia to jeden trigger:
           </p>
-          <pre className="mt-3 overflow-auto rounded-lg border border-syn-border bg-[#0c0c0e] px-3 py-2 text-[12px] text-zinc-300">
-{`.w = Witam | Hejka | Cześć
-.p = Poczekaj chwilę.`}
-          </pre>
+          <pre className="settings-code">{`.w = Witam | Hejka | Cześć
+.p = Poczekaj chwilę.`}</pre>
           <input
             ref={fileRef}
             type="file"
@@ -150,15 +135,12 @@ export function SettingsPage() {
               void onPickMacros(file);
             }}
           />
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="mt-3 inline-flex h-10 items-center gap-1.5 rounded-lg border border-syn-border px-3 text-[13px] text-zinc-200 hover:bg-white/5"
-          >
+          <button onClick={() => fileRef.current?.click()} className="settings-btn mt-4">
             <FileUp size={14} />
             Wczytaj plik makr
           </button>
-          {packMsg ? <div className="mt-2 text-[12px] text-emerald-400">{packMsg}</div> : null}
-        </Card>
+          {packMsg ? <div className="mt-3 text-[12px] text-zinc-300">{packMsg}</div> : null}
+        </div>
       </div>
     </div>
   );
