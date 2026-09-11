@@ -1,6 +1,7 @@
 import { useAppStore } from "@/store/useAppStore";
 import { mergeImportedMacros, parseMacroFile } from "@/services/macroPack";
 import type { UpdateStatus } from "@/types";
+import { Toggle } from "@/components/ui/Toggle";
 import { Download, FileUp, RefreshCw, Unplug } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -173,6 +174,22 @@ export function SettingsPage() {
                 Zaktualizuj
               </button>
             ) : null}
+          </div>
+        </div>
+
+        <div className="studio-card settings-sound">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.22em] text-zinc-500">Dźwięk</div>
+              <div className="mt-2 text-[18px] font-medium text-white">Dźwięk przy starcie</div>
+              <p className="mt-1 max-w-sm text-[13px] leading-relaxed text-zinc-500">
+                Odtwarzaj dźwięk przy pierwszym otwarciu panelu. Wyłącz, jeśli nie chcesz go słyszeć.
+              </p>
+            </div>
+            <Toggle
+              checked={settings.startupSound !== false}
+              onChange={(v) => patchSettings({ startupSound: v })}
+            />
           </div>
         </div>
 

@@ -406,7 +406,8 @@ textarea {
 }
 
 .settings-update,
-.settings-macros {
+.settings-macros,
+.settings-sound {
   padding: 24px;
 }
 
