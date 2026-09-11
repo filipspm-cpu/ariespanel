@@ -1,8 +1,6 @@
 import { Copyright } from "@/components/Copyright";
 import { RankBadge, useAccountRank } from "@/components/RankBadge";
 import { APP_VERSION } from "@/data/appVersion";
-import testersFile from "@/data/testers.txt?raw";
-import { isBetaTester, parseTesters } from "@/data/testers";
 import { useAppStore } from "@/store/useAppStore";
 import { mergeImportedMacros, parseMacroFile } from "@/services/macroPack";
 import type { UpdateStatus } from "@/types";
@@ -35,10 +33,7 @@ export function SettingsPage() {
   };
 
   const available = update?.status === "available" || update?.status === "downloaded";
-  const testers = parseTesters(testersFile);
-  const betaUser = isBetaTester(settings.discordId, testers);
   const rank = useAccountRank(settings.discordId);
-  const channel = update?.channel || (betaUser ? "beta" : "stable");
   const letter = (settings.username || "A").trim().slice(0, 1).toUpperCase();
   const discordConnected = Boolean(settings.discordId);
   const displayName = settings.discordGlobalName || settings.username || "Bez nazwy";
@@ -162,20 +157,16 @@ export function SettingsPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-[11px] uppercase tracking-[0.22em] text-zinc-500">Aktualizacja</div>
-              <div className="mt-2 text-[22px] font-semibold text-white">v{APP_VERSION}</div>
+              <div className="mt-2 text-[22px] font-semibold text-white">v{update?.currentVersion || APP_VERSION}</div>
               <div className="mt-1 text-[12px] text-zinc-500">Zainstalowana wersja</div>
             </div>
             <span className={`settings-pill ${available ? "on" : ""} ${update?.status === "error" ? "warn" : ""}`}>
-              {available ? "Nowa" : update?.status === "error" ? "Błąd" : channel === "beta" ? "Beta" : "OK"}
+              {available ? "Nowa" : update?.status === "error" ? "Błąd" : "OK"}
             </span>
           </div>
 
           <div className="mt-3 text-[12px] text-zinc-500">
-            {channel === "beta"
-              ? "Kanał GitHub: wersja dla beta testerów (prerelease)."
-              : discordConnected
-                ? "Kanał GitHub: wersja dla normalnych użytkowników."
-                : "Kanał GitHub: wersja stabilna. Połącz Discord, żeby dostać kanał beta, jeśli jesteś na liście."}
+            Aktualizacje schodzą z GitHuba jako zwykłe wydanie (latest). Ranga developera / beta nie cofa już do starych 1.1.x.
           </div>
 
           <div className={`settings-status ${update?.status === "error" ? "warn" : available ? "on" : ""}`}>

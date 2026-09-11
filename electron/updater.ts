@@ -45,16 +45,13 @@ function isRetiredLine(version: string | undefined) {
 }
 
 function applyFeed() {
-  const token = loadState().settings.githubToken?.trim();
-  const beta = isBetaTesterId(loadState().settings.discordId);
-  autoUpdater.allowPrerelease = beta;
+  autoUpdater.allowPrerelease = false;
   autoUpdater.allowDowngrade = true;
+  autoUpdater.channel = "latest";
   autoUpdater.setFeedURL({
     provider: "github",
     owner: GITHUB_OWNER,
     repo: GITHUB_REPO,
-    private: Boolean(token),
-    token: token || undefined,
   });
 }
 
