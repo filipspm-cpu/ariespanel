@@ -55,7 +55,7 @@ export function CreditsPage() {
     <div className="credits-page">
       <div className="credits-header">
         <div className="credits-kicker">ARIES PANEL</div>
-        <h1>Podziękowania</h1>
+        <h1>Autorzy</h1>
         <div className="credits-rule" />
       </div>
       <div className="credits-stage">

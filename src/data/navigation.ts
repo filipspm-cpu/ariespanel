@@ -25,7 +25,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { id: "settings", label: "Ustawienia systemu", icon: "settings" },
       { id: "about", label: "O aplikacji", icon: "info" },
-      { id: "credits", label: "Podziękowania", icon: "heart" },
+      { id: "credits", label: "Autorzy", icon: "heart" },
     ],
   },
 ];
@@ -38,7 +38,7 @@ export const breadcrumbs: Record<RouteId, string[]> = {
   counters: ["Dashboard", "Gra", "Statystyki"],
   settings: ["Dashboard", "Ustawienia systemu"],
   about: ["Dashboard", "O aplikacji"],
-  credits: ["Dashboard", "Podziękowania"],
+  credits: ["Dashboard", "Autorzy"],
 };
 
 export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
@@ -49,5 +49,5 @@ export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
   counters: { title: "Statystyki" },
   settings: { title: "Ustawienia systemu" },
   about: { title: "O aplikacji", subtitle: "ARIES — prywatny panel administracyjny" },
-  credits: { title: "Podziękowania" },
+  credits: { title: "Autorzy" },
 };
