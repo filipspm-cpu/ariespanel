@@ -32,7 +32,7 @@ const PEOPLE = [
   },
   {
     role: "Beta tester",
-    name: "Fredka",
+    name: "Fretka",
     featured: false,
     avatar: fredka,
   },
