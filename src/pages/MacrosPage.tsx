@@ -766,7 +766,7 @@ function StepBlock({
           ) : null}
           {step.type === "multiline-text" && (step.pressT || step.enterEachLine) ? (
             <div className="mt-2 text-[11px] leading-snug text-zinc-500">
-              Każda linia to osobna komenda na czacie: wpisuje linię i zatwierdza Enterem. Nie wciska T, żeby nie wpisywało litery t.
+              Każda linia jest wklejana (Ctrl+V) i zatwierdzana Enterem — bez wpisywania znak po znaku.
             </div>
           ) : (
             <div className="mt-2 text-[11px] leading-snug text-zinc-600">

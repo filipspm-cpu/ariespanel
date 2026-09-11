@@ -1,3 +1,4 @@
+import { clipboard } from "electron";
 import koffi from "koffi";
 
 const user32 = koffi.load("user32.dll");
@@ -66,11 +67,12 @@ const EnumWindows = user32.func("bool __stdcall EnumWindows(EnumWindowsProc *lpE
 const IsIconic = user32.func("bool __stdcall IsIconic(void *hWnd)") as (h: unknown) => boolean;
 
 const KEYEVENTF_KEYUP = 0x0002;
-const KEYEVENTF_UNICODE = 0x0004;
 const INPUT_KEYBOARD = 1;
 const SW_RESTORE = 9;
 const VK_RETURN = 0x0d;
 const VK_TAB = 0x09;
+const VK_CONTROL = 0x11;
+const VK_V = 0x56;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -202,23 +204,29 @@ async function tapVk(vk: number) {
   sendEvents([keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
 }
 
-async function typeUnicode(text: string) {
-  for (const ch of [...text]) {
-    if (ch === "\n" || ch === "\r") continue;
-    const code = ch.codePointAt(0) ?? 0;
-    if (code > 0xffff) continue;
-    sendEvents([
-      keyboardEvent(0, code, KEYEVENTF_UNICODE),
-      keyboardEvent(0, code, KEYEVENTF_UNICODE | KEYEVENTF_KEYUP),
-    ]);
-    await sleep(12);
-  }
+async function pasteText(text: string) {
+  if (!text) return;
+  const previous = clipboard.readText();
+  clipboard.writeText(text);
+  await sleep(40);
+  const ctrlScan = MapVirtualKeyW(VK_CONTROL, 0);
+  const vScan = MapVirtualKeyW(VK_V, 0);
+  sendEvents([keyboardEvent(VK_CONTROL, ctrlScan, 0)]);
+  await sleep(20);
+  sendEvents([keyboardEvent(VK_V, vScan, 0)]);
+  await sleep(30);
+  sendEvents([
+    keyboardEvent(VK_V, vScan, KEYEVENTF_KEYUP),
+    keyboardEvent(VK_CONTROL, ctrlScan, KEYEVENTF_KEYUP),
+  ]);
+  await sleep(180);
+  clipboard.writeText(previous);
 }
 
 async function typeLine(text: string) {
   const parts = text.split(/\{tab\}/gi);
   for (let i = 0; i < parts.length; i++) {
-    if (parts[i]) await typeUnicode(parts[i]);
+    if (parts[i]) await pasteText(parts[i]);
     if (i < parts.length - 1) await tapVk(VK_TAB);
   }
 }
