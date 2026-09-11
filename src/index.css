@@ -1367,6 +1367,96 @@ textarea {
   margin-bottom: 18px;
 }
 
+.craft-formula {
+  padding: 16px 18px 14px;
+  margin-bottom: 18px;
+}
+
+.craft-formula-title {
+  margin-bottom: 12px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a8a8a;
+}
+
+.craft-formula-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr 1.2fr;
+  gap: 14px;
+}
+
+.craft-formula-label {
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #cfcfcf;
+}
+
+.craft-formula-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.craft-mat-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.craft-mat-field input,
+.craft-formula-select {
+  height: 34px;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: #050505;
+  padding: 0 10px;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+
+.craft-formula-result {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.craft-formula-cmds {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: #9a9a9a;
+}
+
+.craft-formula-cmds code {
+  color: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.craft-formula-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+@media (max-width: 1100px) {
+  .craft-formula-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .craft-search {
   display: flex;
   height: 36px;
@@ -1530,6 +1620,11 @@ textarea {
 .craft-add:hover {
   background: #fff;
   color: #000;
+}
+
+.craft-add:disabled {
+  opacity: 0.35;
+  pointer-events: none;
 }
 
 .craft-cart {

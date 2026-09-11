@@ -131,6 +131,7 @@ export interface AppSettings {
   discordGlobalName?: string;
   discordAvatar?: string | null;
   discordAvatarUrl?: string;
+  craftStocks?: Record<string, { green: number; blue: number; red: number }>;
 }
 
 export interface UpdateStatus {
