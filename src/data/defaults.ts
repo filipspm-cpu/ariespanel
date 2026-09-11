@@ -7,7 +7,7 @@ export const defaultMacros: Macro[] = [];
 export const defaultCounters: Counter[] = [
   {
     id: "ticket",
-    name: "Ticket",
+    name: "Reporty",
     description: "Odebrane zgłoszenia",
     value: 0,
     color: "purple",

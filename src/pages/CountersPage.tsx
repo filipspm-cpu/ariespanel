@@ -1,6 +1,5 @@
 import { Card } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Select";
-import { Toggle } from "@/components/ui/Toggle";
 import {
   addDays,
   counterPeriodTotals,
@@ -11,12 +10,8 @@ import {
 } from "@/services/counterStats";
 import { useAppStore } from "@/store/useAppStore";
 import type { Counter } from "@/types";
-import { Flame, Minus, Plus, RotateCcw, TrendingDown, TrendingUp } from "lucide-react";
+import { Flame, Minus, Plus, RotateCcw, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-
-function uid() {
-  return `counter-${Math.random().toString(36).slice(2, 9)}`;
-}
 
 function periodBounds(period: string) {
   const now = new Date();
@@ -77,6 +72,8 @@ export function CountersPage() {
   const counters = useAppStore((s) => s.counters);
   const setCounters = useAppStore((s) => s.setCounters);
   const bumpCounter = useAppStore((s) => s.bumpCounter);
+  const removeCounterEntry = useAppStore((s) => s.removeCounterEntry);
+  const clearCounterToday = useAppStore((s) => s.clearCounterToday);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(counters[0]?.id ?? "");
   const [period, setPeriod] = useState("day");
@@ -97,21 +94,6 @@ export function CountersPage() {
     }
   }, [selected?.id]);
 
-  const addCounter = () => {
-    const c: Counter = {
-      id: uid(),
-      name: "Nowy licznik",
-      description: "Licznik lokalny",
-      value: 0,
-      color: "purple",
-      shortcut: "",
-      showInOverlay: false,
-      history: [],
-    };
-    setCounters([...counters, c]);
-    setSelectedId(c.id);
-  };
-
   const bounds = periodBounds(period);
   const hourly = period === "day";
   const history = useMemo(() => {
@@ -127,10 +109,7 @@ export function CountersPage() {
   if (!selected) {
     return (
       <div className="p-6 text-[13px] text-zinc-500">
-        Brak liczników.{" "}
-        <button className="text-white" onClick={addCounter}>
-          Utwórz
-        </button>
+        Brak statystyk.
       </div>
     );
   }
@@ -150,10 +129,7 @@ export function CountersPage() {
     <div className="flex h-full min-h-0">
       <div className="flex w-[240px] shrink-0 flex-col border-r border-syn-line">
         <div className="flex items-center justify-between px-3 py-3">
-          <div className="text-[14px] font-medium">Liczniki</div>
-          <button onClick={addCounter} className="rounded p-1 text-zinc-500 hover:text-white">
-            <Plus size={15} />
-          </button>
+          <div className="text-[14px] font-medium">Statystyki</div>
         </div>
         <div className="px-3 pb-2">
           <input
@@ -259,38 +235,16 @@ export function CountersPage() {
           <IconBtn onClick={() => bumpCounter(selected.id, 1)} icon={<Plus size={14} />} label="Zwiększ" />
           <IconBtn onClick={() => bumpCounter(selected.id, -1)} icon={<Minus size={14} />} label="Zmniejsz" />
           <IconBtn
+            onClick={() => clearCounterToday(selected.id)}
+            icon={<Trash2 size={14} />}
+            label="Usuń dzisiejsze"
+          />
+          <IconBtn
             onClick={() => update(selected.id, { value: 0, history: [] })}
             icon={<RotateCcw size={14} />}
             label="Reset"
           />
         </div>
-
-        <Card className="mt-4 shrink-0 p-4">
-          <div className="text-[13px] font-medium">Ustawienia licznika</div>
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <label className="text-[12px] text-zinc-500">
-              Nazwa
-              <input
-                className="mt-1 h-9 w-full rounded-md border border-syn-border bg-[#0c0c0e] px-3 text-[13px] text-white outline-none"
-                value={selected.name}
-                onChange={(e) => update(selected.id, { name: e.target.value })}
-              />
-            </label>
-            <label className="text-[12px] text-zinc-500">
-              Skrót klawiszowy
-              <input
-                className="mt-1 h-9 w-full rounded-md border border-syn-border bg-[#0c0c0e] px-3 text-[13px] text-white outline-none"
-                value={selected.shortcut}
-                placeholder="F8"
-                onChange={(e) => update(selected.id, { shortcut: e.target.value })}
-              />
-            </label>
-          </div>
-          <div className="mt-3 flex items-center justify-between">
-            <span className="text-[13px] text-zinc-300">Pokaż w overlayu</span>
-            <Toggle checked={selected.showInOverlay} onChange={(v) => update(selected.id, { showInOverlay: v })} />
-          </div>
-        </Card>
 
         <Card className="mt-4 flex min-h-0 flex-1 flex-col p-4">
           <div className="mb-3 flex shrink-0 items-center justify-between">
@@ -317,7 +271,16 @@ export function CountersPage() {
                     <div className={`text-[13px] font-medium ${entry.delta >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                       {entry.delta >= 0 ? `+${entry.delta}` : entry.delta}
                     </div>
-                    <div className="w-16 text-right text-[13px] text-white tabular-nums">{entry.after}</div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-16 text-right text-[13px] text-white tabular-nums">{entry.after}</div>
+                      <button
+                        className="text-zinc-600 hover:text-red-400"
+                        onClick={() => removeCounterEntry(selected.id, entry.timestamp, entry.delta)}
+                        title="Usuń wpis"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

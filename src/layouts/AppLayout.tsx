@@ -7,7 +7,7 @@ import { CmdPage } from "@/pages/CmdPage";
 import { OverlayPage } from "@/pages/OverlayPage";
 import { MacrosPage } from "@/pages/MacrosPage";
 import { CountersPage } from "@/pages/CountersPage";
-import { PlaceholderPage } from "@/pages/PlaceholderPage";
+import { CreditsPage } from "@/pages/CreditsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { AboutPage } from "@/pages/AboutPage";
 import { UpdateBanner } from "@/components/UpdateBanner";
@@ -22,7 +22,7 @@ const pages: Record<RouteId, ComponentType> = {
   counters: CountersPage,
   settings: SettingsPage,
   about: AboutPage,
-  credits: () => <PlaceholderPage />,
+  credits: CreditsPage,
 };
 
 export function AppLayout() {

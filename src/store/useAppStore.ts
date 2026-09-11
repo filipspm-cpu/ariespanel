@@ -94,6 +94,8 @@ type State = AppSnapshot & {
   setFolders: (folders: MacroFolder[]) => void;
   setCounters: (counters: Counter[]) => void;
   bumpCounter: (id: string, delta: number) => void;
+  removeCounterEntry: (id: string, timestamp: number, delta: number) => void;
+  clearCounterToday: (id: string) => void;
   patchOverlay: (overlay: Partial<OverlaySettings>) => void;
   resetOverlayLayout: () => void;
   restoreOverlayPrevious: () => void;
@@ -127,6 +129,9 @@ export const useAppStore = create<State>((set, get) => ({
       ...defaults,
       ...data,
       macros: Array.isArray(data.macros) ? data.macros.map((m) => migrateMacro(m as Macro)) : defaults.macros,
+      counters: (Array.isArray(data.counters) ? data.counters : defaults.counters).map((c) =>
+        c.id === "ticket" ? { ...c, name: "Reporty" } : c,
+      ),
       overlay: {
         ...defaults.overlay,
         ...overlayIn,
@@ -169,6 +174,42 @@ export const useAppStore = create<State>((set, get) => ({
         ...c,
         value,
         history: [...(c.history ?? []), { timestamp: Date.now(), delta: applied }].slice(-2000),
+      };
+    });
+    set({ counters });
+    void persist({ counters });
+  },
+  removeCounterEntry: (id, timestamp, delta) => {
+    const counters = get().counters.map((c) => {
+      if (c.id !== id) return c;
+      const history = [...(c.history ?? [])];
+      const idx = history.findIndex((h) => h.timestamp === timestamp && h.delta === delta);
+      if (idx < 0) return c;
+      const removed = history.splice(idx, 1)[0];
+      return {
+        ...c,
+        history,
+        value: Math.max(0, c.value - removed.delta),
+      };
+    });
+    set({ counters });
+    void persist({ counters });
+  },
+  clearCounterToday: (id) => {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const from = start.getTime();
+    const to = from + 86400000;
+    const counters = get().counters.map((c) => {
+      if (c.id !== id) return c;
+      const history = c.history ?? [];
+      const today = history.filter((h) => h.timestamp >= from && h.timestamp < to);
+      const rest = history.filter((h) => h.timestamp < from || h.timestamp >= to);
+      const removed = today.reduce((sum, h) => sum + h.delta, 0);
+      return {
+        ...c,
+        history: rest,
+        value: Math.max(0, c.value - removed),
       };
     });
     set({ counters });

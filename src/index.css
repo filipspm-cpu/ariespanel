@@ -120,11 +120,15 @@ textarea {
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
 }
 
-.hud-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  border: none;
-  border-radius: 999px;
-  background: #fafafa;
-  cursor: pointer;
+.credits-roll {
+  animation: credits-down 22s linear infinite;
+}
+
+@keyframes credits-down {
+  from {
+    transform: translateY(-40%);
+  }
+  to {
+    transform: translateY(55%);
+  }
 }

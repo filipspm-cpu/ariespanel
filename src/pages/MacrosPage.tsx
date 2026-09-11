@@ -736,7 +736,7 @@ function StepBlock({
             onChange={(e) => onPatch(step.id, { counterId: e.target.value })}
             className="h-9 rounded-md border border-emerald-500/30 bg-[#07110d] px-3 text-[13px] text-emerald-100 outline-none focus:border-emerald-400"
           >
-            <option value="ticket">Licznik reportów</option>
+            <option value="ticket">Reporty</option>
             <option value="event-specs">Licznik spec eventów</option>
           </select>
           <div className="mt-2 text-[11px] text-emerald-200/65">Zwiększy wybrany licznik o 1 po uruchomieniu makra.</div>

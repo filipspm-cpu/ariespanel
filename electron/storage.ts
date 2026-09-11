@@ -135,7 +135,7 @@ const defaultState = (): AppState => ({
   counters: [
     {
       id: "ticket",
-      name: "Ticket",
+      name: "Reporty",
       description: "Odebrane zgłoszenia",
       value: 0,
       color: "purple",

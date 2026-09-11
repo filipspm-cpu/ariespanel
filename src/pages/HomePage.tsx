@@ -71,7 +71,7 @@ export function HomePage() {
         <StatCard
           title="Reporty dziś"
           value={ticketToday.inPeriod}
-          unit="Ticket"
+          unit="Reporty"
           accent="bg-violet-500"
           hint={`Łącznie ${ticketToday.total} · wczoraj ${ticketToday.previous}`}
           trend={ticketToday.change}
@@ -79,7 +79,7 @@ export function HomePage() {
         <StatCard
           title="Reporty w tym tygodniu"
           value={ticketWeek.inPeriod}
-          unit="Ticket"
+          unit="Reporty"
           accent="bg-violet-400"
           hint={`Śr. ${ticketWeek.avg.toFixed(1)} / dzień · ${ticketWeek.activeDays} dni aktywności`}
           trend={ticketWeek.change}
