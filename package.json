@@ -1,7 +1,7 @@
 {
   "name": "aries",
   "productName": "ARIES",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "ARIES — prywatny panel administracyjny",
   "author": "ARIES",
   "copyright": "Copyright © 2026 ARIES",
@@ -56,7 +56,7 @@
       "package.json"
     ],
     "asarUnpack": [
-      "node_modules/koffi/**"
+      "node_modules/koffi/build/koffi/win32_x64/**"
     ],
     "extraResources": [
       {
@@ -78,7 +78,7 @@
     ],
     "win": {
       "icon": "build/installerIcon.ico",
-      "signExts": [".dll", ".exe", ".node"],
+      "signExts": ["win32_x64/koffi.node", "win32_x64\\koffi.node"],
       "signtoolOptions": {
         "rfc3161TimeStampServer": "http://timestamp.digicert.com",
         "signingHashAlgorithms": ["sha256"]
