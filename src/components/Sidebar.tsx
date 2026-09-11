@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
+import { RankBadge, useAccountRank } from "@/components/RankBadge";
 import { navGroups } from "@/data/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import type { RouteId } from "@/types";
@@ -85,6 +86,7 @@ export function Sidebar() {
   const settings = useAppStore((s) => s.settings);
   const nick = settings.discordGlobalName || settings.username || "Konto";
   const letter = (nick || "A").trim().slice(0, 1).toUpperCase();
+  const rank = useAccountRank(settings.discordId);
 
   return (
     <aside className="app-sidebar flex w-[252px] shrink-0 flex-col border-r border-white/[0.06] bg-black">
@@ -169,6 +171,7 @@ export function Sidebar() {
           {settings.discordUsername ? (
             <div className="truncate text-[11px] text-zinc-500">@{settings.discordUsername}</div>
           ) : null}
+          <RankBadge rank={rank} />
         </div>
       </button>
     </aside>

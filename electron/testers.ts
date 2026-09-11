@@ -42,5 +42,5 @@ export function loadTesters(): Tester[] {
 
 export function isBetaTesterId(discordId: string | undefined) {
   if (!discordId) return false;
-  return loadTesters().some((t) => t.id === discordId && /beta/i.test(t.role));
+  return loadTesters().some((t) => t.id === discordId && (/beta/i.test(t.role) || /dev/i.test(t.role)));
 }

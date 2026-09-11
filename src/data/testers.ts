@@ -17,7 +17,22 @@ export function parseTesters(raw: string): Tester[] {
   return raw.split(/\r?\n/).map(parseTesterLine).filter((row): row is Tester => Boolean(row));
 }
 
+export type AccountRank = "developer" | "beta";
+
+export function rankFromRole(role: string): AccountRank | null {
+  if (/dev/i.test(role)) return "developer";
+  if (/beta/i.test(role)) return "beta";
+  return null;
+}
+
+export function accountRank(discordId: string | undefined, testers: Tester[]): AccountRank | null {
+  if (!discordId) return null;
+  const row = testers.find((t) => t.id === discordId);
+  if (!row) return null;
+  return rankFromRole(row.role);
+}
+
 export function isBetaTester(discordId: string | undefined, testers: Tester[]) {
-  if (!discordId) return false;
-  return testers.some((t) => t.id === discordId && /beta/i.test(t.role));
+  const rank = accountRank(discordId, testers);
+  return rank === "beta" || rank === "developer";
 }
