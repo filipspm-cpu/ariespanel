@@ -635,13 +635,25 @@ textarea {
 }
 
 .settings-btn.discord {
+  width: 100%;
+  height: 56px;
+  gap: 10px;
+  border-radius: 999px;
   background: #5865f2;
   border-color: #5865f2;
   color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .settings-btn.discord:hover {
   background: #4752c4;
+}
+
+.settings-btn.discord svg {
+  width: 20px;
+  height: 20px;
 }
 
 .settings-input {
