@@ -1,4 +1,3 @@
-import { Card } from "@/components/ui/Card";
 import { MajesticServersPanel } from "@/components/MajesticServersPanel";
 import { formatDuration } from "@/services/api";
 import { counterPeriodTotals, startOfDay, startOfWeek } from "@/services/counterStats";
@@ -11,38 +10,33 @@ function StatCard({
   value,
   unit,
   hint,
-  accent,
   trend,
 }: {
   title: string;
   value: string | number;
   unit?: string;
   hint?: string;
-  accent: string;
   trend?: number;
 }) {
   const TrendIcon = (trend ?? 0) >= 0 ? TrendingUp : TrendingDown;
   return (
-    <Card className="relative overflow-hidden p-4">
-      <div className={`absolute inset-x-0 top-0 h-0.5 ${accent}`} />
-      <div className="text-[12px] text-zinc-500">{title}</div>
-      <div className="mt-3 flex items-end gap-2">
-        <div className="text-[28px] font-semibold leading-none tracking-tight text-white tabular-nums">{value}</div>
-        {unit ? <div className="mb-0.5 text-[12px] text-zinc-500">{unit}</div> : null}
+    <div className="home-stat">
+      <div className="home-stat-label">{title}</div>
+      <div className="home-stat-value">
+        <strong className="tabular-nums">{value}</strong>
+        {unit ? <span>{unit}</span> : null}
       </div>
-      <div className="mt-3 flex items-center justify-between gap-2">
-        {hint ? <div className="text-[11px] leading-snug text-zinc-600">{hint}</div> : <span />}
+      <div className="home-stat-foot">
+        {hint ? <div className="home-stat-hint">{hint}</div> : <span />}
         {typeof trend === "number" ? (
-          <span
-            className={`inline-flex items-center gap-0.5 text-[11px] ${trend >= 0 ? "text-emerald-400" : "text-red-400"}`}
-          >
+          <span className={`home-stat-trend ${trend >= 0 ? "up" : "down"}`}>
             <TrendIcon size={12} />
             {trend > 0 ? "+" : ""}
             {trend}%
           </span>
         ) : null}
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -66,13 +60,12 @@ export function HomePage() {
   const ticketWeek = counterPeriodTotals(ticket, weekStart, weekStart + 7 * 86400000);
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 overflow-hidden p-4 xl:p-5">
-      <div className="grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="home-page">
+      <div className="home-stats grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Reporty dziś"
           value={ticketToday.inPeriod}
           unit="Reporty"
-          accent="bg-violet-500"
           hint={`Łącznie ${ticketToday.total} · wczoraj ${ticketToday.previous}`}
           trend={ticketToday.change}
         />
@@ -80,7 +73,6 @@ export function HomePage() {
           title="Reporty w tym tygodniu"
           value={ticketWeek.inPeriod}
           unit="Reporty"
-          accent="bg-violet-400"
           hint={`Śr. ${ticketWeek.avg.toFixed(1)} / dzień · ${ticketWeek.activeDays} dni aktywności`}
           trend={ticketWeek.change}
         />
@@ -88,14 +80,12 @@ export function HomePage() {
           title="Event Specs dziś"
           value={specsToday.inPeriod}
           unit="Event Specs"
-          accent="bg-emerald-500"
           hint={`Łącznie ${specsToday.total} · seria ${specsToday.streak} dni`}
           trend={specsToday.change}
         />
         <StatCard
           title="Czas w aplikacji"
           value={formatDuration(onlineMs)}
-          accent="bg-zinc-500"
           hint="Czas pracy tej instalacji, bez przerw między sesjami."
         />
       </div>

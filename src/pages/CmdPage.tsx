@@ -1,4 +1,3 @@
-import { Card } from "@/components/ui/Card";
 import { Toggle } from "@/components/ui/Toggle";
 import { useAppStore } from "@/store/useAppStore";
 import { Check, Play, RefreshCw, Square } from "lucide-react";
@@ -68,113 +67,97 @@ export function CmdPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0">
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col p-4">
-        <div className="shrink-0 pb-3">
-          <h1 className="text-[22px] font-semibold tracking-tight text-white">CMD Executor</h1>
-          <p className="mt-0.5 text-[13px] text-zinc-500">Wyślij serię komend do wybranego procesu gry</p>
-        </div>
+    <div className="cmd-page">
+      <div className="cmd-main">
+        <div className="cmd-kicker">ARIES PANEL</div>
+        <h1>Wykonawca CMD</h1>
+        <p className="cmd-lead">Wyślij serię komend do wybranego procesu gry.</p>
 
-        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="shrink-0 border-b border-syn-border px-5 py-3">
-            <div className="text-[14px] font-medium text-white">Wprowadź komendę</div>
-            <p className="mt-1 text-[12px] leading-relaxed text-zinc-500">
-              Wprowadź komendę. Okno zostanie aktywowane, a następnie komenda zostanie wysłana w zależności od
-              ustawienia, z naciśnięciem wcześniej „T”.
+        <section className="cmd-editor">
+          <div className="cmd-editor-head">
+            <strong>Wprowadź komendy</strong>
+            <p>
+              Każda linia to jedna komenda. Okno gry zostanie aktywowane, a potem komendy polecą według ustawień — z
+              opcjonalnym „T” przed każdą z nich.
             </p>
           </div>
-          <div className="flex min-h-0 flex-1 flex-col p-4">
-            <div className="mb-1 shrink-0 text-[11px] text-zinc-500">Komenda</div>
-            <div className="min-h-0 flex-1">
-              <textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                className="h-full w-full resize-none rounded-md border border-syn-border bg-[#0c0c0e] p-3 text-[13px] leading-6 text-zinc-200 outline-none focus:border-zinc-600"
-                placeholder={"/komenda1\n/komenda2\n/komenda3"}
-                spellCheck={false}
-              />
-            </div>
-            {lastCommand && running ? (
-              <div className="mt-2 shrink-0 text-[11px] text-zinc-500">Wysyłanie: {lastCommand}</div>
-            ) : null}
+          <div className="cmd-editor-body">
+            <label htmlFor="cmd-text">Komendy</label>
+            <textarea
+              id="cmd-text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={"/komenda1\n/komenda2\n/komenda3"}
+              spellCheck={false}
+            />
+            {lastCommand && running ? <div className="cmd-progress">Wysyłanie: {lastCommand}</div> : null}
           </div>
-          <div className="flex shrink-0">
-            <button
-              onClick={() => (running ? void stop() : void run())}
-              className="flex h-11 flex-1 items-center justify-center gap-2 border-t border-syn-border bg-[#1a1a1d] text-[13px] text-zinc-300 hover:bg-[#202024]"
-            >
+          <div className="cmd-actions">
+            <button onClick={() => (running ? void stop() : void run())}>
               {running ? <Square size={14} /> : <Play size={14} />}
               {running ? "Zatrzymaj" : "Wyślij komendy"}
             </button>
-            <button
-              onClick={() => setText("")}
-              className="h-11 w-36 border-l border-t border-syn-border bg-[#141416] text-[13px] text-zinc-500 hover:text-zinc-300"
-            >
-              Wyczyść
-            </button>
+            <button onClick={() => setText("")}>Wyczyść</button>
           </div>
-        </Card>
+        </section>
       </div>
 
-      <aside className="flex h-full w-[300px] shrink-0 flex-col overflow-auto border-l border-syn-line p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="text-[13px] font-medium text-white">Ustawienia</div>
-          <button onClick={() => void refreshProcess()} className="text-zinc-500 hover:text-zinc-300">
+      <aside className="cmd-side">
+        <div className="cmd-side-top">
+          <strong>Ustawienia</strong>
+          <button onClick={() => void refreshProcess()} title="Odśwież proces">
             <RefreshCw size={14} />
           </button>
         </div>
 
-        <div className="rounded-md border border-syn-border bg-[#0e0e10] p-3">
-          <div className="text-[11px] text-zinc-500">Proces</div>
-          <div className="mt-1 text-[13px] text-white">{processLabel}</div>
-          <div className="text-[11px] text-zinc-600">{pid ? `PID: ${pid}` : "Oczekiwanie na grę"}</div>
+        <div className="cmd-process">
+          <span>Proces</span>
+          <strong>{processLabel}</strong>
+          <em>{pid ? `PID: ${pid}` : "Oczekiwanie na grę"}</em>
         </div>
 
-        <div className="mt-4 flex items-start justify-between gap-3">
+        <div className="cmd-option">
           <div>
-            <div className="text-[13px] text-zinc-200">Naciskaj T przed komendą</div>
-            <div className="mt-1 text-[11px] leading-snug text-zinc-600">
-              Wciśnie i zwolni T przed wysłaniem każdej komendy.
-            </div>
+            <strong>Naciskaj T przed komendą</strong>
+            <p>Wciśnie i zwolni T przed wysłaniem każdej komendy.</p>
           </div>
           <Toggle checked={cmd.pressT} onChange={(v) => patchCmd({ pressT: v })} />
         </div>
 
-        <div className="mt-4 flex items-start justify-between gap-3">
+        <div className="cmd-option">
           <div>
-            <div className="text-[13px] text-zinc-200">Odwrócona kolejność</div>
+            <strong>Odwrócona kolejność</strong>
           </div>
           <Toggle checked={cmd.reverse} onChange={(v) => patchCmd({ reverse: v })} />
         </div>
 
-        <div className="mt-4 flex items-start justify-between gap-3">
+        <div className="cmd-option">
           <div>
-            <div className="text-[13px] text-zinc-200">Naciśnij Enter po komendzie</div>
+            <strong>Naciśnij Enter po komendzie</strong>
           </div>
           <Toggle checked={cmd.pressEnter} onChange={(v) => patchCmd({ pressEnter: v })} />
         </div>
 
-        <div className="mt-5">
-          <div className="text-[13px] text-zinc-200">Odstęp między komendami (ms)</div>
+        <div className="cmd-field">
+          <strong>Odstęp między komendami (ms)</strong>
           <input
             type="number"
             min={100}
             value={cmd.intervalMs}
             onChange={(e) => patchCmd({ intervalMs: Math.max(100, Number(e.target.value) || 100) })}
-            className="mt-2 h-9 w-full rounded-md border border-syn-border bg-[#0e0e10] px-3 text-[13px] outline-none"
           />
-          <div className="mt-1 text-[11px] text-zinc-600">Minimum 100 ms</div>
+          <p>Minimum 100 ms</p>
         </div>
 
         <button
-          className="mt-4 text-[12px] text-zinc-500 hover:text-zinc-300"
+          className="cmd-reset"
           onClick={() => patchCmd({ pressT: false, reverse: false, pressEnter: true, intervalMs: 500 })}
         >
           Przywróć domyślne
         </button>
 
-        <div className="mt-8">
-          <div className="mb-3 text-[13px] font-medium text-white">Przegląd komend</div>
+        <div className="cmd-review">
+          <strong>Przegląd komend</strong>
           <Row label="Liczba komend" value={String(commands.length)} />
           <Row label="Liczba znaków" value={String(chars)} />
           <Row label="Duplikaty" value={dupes ? String(dupes) : "Brak"} ok={!dupes} />
@@ -187,12 +170,12 @@ export function CmdPage() {
 
 function Row({ label, value, ok }: { label: string; value: string; ok?: boolean }) {
   return (
-    <div className="flex items-center justify-between py-1.5 text-[13px]">
-      <span className="text-zinc-500">{label}</span>
-      <span className={`flex items-center gap-1 ${ok ? "text-syn-green" : "text-white"}`}>
+    <div className="cmd-row">
+      <span>{label}</span>
+      <b className={ok ? "ok" : undefined}>
         {ok ? <Check size={13} /> : null}
         {value}
-      </span>
+      </b>
     </div>
   );
 }
