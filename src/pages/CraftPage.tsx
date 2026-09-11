@@ -6,6 +6,7 @@ import {
   EMPTY_STOCK,
   MATERIAL_KEYS,
   asStock,
+  formatKg,
   fractionMeta,
   materialMeta,
   type CraftItem,
@@ -17,7 +18,7 @@ import { useAppStore } from "@/store/useAppStore";
 const ITEMS = crafts as CraftItem[];
 
 function parseCount(value: string) {
-  const n = Number(value.replace(",", "."));
+  const n = Math.floor(Number(value.replace(",", ".")));
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
@@ -25,7 +26,7 @@ export function CraftPage() {
   const [query, setQuery] = useState("");
   const [filterFaction, setFilterFaction] = useState("all");
   const [cart, setCart] = useState<Record<number, number>>({});
-  const [needed, setNeeded] = useState<MaterialStock>({ ...EMPTY_STOCK });
+  const [qty, setQty] = useState<Record<number, string>>({});
   const [cmdFaction, setCmdFaction] = useState(CRAFT_FRACTIONS[0].id);
   const [copied, setCopied] = useState(false);
   const stocks = useAppStore((s) => s.settings.craftStocks) ?? {};
@@ -44,6 +45,19 @@ export function CraftPage() {
 
   const cartItems = ITEMS.filter((item) => cart[item.id] > 0);
 
+  const needed = useMemo(() => {
+    const next: MaterialStock = { ...EMPTY_STOCK };
+    for (const item of cartItems) {
+      const key = (MATERIAL_KEYS.includes(item.materialType as MaterialKey)
+        ? item.materialType
+        : "green") as MaterialKey;
+      next[key] += item.materials * cart[item.id];
+    }
+    return next;
+  }, [cartItems, cart]);
+
+  const weightGrams = cartItems.reduce((sum, item) => sum + item.weight * cart[item.id], 0);
+
   const totals = useMemo(() => {
     const next: MaterialStock = { ...EMPTY_STOCK };
     for (const key of MATERIAL_KEYS) next[key] = current[key] + needed[key];
@@ -55,15 +69,8 @@ export function CraftPage() {
   );
 
   function add(item: CraftItem) {
-    const key = (MATERIAL_KEYS.includes(item.materialType as MaterialKey)
-      ? item.materialType
-      : "green") as MaterialKey;
-    setCart((prev) => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
-    setNeeded((prev) => ({ ...prev, [key]: prev[key] + item.materials }));
-  }
-
-  function setNeed(key: MaterialKey, value: string) {
-    setNeeded((prev) => ({ ...prev, [key]: parseCount(value) }));
+    const count = parseCount(qty[item.id] ?? "1") || 1;
+    setCart((prev) => ({ ...prev, [item.id]: (prev[item.id] || 0) + count }));
   }
 
   function setHave(key: MaterialKey, value: string) {
@@ -77,7 +84,6 @@ export function CraftPage() {
     patchSettings({
       craftStocks: { ...stocks, [cmdFaction]: { ...totals } },
     });
-    setNeeded({ ...EMPTY_STOCK });
     setCart({});
   }
 
@@ -98,24 +104,7 @@ export function CraftPage() {
       <div className="studio-body craft-body">
         <div className="studio-card craft-formula">
           <div className="craft-formula-title">Formuła /setmaterials</div>
-          <div className="craft-formula-grid">
-            <div>
-              <div className="craft-formula-label">Potrzeba</div>
-              <div className="craft-formula-row">
-                {MATERIAL_KEYS.map((key) => (
-                  <label key={key} className={`craft-mat-field craft-qty-${key}`}>
-                    {key}
-                    <input
-                      type="number"
-                      min={0}
-                      value={needed[key] || ""}
-                      placeholder="0"
-                      onChange={(e) => setNeed(key, e.target.value)}
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
+          <div className="craft-formula-grid craft-formula-grid-2">
             <div>
               <div className="craft-formula-label">Frakcja</div>
               <select
@@ -148,14 +137,21 @@ export function CraftPage() {
               </div>
             </div>
           </div>
+          <div className="craft-needed">
+            Potrzeba z craftu
+            {MATERIAL_KEYS.map((key) => (
+              <span key={key} className={`craft-qty-type-inline craft-qty-${key}`}>
+                {needed[key]} {key}
+              </span>
+            ))}
+            <span className="craft-needed-weight">łącznie {formatKg(weightGrams)}</span>
+          </div>
           <div className="craft-formula-result">
             <div className="craft-formula-cmds">
               {commands.length ? (
-                commands.map((cmd) => (
-                  <code key={cmd}>{cmd}</code>
-                ))
+                commands.map((cmd) => <code key={cmd}>{cmd}</code>)
               ) : (
-                <span>Dodaj craft albo wpisz ile materiałów trzeba.</span>
+                <span>Dodaj przedmioty z kart poniżej.</span>
               )}
             </div>
             <div className="craft-formula-actions">
@@ -201,50 +197,59 @@ export function CraftPage() {
         </div>
 
         <div className="craft-grid">
-          {list.map((item) => (
-            <article key={item.id} className="craft-win" title={item.description}>
-              <div className="craft-win-dots">
-                {item.fractions.map((id) => (
-                  <span key={id} className="craft-dot" style={{ background: fractionMeta(id).color }} />
-                ))}
-              </div>
-              <div className="craft-win-art">
-                <img src={item.imageUrl} alt="" draggable={false} />
-              </div>
-              <div className="craft-win-name">{item.name}</div>
-              <div className="craft-win-bar">
-                <span className={`craft-qty craft-qty-${item.materialType}`}>
-                  {item.materials}
-                  <span className="craft-qty-type">{materialMeta(item.materialType).label}</span>
-                </span>
-                <button type="button" className="craft-add" onClick={() => add(item)}>
-                  DODAJ
-                </button>
-              </div>
-            </article>
-          ))}
+          {list.map((item) => {
+            const count = parseCount(qty[item.id] ?? "1") || 1;
+            return (
+              <article key={item.id} className="craft-win" title={item.description}>
+                <div className="craft-win-dots">
+                  {item.fractions.map((id) => (
+                    <span key={id} className="craft-dot" style={{ background: fractionMeta(id).color }} />
+                  ))}
+                </div>
+                <div className="craft-win-art">
+                  <img src={item.imageUrl} alt="" draggable={false} />
+                </div>
+                <div className="craft-win-name">{item.name}</div>
+                <div className="craft-win-meta">
+                  <span className={`craft-qty craft-qty-${item.materialType}`}>
+                    {item.materials}
+                    <span className="craft-qty-type">{materialMeta(item.materialType).label}</span>
+                  </span>
+                  <span className="craft-kg">
+                    {formatKg(item.weight)}
+                    {count > 1 ? ` · ${formatKg(item.weight * count)}` : ""}
+                  </span>
+                </div>
+                <div className="craft-win-bar">
+                  <input
+                    className="craft-count"
+                    type="number"
+                    min={1}
+                    value={qty[item.id] ?? "1"}
+                    onChange={(e) => setQty((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                  />
+                  <button type="button" className="craft-add" onClick={() => add(item)}>
+                    DODAJ
+                  </button>
+                </div>
+              </article>
+            );
+          })}
         </div>
         {list.length === 0 ? <div className="mt-8 text-center text-[13px] text-zinc-500">Brak przedmiotów</div> : null}
       </div>
 
       {cartItems.length ? (
         <div className="craft-cart">
-          <div className="craft-cart-meta">Wybrane</div>
+          <div className="craft-cart-meta">Wybrane · {formatKg(weightGrams)}</div>
           <div className="craft-cart-list">
             {cartItems.map((item) => (
               <span key={item.id}>
-                {item.name} ×{cart[item.id]}
+                {item.name} ×{cart[item.id]} · {formatKg(item.weight * cart[item.id])}
               </span>
             ))}
           </div>
-          <button
-            type="button"
-            className="craft-add"
-            onClick={() => {
-              setCart({});
-              setNeeded({ ...EMPTY_STOCK });
-            }}
-          >
+          <button type="button" className="craft-add" onClick={() => setCart({})}>
             Wyczyść
           </button>
         </div>

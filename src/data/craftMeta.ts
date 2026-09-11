@@ -61,3 +61,13 @@ export function asStock(input: Partial<MaterialStock> | undefined): MaterialStoc
     red: Number(input?.red) || 0,
   };
 }
+
+export function gramsToKg(grams: number) {
+  return grams / 1000;
+}
+
+export function formatKg(grams: number) {
+  const kg = gramsToKg(grams);
+  const text = Number.isInteger(kg) ? String(kg) : kg.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+  return `${text} kg`;
+}

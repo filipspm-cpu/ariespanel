@@ -1386,6 +1386,10 @@ textarea {
   gap: 14px;
 }
 
+.craft-formula-grid-2 {
+  grid-template-columns: 0.9fr 1.4fr;
+}
+
 .craft-formula-label {
   margin-bottom: 8px;
   font-size: 12px;
@@ -1439,6 +1443,21 @@ textarea {
   color: #9a9a9a;
 }
 
+.craft-needed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 0;
+  margin-top: 14px;
+  font-size: 12px;
+  color: #9a9a9a;
+}
+
+.craft-needed-weight {
+  margin-left: 10px;
+  color: #fff;
+}
+
 .craft-formula-cmds code {
   color: #fff;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -1452,7 +1471,8 @@ textarea {
 }
 
 @media (max-width: 1100px) {
-  .craft-formula-grid {
+  .craft-formula-grid,
+  .craft-formula-grid-2 {
     grid-template-columns: 1fr;
   }
 }
@@ -1564,6 +1584,31 @@ textarea {
   justify-content: space-between;
   gap: 10px;
   padding: 8px 12px 12px;
+}
+
+.craft-win-meta {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 12px 4px;
+}
+
+.craft-kg {
+  font-size: 11px;
+  color: #9a9a9a;
+}
+
+.craft-count {
+  width: 64px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: #050505;
+  padding: 0 8px;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
 }
 
 .craft-qty {
