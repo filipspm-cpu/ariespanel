@@ -135,8 +135,22 @@ export interface UpdateStatus {
   version?: string;
   currentVersion: string;
   percent?: number;
+  transferred?: number;
+  total?: number;
+  detail?: string;
+  left?: string;
   message?: string;
 }
+
+export interface UpdateNotice {
+  id: string;
+  version: string;
+  at: number;
+  kind: "available" | "installed";
+  read: boolean;
+}
+
+export type AppNotice = UpdateNotice;
 
 export interface AppStats {
   reportsToday: number;

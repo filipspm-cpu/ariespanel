@@ -67,6 +67,10 @@ const api = {
   updateStatus: () => ipcRenderer.invoke("update:status"),
   updateCheck: () => ipcRenderer.invoke("update:check"),
   updateInstall: () => ipcRenderer.invoke("update:install"),
+  updateNotices: () => ipcRenderer.invoke("update:notices") as Promise<
+    { id: string; version: string; at: number; kind: "available" | "installed"; read: boolean }[]
+  >,
+  updateNoticesRead: () => ipcRenderer.invoke("update:noticesRead"),
   onUpdateStatus: (cb: (status: unknown) => void) => {
     const listener = (_: unknown, status: unknown) => cb(status);
     ipcRenderer.on("update:status", listener);

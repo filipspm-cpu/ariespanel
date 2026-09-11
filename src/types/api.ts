@@ -1,4 +1,4 @@
-import type { OverlaySettings, UpdateStatus } from "./index";
+import type { OverlaySettings, UpdateNotice, UpdateStatus } from "./index";
 
 export interface SynvityApi {
   minimize: () => Promise<unknown>;
@@ -44,6 +44,8 @@ export interface SynvityApi {
   updateCheck: () => Promise<UpdateStatus>;
   updateInstall: () => Promise<unknown>;
   onUpdateStatus: (cb: (status: UpdateStatus) => void) => () => void;
+  updateNotices: () => Promise<UpdateNotice[]>;
+  updateNoticesRead: () => Promise<UpdateNotice[]>;
   majesticServers: () => Promise<import("./index").LiveServerStatus[]>;
   discordConnect: () => Promise<{
     id: string;

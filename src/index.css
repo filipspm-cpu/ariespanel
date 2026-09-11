@@ -129,6 +129,68 @@ textarea {
   background: #e4e4e7;
 }
 
+.notice-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 0 0 2px #000;
+}
+
+.notice-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  width: 280px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: #0a0a0a;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+}
+
+.notice-pop-head {
+  padding: 10px 12px 8px;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #71717a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.notice-empty {
+  padding: 16px 12px;
+  font-size: 12px;
+  color: #71717a;
+}
+
+.notice-row {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.notice-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.notice-row-title {
+  font-size: 12px;
+  color: #f4f4f5;
+}
+
+.notice-row-time {
+  margin-top: 3px;
+  font-size: 11px;
+  color: #71717a;
+}
+
 @media (max-width: 820px) {
   .update-banner-hint {
     display: none;

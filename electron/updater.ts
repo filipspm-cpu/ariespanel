@@ -2,6 +2,7 @@ import { app, ipcMain, BrowserWindow, Tray, Notification } from "electron";
 import { autoUpdater, type UpdateInfo, type ProgressInfo } from "electron-updater";
 import { loadState } from "./storage";
 import { closeUpdateProgressWindow, openUpdateProgressWindow, setUpdateProgress } from "./updateProgress";
+import { listUpdateNotices, markUpdateNoticesRead, pushUpdateNotice } from "./updateNotices";
 import { nativeImage } from "electron";
 
 export const GITHUB_OWNER = "filipspm-cpu";
@@ -12,6 +13,10 @@ export type UpdateStatus = {
   version?: string;
   currentVersion: string;
   percent?: number;
+  transferred?: number;
+  total?: number;
+  detail?: string;
+  left?: string;
   message?: string;
 };
 
@@ -66,7 +71,19 @@ function formatLeft(bytesPerSecond: number, transferred: number, total: number) 
   return `Zostało ok. ${m} min ${s} s`;
 }
 
+function hidePanel() {
+  getWindow()?.hide();
+}
+
+function showPanel() {
+  const win = getWindow();
+  if (!win) return;
+  win.show();
+  win.focus();
+}
+
 function notifyAvailable(version: string) {
+  pushUpdateNotice(app.getVersion(), { version, at: Date.now(), kind: "available" });
   if (notifiedVersion === version) return;
   notifiedVersion = version;
   const body = `Dostępna aktualizacja ${version}. Wejdź w Ustawienia i kliknij Zaktualizuj.`;
@@ -136,16 +153,19 @@ async function applyUpdate() {
     await checkNow(true);
   }
   if (last.status === "downloaded") {
+    hidePanel();
+    openUpdateProgressWindow(last.version || "", getIcon());
     finishInstall();
     return last;
   }
   applying = true;
+  hidePanel();
   openUpdateProgressWindow(last.version || "", getIcon());
   setUpdateProgress({
     percent: 0,
     detail: "Start pobierania…",
     left: "Szacowanie czasu…",
-    sub: `Pobieranie wersji ${last.version || ""}…`,
+    sub: `v${last.version || ""}`,
   });
   applyFeed();
   try {
@@ -153,6 +173,7 @@ async function applyUpdate() {
   } catch (err) {
     applying = false;
     closeUpdateProgressWindow();
+    showPanel();
     send({ status: "error", message: friendlyUpdateError(err) });
   }
   return last;
@@ -164,7 +185,7 @@ function finishInstall() {
     percent: 100,
     detail: "Instalowanie…",
     left: "Aplikacja uruchomi się ponownie",
-    sub: "Kończenie aktualizacji",
+    sub: `v${last.version || ""}`,
   });
   setTimeout(() => {
     closeUpdateProgressWindow();
@@ -186,6 +207,7 @@ export function registerUpdater(opts: {
   autoUpdater.allowPrerelease = false;
   autoUpdater.autoRunAppAfterInstall = true;
   last = { status: "idle", currentVersion: app.getVersion() };
+  listUpdateNotices(app.getVersion());
   try {
     (autoUpdater as unknown as { verifyUpdateCodeSignature?: boolean }).verifyUpdateCodeSignature = false;
   } catch {
@@ -203,12 +225,20 @@ export function registerUpdater(opts: {
     if (!applying) send({ status: "not-available", version: undefined, message: undefined });
   });
   autoUpdater.on("download-progress", (p: ProgressInfo) => {
-    send({ status: "downloading", percent: p.percent, version: last.version });
+    send({
+      status: "downloading",
+      percent: p.percent,
+      version: last.version,
+      transferred: p.transferred,
+      total: p.total,
+      detail: `${formatBytes(p.transferred)} / ${formatBytes(p.total)}`,
+      left: formatLeft(p.bytesPerSecond, p.transferred, p.total),
+    });
     setUpdateProgress({
       percent: p.percent,
       detail: `${formatBytes(p.transferred)} / ${formatBytes(p.total)}`,
       left: formatLeft(p.bytesPerSecond, p.transferred, p.total),
-      sub: `Pobieranie wersji ${last.version || ""}…`,
+      sub: `v${last.version || ""}`,
     });
   });
   autoUpdater.on("update-downloaded", (info) => {
@@ -218,6 +248,7 @@ export function registerUpdater(opts: {
   autoUpdater.on("error", (err) => {
     applying = false;
     closeUpdateProgressWindow();
+    showPanel();
     send({ status: "error", message: friendlyUpdateError(err) });
   });
 
@@ -225,6 +256,8 @@ export function registerUpdater(opts: {
   ipcMain.handle("update:status", () => ({ ...last, currentVersion: app.getVersion() }));
   ipcMain.handle("update:check", () => checkNow(true));
   ipcMain.handle("update:install", () => applyUpdate());
+  ipcMain.handle("update:notices", () => listUpdateNotices(app.getVersion()));
+  ipcMain.handle("update:noticesRead", () => markUpdateNoticesRead(app.getVersion()));
 
   setTimeout(() => {
     if (loadState().settings.autoUpdate === false) return;

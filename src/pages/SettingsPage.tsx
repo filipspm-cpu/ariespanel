@@ -96,7 +96,11 @@ export function SettingsPage() {
         ? "Masz najnowszą wersję."
         : update?.status === "error"
           ? update.message || "Nie udało się sprawdzić aktualizacji."
-          : available
+        : update?.status === "downloading"
+          ? `Pobieranie v${update.version || ""}… ${Math.round(update.percent || 0)}%${update.detail ? ` · ${update.detail}` : ""}`
+          : update?.status === "downloaded"
+            ? "Pobrano. Instalowanie…"
+            : available
             ? `Dostępna v${update?.version}`
             : "Nie sprawdzono jeszcze aktualizacji.";
 
