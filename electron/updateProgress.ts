@@ -1,6 +1,23 @@
-import { BrowserWindow, nativeImage, screen } from "electron";
+import fs from "fs";
+import path from "path";
+import { app, BrowserWindow, nativeImage, screen } from "electron";
 
-function html(version: string) {
+function characterPath() {
+  return [
+    path.join(process.resourcesPath, "updateCharacter.png"),
+    path.join(app.getAppPath(), "build", "updateCharacter.png"),
+    path.join(__dirname, "..", "build", "updateCharacter.png"),
+  ].find((file) => fs.existsSync(file));
+}
+
+function fileUrl(file: string) {
+  return "file:///" + file.replace(/\\/g, "/");
+}
+
+function html(version: string, portrait: string) {
+  const figure = portrait
+    ? `<img class="char" src="${portrait}" alt="" draggable="false" />`
+    : "";
   return `<!doctype html>
 <html>
 <head>
@@ -8,13 +25,33 @@ function html(version: string) {
   <title>Aktualizacja ARIES</title>
   <style>
     html, body { margin: 0; height: 100%; background: #000; color: #f4f4f5; font-family: Inter, Segoe UI, system-ui, sans-serif; overflow: hidden; }
-    .bar {
+    .wrap {
       box-sizing: border-box;
       height: 100%;
       display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      padding: 0 10px 8px 0;
+    }
+    .char {
+      height: 100%;
+      width: auto;
+      max-width: 46%;
+      object-fit: contain;
+      object-position: left bottom;
+      pointer-events: none;
+      user-select: none;
+    }
+    .bar {
+      flex: 1;
+      box-sizing: border-box;
+      height: 64px;
+      margin-bottom: 6px;
+      display: flex;
       align-items: center;
-      gap: 16px;
-      padding: 0 18px;
+      gap: 14px;
+      padding: 0 16px;
+      border-radius: 16px;
       border: 1px solid rgba(255,255,255,0.1);
       background: linear-gradient(180deg, #121212, #050505);
     }
@@ -33,13 +70,16 @@ function html(version: string) {
   </style>
 </head>
 <body>
-  <div class="bar">
-    <div class="label">Aktualizacja</div>
-    <div class="ver" id="ver">v${version}</div>
-    <div class="track"><div class="fill" id="fill"></div></div>
-    <div class="meta">
-      <span class="pct" id="pct">0%</span>
-      <span id="detail">0 MB / —</span>
+  <div class="wrap">
+    ${figure}
+    <div class="bar">
+      <div class="label">Aktualizacja</div>
+      <div class="ver" id="ver">v${version}</div>
+      <div class="track"><div class="fill" id="fill"></div></div>
+      <div class="meta">
+        <span class="pct" id="pct">0%</span>
+        <span id="detail">0 MB / —</span>
+      </div>
     </div>
   </div>
   <script>
@@ -62,11 +102,14 @@ export function openUpdateProgressWindow(version: string, icon: Electron.NativeI
     progressWin.show();
     return progressWin;
   }
+  const portrait = characterPath();
   const area = screen.getPrimaryDisplay().workArea;
-  const width = Math.min(760, Math.max(480, area.width - 48));
-  const height = 64;
+  const width = Math.min(portrait ? 920 : 760, Math.max(480, area.width - 48));
+  const height = portrait ? 210 : 64;
   const x = area.x + Math.round((area.width - width) / 2);
-  const y = area.y + area.height - height - 18;
+  const y = area.y + area.height - height - 12;
+  const htmlPath = path.join(app.getPath("temp"), "aries-update-progress.html");
+  fs.writeFileSync(htmlPath, html(version, portrait ? fileUrl(portrait) : ""), "utf8");
   progressWin = new BrowserWindow({
     x,
     y,
@@ -84,11 +127,11 @@ export function openUpdateProgressWindow(version: string, icon: Electron.NativeI
     backgroundColor: "#000000",
     title: "Aktualizacja ARIES",
     icon: icon.isEmpty() ? nativeImage.createEmpty() : icon,
-    webPreferences: { sandbox: true, contextIsolation: true },
+    webPreferences: { sandbox: false, contextIsolation: true },
   });
   progressWin.setMenuBarVisibility(false);
   progressWin.setAlwaysOnTop(true, "screen-saver");
-  void progressWin.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html(version)));
+  void progressWin.loadFile(htmlPath);
   progressWin.on("closed", () => {
     progressWin = null;
   });
