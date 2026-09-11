@@ -27,6 +27,12 @@ export const CRAFT_FRACTIONS: { id: string; label: string; color: string }[] = [
   { id: "marabunta", label: "Marabunta", color: "#2BB3C7" },
 ];
 
-export function fractionMeta(id: string) {
-  return CRAFT_FRACTIONS.find((row) => row.id === id) ?? { id, label: id, color: "#888" };
+export const MATERIAL_TYPES: Record<string, { label: string; color: string }> = {
+  green: { label: "green", color: "#73CC72" },
+  blue: { label: "blue", color: "#4EA0FF" },
+  red: { label: "red", color: "#E45B5B" },
+};
+
+export function materialMeta(type: string) {
+  return MATERIAL_TYPES[type] ?? { label: type, color: "#fff" };
 }

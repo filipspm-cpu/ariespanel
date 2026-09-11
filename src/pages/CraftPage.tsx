@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import crafts from "@/data/crafts.json";
-import { CRAFT_FRACTIONS, fractionMeta, type CraftItem } from "@/data/craftMeta";
+import { CRAFT_FRACTIONS, fractionMeta, materialMeta, type CraftItem } from "@/data/craftMeta";
 
 const ITEMS = crafts as CraftItem[];
 
@@ -20,7 +20,10 @@ export function CraftPage() {
   }, [query, faction]);
 
   const cartItems = ITEMS.filter((item) => cart[item.id] > 0);
-  const mats = cartItems.reduce((sum, item) => sum + item.materials * (cart[item.id] || 0), 0);
+  const matsByType = cartItems.reduce<Record<string, number>>((acc, item) => {
+    acc[item.materialType] = (acc[item.materialType] || 0) + item.materials * (cart[item.id] || 0);
+    return acc;
+  }, {});
 
   function add(id: number) {
     setCart((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
@@ -78,7 +81,10 @@ export function CraftPage() {
               </div>
               <div className="craft-win-name">{item.name}</div>
               <div className="craft-win-bar">
-                <span className="craft-qty">{item.materials}</span>
+                <span className={`craft-qty craft-qty-${item.materialType}`}>
+                  {item.materials}
+                  <span className="craft-qty-type">{materialMeta(item.materialType).label}</span>
+                </span>
                 <button type="button" className="craft-add" onClick={() => add(item.id)}>
                   DODAJ
                 </button>
@@ -92,7 +98,12 @@ export function CraftPage() {
       {cartItems.length ? (
         <div className="craft-cart">
           <div className="craft-cart-meta">
-            Kalkulator · {mats} mat.
+            Kalkulator
+            {Object.entries(matsByType).map(([type, count]) => (
+              <span key={type} className={`craft-qty-type-inline craft-qty-${type}`}>
+                {count} {materialMeta(type).label}
+              </span>
+            ))}
           </div>
           <div className="craft-cart-list">
             {cartItems.map((item) => (

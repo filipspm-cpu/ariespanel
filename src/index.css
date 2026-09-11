@@ -1477,9 +1477,41 @@ textarea {
 }
 
 .craft-qty {
+  display: inline-flex;
+  flex-direction: column;
   min-width: 18px;
-  color: #fff;
+  line-height: 1.1;
   font-size: 18px;
+  font-weight: 600;
+}
+
+.craft-qty-type {
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  opacity: 0.9;
+}
+
+.craft-qty-green,
+.craft-qty-green .craft-qty-type {
+  color: #73cc72;
+}
+
+.craft-qty-blue,
+.craft-qty-blue .craft-qty-type {
+  color: #4ea0ff;
+}
+
+.craft-qty-red,
+.craft-qty-red .craft-qty-type {
+  color: #e45b5b;
+}
+
+.craft-qty-type-inline {
+  margin-left: 8px;
+  font-size: 12px;
   font-weight: 600;
 }
 
