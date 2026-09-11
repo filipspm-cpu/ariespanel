@@ -1,4 +1,4 @@
-import type { AppSettings, AppStats, CmdSettings, Counter, Macro, MacroFolder, OverlaySettings } from "@/types";
+import type { AppNotice, AppSettings, AppStats, CmdSettings, Counter, Macro, MacroFolder, OverlaySettings } from "@/types";
 
 export interface PersistedState {
   macros: Macro[];
@@ -8,6 +8,7 @@ export interface PersistedState {
   cmd: CmdSettings;
   settings: AppSettings;
   stats: AppStats;
+  notices: AppNotice[];
 }
 
 export async function persist(partial: Partial<PersistedState>) {
