@@ -9,7 +9,6 @@ import {
   Download,
   Folder,
   FolderPlus,
-  GitBranch,
   GripVertical,
   Hash,
   Keyboard,
@@ -20,7 +19,6 @@ import {
   Shuffle,
   Trash2,
   Type,
-  ArrowLeftRight,
   FileUp,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -30,9 +28,6 @@ const STEP_MENU: { type: MacroStepType; label: string; icon: ReactNode }[] = [
   { type: "multiline-text", label: "Tekst wieloliniowy", icon: <AlignLeft size={14} /> },
   { type: "key-press", label: "Naciśnięcie klawisza", icon: <Keyboard size={14} /> },
   { type: "wait", label: "Czekaj", icon: <Clock size={14} /> },
-  { type: "call-function", label: "Wywołaj funkcję", icon: <ArrowLeftRight size={14} /> },
-  { type: "if", label: "Jeśli", icon: <GitBranch size={14} /> },
-  { type: "if-else", label: "jeżeli / w przeciwnym razie", icon: <GitBranch size={14} /> },
   { type: "random", label: "Losowo", icon: <Shuffle size={14} /> },
   { type: "counter", label: "Licznik", icon: <Hash size={14} /> },
 ];
@@ -760,9 +755,24 @@ function StepBlock({
             <span className="text-[12px] text-zinc-500">Naciśnij Enter po wstawieniu</span>
             <Toggle checked={step.pressEnter} onChange={(v) => onPatch(step.id, { pressEnter: v })} />
           </div>
-          <div className="mt-2 text-[11px] leading-snug text-zinc-600">
-            Użyj %1 by wstawić jako zmienną lub nazwę. Użyj {"{tab}"}, aby wstawić tabulator.
-          </div>
+          {step.type === "multiline-text" ? (
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <span className="text-[12px] text-zinc-500">T i Enter po każdej linii</span>
+              <Toggle
+                checked={Boolean(step.pressT || step.enterEachLine)}
+                onChange={(v) => onPatch(step.id, { pressT: v, enterEachLine: v })}
+              />
+            </div>
+          ) : null}
+          {step.type === "multiline-text" && (step.pressT || step.enterEachLine) ? (
+            <div className="mt-2 text-[11px] leading-snug text-zinc-500">
+              Każda linia: T, tekst, Enter. Np. Filipek / liniek / zegar → trzy osobne wiadomości na czacie.
+            </div>
+          ) : (
+            <div className="mt-2 text-[11px] leading-snug text-zinc-600">
+              Użyj %1 by wstawić jako zmienną lub nazwę. Użyj {"{tab}"}, aby wstawić tabulator.
+            </div>
+          )}
         </>
       ) : null}
     </div>

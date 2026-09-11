@@ -23,6 +23,8 @@ export interface MacroStep {
   type: MacroStepType;
   text: string;
   pressEnter: boolean;
+  enterEachLine?: boolean;
+  pressT?: boolean;
   waitMs?: number;
   key?: string;
   condition?: string;

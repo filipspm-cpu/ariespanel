@@ -358,10 +358,22 @@ function registerIpc() {
     return true;
   });
 
-  ipcMain.handle("macro:send", async (_e, text: string, pressEnter: boolean) => {
-    await sendTextForeground(text, pressEnter);
-    return true;
-  });
+  ipcMain.handle(
+    "macro:send",
+    async (
+      _e,
+      text: string,
+      pressEnter: boolean,
+      extra?: { pressT?: boolean; enterEachLine?: boolean },
+    ) => {
+      await sendTextForeground(text, {
+        pressEnter,
+        pressT: Boolean(extra?.pressT),
+        enterEachLine: Boolean(extra?.enterEachLine),
+      });
+      return true;
+    },
+  );
 
   ipcMain.handle("macro:press", (_e, key: string) => {
     const processInfo = findGameProcess();

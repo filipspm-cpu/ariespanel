@@ -46,7 +46,9 @@ if ($existing) {
 $releaseBody = @{
   tag_name   = $tag
   name       = ("ARIES " + $version)
-  body       = "Silent update install (no installer wizard after update)."
+  body       = @"
+Szybsze makra, T+Enter po każdej linii, bez kroków Jeśli / funkcja, logo ARIES.
+"@
   draft      = $false
   prerelease = $false
 } | ConvertTo-Json

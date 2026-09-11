@@ -34,7 +34,10 @@ async function runStep(step: MacroStep, macros: Macro[]): Promise<void> {
     return;
   }
   if (step.text) {
-    await window.synvity?.macroSend(step.text, Boolean(step.pressEnter) || step.type === "multiline-text");
+    await window.synvity?.macroSend(step.text, Boolean(step.pressEnter), {
+      pressT: Boolean(step.pressT),
+      enterEachLine: Boolean(step.enterEachLine),
+    });
     await sleep(12);
   }
 }

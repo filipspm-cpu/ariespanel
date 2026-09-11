@@ -27,7 +27,11 @@ export interface SynvityApi {
     pressEnter: boolean;
   }) => Promise<unknown>;
   cmdStop: () => Promise<unknown>;
-  macroSend: (text: string, pressEnter: boolean) => Promise<unknown>;
+  macroSend: (
+    text: string,
+    pressEnter: boolean,
+    extra?: { pressT?: boolean; enterEachLine?: boolean },
+  ) => Promise<unknown>;
   macroPress: (key: string) => Promise<unknown>;
   registerTriggers: (triggers: { id: string; sequence: string }[]) => Promise<unknown>;
   onCmdProgress: (cb: (data: { command: string }) => void) => () => void;

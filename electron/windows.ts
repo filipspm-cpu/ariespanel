@@ -243,15 +243,31 @@ async function typeLine(text: string) {
   }
 }
 
-async function typeText(text: string, pressEnter: boolean) {
+export type TypeTextOptions = {
+  pressEnter?: boolean;
+  enterEachLine?: boolean;
+  pressT?: boolean;
+};
+
+function asTypeOptions(value: boolean | TypeTextOptions | undefined): TypeTextOptions {
+  if (typeof value === "boolean") return { pressEnter: value };
+  return value ?? {};
+}
+
+async function typeText(text: string, options: TypeTextOptions) {
   const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-  const enterEachLine = lines.length > 1;
-  for (let i = 0; i < lines.length; i++) {
-    await typeLine(lines[i]);
-    const last = i === lines.length - 1;
-    if (enterEachLine || (pressEnter && last)) {
+  const chatLines = Boolean(options.pressT || options.enterEachLine);
+  const toSend = chatLines ? lines.map((l) => l.trimEnd()).filter((l) => l.length > 0) : lines;
+  for (let i = 0; i < toSend.length; i++) {
+    const last = i === toSend.length - 1;
+    if (options.pressT) {
+      keyTap("T");
+      await sleep(90);
+    }
+    await typeLine(toSend[i]);
+    if (chatLines || (options.pressEnter && last)) {
       tapVk(VK_RETURN);
-      if (!last) await sleep(8);
+      if (!last) await sleep(80);
     }
   }
 }
@@ -263,11 +279,11 @@ export function pressKey(hwnd: unknown | null, key: string) {
 
 export async function sendTextToWindow(hwnd: unknown | null, text: string, pressEnter: boolean) {
   focusWindow(hwnd);
-  await typeText(text, pressEnter);
+  await typeText(text, { pressEnter });
 }
 
-export async function sendTextForeground(text: string, pressEnter: boolean) {
-  await typeText(text, pressEnter);
+export async function sendTextForeground(text: string, pressEnterOrOptions: boolean | TypeTextOptions = false) {
+  await typeText(text, asTypeOptions(pressEnterOrOptions));
 }
 
 export function pressKeyForeground(key: string) {

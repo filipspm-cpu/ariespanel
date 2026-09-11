@@ -45,7 +45,11 @@ async function runStep(step: MacroStep, macros: Macro[]): Promise<void> {
     return;
   }
   if (step.text) {
-    await sendTextForeground(step.text, Boolean(step.pressEnter) || step.type === "multiline-text");
+    await sendTextForeground(step.text, {
+      pressEnter: Boolean(step.pressEnter),
+      enterEachLine: Boolean(step.enterEachLine),
+      pressT: Boolean(step.pressT),
+    });
     await sleep(12);
   }
 }

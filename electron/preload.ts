@@ -30,7 +30,11 @@ const api = {
     pressEnter: boolean;
   }) => ipcRenderer.invoke("cmd:run", payload),
   cmdStop: () => ipcRenderer.invoke("cmd:stop"),
-  macroSend: (text: string, pressEnter: boolean) => ipcRenderer.invoke("macro:send", text, pressEnter),
+  macroSend: (
+    text: string,
+    pressEnter: boolean,
+    extra?: { pressT?: boolean; enterEachLine?: boolean },
+  ) => ipcRenderer.invoke("macro:send", text, pressEnter, extra),
   macroPress: (key: string) => ipcRenderer.invoke("macro:press", key),
   registerTriggers: (triggers: { id: string; sequence: string }[]) =>
     ipcRenderer.invoke("macro:registerTriggers", triggers),
