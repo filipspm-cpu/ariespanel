@@ -88,7 +88,7 @@
       "artifactName": "ARIES-Setup-${version}.exe",
       "shortcutName": "ARIES",
       "uninstallDisplayName": "ARIES",
-      "differentialPackage": true,
+      "differentialPackage": false,
       "installerIcon": "build/installerIcon.ico",
       "uninstallerIcon": "build/installerIcon.ico",
       "installerHeader": "build/installerHeader.bmp",
