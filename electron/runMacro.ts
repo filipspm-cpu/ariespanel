@@ -53,7 +53,7 @@ async function runStep(step: MacroStep, macros: Macro[], ctx: { inChat: boolean 
       skipFirstT: true,
     });
     if (chat) ctx.inChat = false;
-    await sleep(40);
+    await sleep(15);
   }
 }
 
@@ -91,13 +91,13 @@ export async function runMacroById(macroId: string, eraseCount: number): Promise
   setMacroInjecting(true);
   try {
     if (eraseCount > 0) {
-      await sleep(30);
+      await sleep(15);
       await pressBackspace(eraseCount);
-      await sleep(80);
+      await sleep(35);
     }
     await runSteps(macro.steps, macros, { inChat: true });
   } finally {
-    await sleep(80);
+    await sleep(30);
     setMacroInjecting(false);
     running = false;
   }

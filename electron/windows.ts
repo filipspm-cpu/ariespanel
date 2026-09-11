@@ -200,7 +200,7 @@ function keyTap(key: string) {
 async function tapVk(vk: number) {
   const scan = MapVirtualKeyW(vk, 0);
   sendEvents([keyboardEvent(vk, scan, 0)]);
-  await sleep(25);
+  await sleep(15);
   sendEvents([keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
 }
 
@@ -208,18 +208,18 @@ async function pasteText(text: string) {
   if (!text) return;
   const previous = clipboard.readText();
   clipboard.writeText(text);
-  await sleep(40);
+  await sleep(20);
   const ctrlScan = MapVirtualKeyW(VK_CONTROL, 0);
   const vScan = MapVirtualKeyW(VK_V, 0);
   sendEvents([keyboardEvent(VK_CONTROL, ctrlScan, 0)]);
-  await sleep(20);
+  await sleep(12);
   sendEvents([keyboardEvent(VK_V, vScan, 0)]);
-  await sleep(30);
+  await sleep(18);
   sendEvents([
     keyboardEvent(VK_V, vScan, KEYEVENTF_KEYUP),
     keyboardEvent(VK_CONTROL, ctrlScan, KEYEVENTF_KEYUP),
   ]);
-  await sleep(180);
+  await sleep(90);
   clipboard.writeText(previous);
 }
 
@@ -262,13 +262,13 @@ async function typeText(text: string, options: TypeTextOptions) {
     const last = i === toSend.length - 1;
     if (reopenChat && i > 0) {
       await tapVk(0x54);
-      await sleep(280);
+      await sleep(140);
     }
     await typeLine(toSend[i]);
-    await sleep(50);
+    await sleep(25);
     if (chatLines || (options.pressEnter && last)) {
       await tapVk(VK_RETURN);
-      if (!last) await sleep(650);
+      if (!last) await sleep(220);
     }
   }
 }
