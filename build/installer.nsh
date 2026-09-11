@@ -1,12 +1,5 @@
 !include "FileFunc.nsh"
 
-!macro customInstall
-  IfFileExists "$INSTDIR\resources\aries-codesign.cer" 0 aries_skip_cert
-  nsExec::ExecToLog 'certutil -user -addstore -f Root "$INSTDIR\resources\aries-codesign.cer"'
-  nsExec::ExecToLog 'certutil -user -addstore -f TrustedPublisher "$INSTDIR\resources\aries-codesign.cer"'
-  aries_skip_cert:
-!macroend
-
 ; electron-updater always passes --updated. Force silent install so the wizard never appears.
 !macro customInit
   ${GetParameters} $R0
