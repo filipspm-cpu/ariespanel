@@ -3,6 +3,7 @@ import filipek from "@/assets/credits/filipek.webp";
 import rysiasty from "@/assets/credits/rysiasty.webp";
 import szczurek from "@/assets/credits/wisniowka.webp";
 import dorek from "@/assets/credits/dorek.webp";
+import fredka from "@/assets/credits/fredka.webp";
 
 const PEOPLE = [
   {
@@ -28,6 +29,12 @@ const PEOPLE = [
     name: "Dorek Helper",
     featured: false,
     avatar: dorek,
+  },
+  {
+    role: "Beta tester",
+    name: "Fredka",
+    featured: false,
+    avatar: fredka,
   },
 ] as const;
 
