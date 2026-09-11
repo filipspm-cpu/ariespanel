@@ -25,7 +25,6 @@ function titleFromEndpoint(endpoint: string): string {
 }
 
 const ENDPOINTS = [
-  "api.majestic-files.net:443/join/memphis",
   "api.majestic-files.net:443/join/arbatsky",
   "api.majestic-files.net:443/join/tverskoy",
   "api.majestic-files.net:443/join/kutuzovsky",
