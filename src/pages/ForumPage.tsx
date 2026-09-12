@@ -174,7 +174,7 @@ export function ForumPage() {
           <div className="forum-results">
             <div className="forum-results-label">Konkretne punkty</div>
             {askHits.length ? (
-            {askHits.map((hit) => (
+              askHits.map((hit) => (
                 <HitCard
                   key={`${hit.ruleId}-${hit.lineIndex}`}
                   hit={hit}
