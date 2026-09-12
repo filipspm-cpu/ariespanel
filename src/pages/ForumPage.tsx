@@ -1,17 +1,49 @@
 import { forumRuleById } from "@/data/forumRules";
 import { useAppStore } from "@/store/useAppStore";
 
+const SECTION_TITLES = new Set([
+  "Awanse / Zwolnienia",
+  "Liderom zabrania się",
+  "Obowiązki lidera",
+  "Postanowienia ogólne",
+  "Zadania i obowiązki FIB",
+  "Zadania i obowiązki LSPD / LSCSD",
+  "Zadania i obowiązki Rządu",
+  "Zadania i obowiązki USSS",
+  "Zasady AirDrop",
+  "Zasady AirDrop & Wojny Magazynów/Dealerów",
+  "Zasady Ataku na Fort Zancudo i Cayo Perico",
+  "Zasady Captures (Turfs)",
+  "Zasady Dealerów i Magazynów",
+  "Zasady Dostaw & Kraftu",
+  "Zasady Napadu na Bank & Biznes",
+  "Zasady Ogólne",
+  "Zasady Ogólne - Klany",
+  "Zasady Ogólne - Rodziny",
+  "Zasady Organizacje kryminalnych",
+  "Zasady SANG",
+  "Zasady dla frakcji kryminalnych",
+  "Zasady dla frakcji państwowych",
+  "Zasady dla organizacji kryminalnych",
+  "Zasady dla organizacji państwowych",
+  "Zasady dotyczące frakcji państwowych",
+  "Zasady frakcji państwowych",
+  "Zasady gry",
+  "Zasady ogólne",
+  "Zasady ogólne - Cayo Perico",
+  "Zasady ogólne - Fort Zancudo",
+  "Zasady ogólne Captures Gangów",
+  "Zasady ogólne Captures Rodzinnych",
+  "Zasady ogólne nalotu",
+  "Zasady porwań dla frakcji państwowej",
+  "Zasady przechwytywania dostaw",
+  "Zasady rabunku dla organizacji kryminalnych",
+  "Zasady składania skarg w ticketach",
+  "Zasady weryfikacji oprogramowania firm trzecich",
+]);
+
 function isSectionTitle(line: string) {
-  const t = line.trim();
-  if (!t) return false;
-  if (/^\d/.test(t)) return false;
-  if (t.includes("|")) return false;
-  if (t.endsWith(".")) return false;
-  if (t.length > 90) return false;
-  if (/^(wyjaśnienie|uwaga|wyjątek|przykład)\b/i.test(t)) return false;
-  return /^(zasady\b|postanowienia\b|obowiązki lidera\b|warunki dotyczące\b|organizacje kryminalne\b|rodziny i klany\b|dyplomacja\b|dyplomacje\b|działalność\b|liderom zabrania\b|awanse\s*\/\s*zwolnienia\b|wspólne zasady\b|zadania i obowiązki\b)/i.test(
-    t,
-  );
+  return SECTION_TITLES.has(line.trim().replace(/:$/, ""));
 }
 
 export function ForumPage() {
