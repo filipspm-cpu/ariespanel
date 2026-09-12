@@ -22,11 +22,9 @@ const notes = isBeta
   : [
       "## Stabilna",
       "",
-      "Ten sam instalator dla wszystkich. v1.0.27 nie widziała wydań BETA, więc ta wersja schodzi jako zwykłe wydanie.",
-      "",
-      "- Forum z regulaminem w panelu (znaczek BETA) — testerzy i developerzy",
-      "- Craft (znaczek BETA) — testerzy i developerzy",
-      "- Pogrubiane są tylko nagłówki typu „Zasady ogólne”",
+      "- Forum: szukaj i asystent wskazuje konkretny punkt we wszystkich regulaminach",
+      "- Regulamin 1:1, pogrubiane tylko nagłówki typu „Zasady ogólne”",
+      "- Craft i Forum ze znaczkiem BETA — testerzy i developerzy",
       "",
       "Zwykłe konto nie widzi Forum ani Crafta.",
     ].join("\n");

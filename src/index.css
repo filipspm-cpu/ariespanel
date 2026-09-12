@@ -1778,3 +1778,133 @@ textarea {
   font-weight: 650;
   color: #fff;
 }
+
+.forum-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 860px;
+  margin: 0 auto 14px;
+  padding: 16px;
+}
+
+.forum-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #8a8a8a;
+}
+
+.forum-field input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: #f2f2f2;
+  font-size: 13px;
+}
+
+.forum-ask button {
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: #fff;
+  color: #000;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.forum-results {
+  max-width: 860px;
+  margin: 0 auto 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.forum-results-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #737373;
+}
+
+.forum-hit {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(18, 18, 18, 0.94), rgba(8, 8, 8, 0.9));
+  color: #c4c4c4;
+}
+
+.forum-hit.on,
+.forum-hit:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.forum-hit-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.forum-hit-point {
+  border-radius: 999px;
+  background: #e11d48;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  text-transform: uppercase;
+}
+
+.forum-hit-doc {
+  font-size: 11px;
+  color: #8a8a8a;
+}
+
+.forum-hit-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #ececec;
+}
+
+.forum-hit-penalty {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #f0a0a0;
+}
+
+.forum-empty {
+  font-size: 13px;
+  color: #737373;
+}
+
+.forum-mark {
+  background: rgba(225, 29, 72, 0.35);
+  color: #fff;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.forum-active {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+}
