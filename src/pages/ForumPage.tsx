@@ -110,7 +110,7 @@ export function ForumPage() {
   const lineRefs = useRef<Record<number, HTMLElement | null>>({});
 
   const searchHits = useMemo(() => searchForum(search, 12), [search]);
-  const askHits = useMemo(() => (asked ? askForum(asked, 5) : []), [asked]);
+  const askHits = useMemo(() => (asked ? askForum(asked, 3) : []), [asked]);
   const needle = asked || search;
   const showAsk = asked.length >= 2;
   const showSearch = !showAsk && search.trim().length >= 2;
@@ -129,7 +129,7 @@ export function ForumPage() {
     const q = ask.trim();
     if (q.length < 2) return;
     setAsked(q);
-    const hits = askForum(q, 5);
+    const hits = askForum(q, 3);
     if (hits[0]) openHit(hits[0]);
   }
 
@@ -174,7 +174,7 @@ export function ForumPage() {
           <div className="forum-results">
             <div className="forum-results-label">Konkretne punkty</div>
             {askHits.length ? (
-              askHits.map((hit) => (
+            {askHits.map((hit) => (
                 <HitCard
                   key={`${hit.ruleId}-${hit.lineIndex}`}
                   hit={hit}

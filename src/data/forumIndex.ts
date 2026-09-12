@@ -12,39 +12,33 @@ export type ForumHit = {
 };
 
 const POINT_RE = /^(\d+(?:\.\d+)*)(?:[.)]\s*|\s+)/;
+const ACRONYM_DEF_RE = /^(RDM|VDM|NRP|NLR|PG|CK|SK|MG|GBS)\b/i;
+const NOTE_RE = /^(wyjaśnienie|uwaga|wyjątek|przykład)\b/i;
 const HEADING_RE =
   /^(zasady\b|postanowienia\b|obowiązki lidera\b|warunki dotyczące\b|organizacje kryminalne\b|rodziny i klany\b|dyplomacja\b|dyplomacje\b|działalność\b|liderom zabrania\b|awanse\s*\/\s*zwolnienia\b|wspólne zasady\b|zadania i obowiązki\b)/i;
+
 const STOP = new Set(
-  "i w na do z ze a o u sie nie czy jak za od po lub oraz to jest byc tym tej tego ten ta te przy bez nad pod we ale czyli jezeli jesli gdy gdyz przez dla juz tylko tez moze moga ktos kogo czego czym jaki jaka jakie jacy jakiej jakim jakich punkt punkcie kara karze regulamin regulaminu".split(
+  "i w na do z ze a o u sie nie czy jak za od po lub oraz to jest byc tym tej tego ten ta te przy bez nad pod we ale czyli jezeli jesli gdy gdyz przez dla juz tylko tez moze moga ktos kogo czego czym jaki jaka jakie dac daje pytam pytanie".split(
     " ",
   ),
 );
 
-const SYNONYMS: Record<string, string[]> = {
-  rdm: ["rdm", "random", "deathmatch", "zabicie", "zabijanie", "atak"],
-  vdm: ["vdm", "vehicle", "przejechanie", "pojazd"],
-  pg: ["pg", "power", "gaming"],
-  nlr: ["nlr", "new", "life", "szpital", "respawn"],
-  nrp: ["nrp", "nonrp", "nierealistyczne"],
-  ck: ["ck", "character", "kill"],
-  sk: ["sk", "spawn"],
-  metagaming: ["metagaming", "mg", "ooc"],
-  zielona: ["zielona", "zielonej", "greenzone", "bezpieczna"],
-  czerwona: ["czerwona", "czerwonej", "redzone"],
-  ghetto: ["ghetto", "getto"],
-  nalot: ["nalot", "nalotu"],
-  kraft: ["kraft", "craft", "crafting"],
-  airdrop: ["airdrop", "zrzut"],
-  capture: ["capture", "captures", "turf", "turfs"],
-  permban: ["permban", "ban", "blokada"],
-  lider: ["lider", "lidera", "kadencja"],
-  skarga: ["skarga", "skargi", "ticket", "zgloszenie"],
-  napad: ["napad", "bank", "biznes"],
-  fort: ["fort", "zancudo", "cayo"],
-  airdrop2: ["magazyn", "dealer", "dealerow"],
-  wojenny: ["wojenny", "wojennego"],
-  dostawy: ["dostawy", "dostaw"],
-};
+const WEAK = new Set(
+  "jedna jeden jednym jednej jedno osobe osoba osoby osob osobami uczestnik uczestnicy liczba podczas musi byc obecna przynajmniej tego tej",
+);
+
+const ACRONYMS = new Set(["rdm", "vdm", "nlr", "nrp", "pg", "ck", "sk", "gbs"]);
+
+const DOC_HINTS: { keys: string[]; ruleId: string }[] = [
+  { keys: ["bank", "biznes", "napad", "zakladnik"], ruleId: "napad" },
+  { keys: ["rdm", "vdm", "nlr", "nrp", "metagaming"], ruleId: "ogolne" },
+  { keys: ["nalot"], ruleId: "nalot" },
+  { keys: ["airdrop", "zrzut", "magazyn", "dealer"], ruleId: "airdrop" },
+  { keys: ["capture", "turf"], ruleId: "captures" },
+  { keys: ["zancudo", "cayo", "fort"], ruleId: "fort" },
+  { keys: ["lider", "kadencja"], ruleId: "lider" },
+  { keys: ["kraft", "dostaw", "dostawy"], ruleId: "dostawy" },
+];
 
 function fold(value: string) {
   return value
@@ -54,134 +48,218 @@ function fold(value: string) {
     .replace(/ł/g, "l");
 }
 
+function stem(token: string) {
+  let t = token;
+  t = t.replace(/osci$/, "osc").replace(/osc$/, "osc");
+  t = t.replace(/(ami|ach|owi|owie|ego|ej|ych|ymi)$/, "");
+  t = t.replace(/(ow|om|em|ie|ia|ie|a|e|y|i|e)$/, "");
+  if (t.startsWith("osob")) return "osob";
+  if (t.startsWith("jedn")) return "jedn";
+  if (t.startsWith("bank")) return "bank";
+  if (t.startsWith("napad")) return "napad";
+  return t.length >= 3 ? t : token;
+}
+
 function tokens(value: string) {
   return fold(value)
     .split(/[^a-z0-9]+/)
     .map((t) => t.trim())
-    .filter((t) => t.length >= 2 && !STOP.has(t));
-}
-
-function expandQuery(query: string) {
-  const raw = tokens(query);
-  const extra: string[] = [];
-  for (const t of raw) {
-    extra.push(...(SYNONYMS[t] ?? []));
-  }
-  return [...new Set([...raw, ...extra])];
+    .filter((t) => t.length >= 2 && !STOP.has(t))
+    .map(stem)
+    .filter((t) => t.length >= 2);
 }
 
 function splitPenalty(line: string) {
-  const pipe = line.lastIndexOf(" | ");
+  const pipe = line.search(/\s*\|\s*/);
   if (pipe < 0) return { text: line.trim(), penalty: null as string | null };
-  return { text: line.slice(0, pipe).trim(), penalty: line.slice(pipe + 3).trim() };
+  return {
+    text: line.slice(0, pipe).trim(),
+    penalty: line.slice(pipe).replace(/^\s*\|\s*/, "").trim(),
+  };
 }
 
-type IndexedLine = {
+type Chunk = {
   ruleId: string;
   ruleTitle: string;
   point: string | null;
   section: string | null;
   lineIndex: number;
-  raw: string;
-  text: string;
+  lead: string;
   penalty: string | null;
   hay: string;
+  body: string;
+  isDef: boolean;
+  isNumbered: boolean;
 };
 
-function buildIndex(): IndexedLine[] {
-  const rows: IndexedLine[] = [];
+function buildChunks(): Chunk[] {
+  const chunks: Chunk[] = [];
   for (const rule of FORUM_RULES) {
     const lines = rule.body.replace(/\u200B/g, "").replace(/\r\n/g, "\n").split("\n");
-    let point: string | null = null;
-    let section: string | null = rule.title;
+    let section = rule.title;
+    let current: Chunk | null = null;
+    const push = () => {
+      if (current) chunks.push(current);
+      current = null;
+    };
     for (let i = 0; i < lines.length; i++) {
-      const raw = lines[i];
-      const trimmed = raw.trim();
-      if (!trimmed) continue;
+      const trimmed = lines[i].trim();
+      if (!trimmed) {
+        if (current && current.hay.length > 80) push();
+        continue;
+      }
       const heading = HEADING_RE.test(trimmed.replace(/:$/, "")) && trimmed.length <= 90 && !trimmed.includes("|");
-      if (heading) section = trimmed.replace(/:$/, "");
-      const pointMatch = trimmed.match(POINT_RE);
-      if (pointMatch) point = pointMatch[1];
+      if (heading) {
+        section = trimmed.replace(/:$/, "");
+        push();
+        continue;
+      }
+      const numbered = trimmed.match(POINT_RE);
+      const def = trimmed.match(ACRONYM_DEF_RE);
+      const note = NOTE_RE.test(trimmed);
+      if (numbered || def) {
+        push();
+        const { text, penalty } = splitPenalty(trimmed);
+        const point = numbered ? numbered[1] : def ? def[1].toUpperCase() : null;
+        current = {
+          ruleId: rule.id,
+          ruleTitle: rule.title,
+          point,
+          section,
+          lineIndex: i,
+          lead: text,
+          penalty,
+          body: fold(trimmed),
+          hay: fold(`${rule.title} ${section} ${point ?? ""} ${trimmed}`),
+          isDef: Boolean(def),
+          isNumbered: Boolean(numbered),
+        };
+        continue;
+      }
+      if (current && note) {
+        current.body += ` ${fold(trimmed)}`;
+        current.hay += ` ${fold(trimmed)}`;
+        if (!current.penalty) current.penalty = splitPenalty(trimmed).penalty;
+        continue;
+      }
+      push();
       const { text, penalty } = splitPenalty(trimmed);
-      rows.push({
+      current = {
         ruleId: rule.id,
         ruleTitle: rule.title,
-        point,
+        point: null,
         section,
         lineIndex: i,
-        raw,
-        text,
+        lead: text,
         penalty,
-        hay: fold(`${rule.title} ${section ?? ""} ${point ?? ""} ${trimmed}`),
-      });
+        body: fold(trimmed),
+        hay: fold(`${rule.title} ${section} ${trimmed}`),
+        isDef: false,
+        isNumbered: false,
+      };
     }
+    push();
   }
-  return rows;
+  return chunks;
 }
 
-const INDEX = buildIndex();
+const CHUNKS = buildChunks();
 
-function scoreLine(row: IndexedLine, query: string, qTokens: string[], preferPoints: boolean) {
-  const q = fold(query).trim();
-  if (!q) return 0;
-  let score = 0;
-  if (row.hay.includes(q)) score += 80;
-  const pointInQuery = query.match(/\b(\d+(?:\.\d+)+)\b/);
-  if (pointInQuery && row.point === pointInQuery[1]) score += 200;
-  for (const t of qTokens) {
-    if (!t) continue;
-    if (row.point === t) score += 120;
-    if (row.hay.includes(t)) score += t.length >= 4 ? 14 : 7;
+function wholeWord(hay: string, token: string) {
+  return new RegExp(`(?:^|[^a-z0-9])${token}(?:$|[^a-z0-9])`).test(hay);
+}
+
+function scoreChunk(chunk: Chunk, query: string) {
+  const qFold = fold(query);
+  const qTokens = [...new Set(tokens(query))];
+  if (!qTokens.length) return 0;
+
+  const acronyms = qTokens.filter((t) => ACRONYMS.has(t));
+  if (acronyms.length) {
+    const ok = acronyms.every((a) => wholeWord(chunk.hay, a) || chunk.hay.includes(a));
+    if (!ok) return 0;
   }
-  if (preferPoints && row.point && POINT_RE.test(row.raw.trim())) score += 18;
-  if (row.penalty) score += 4;
+
+  const keyTokens = qTokens.filter((t) => !WEAK.has(t) && t.length >= 4);
+  if (keyTokens.length) {
+    const missing = keyTokens.filter((t) => !chunk.body.includes(t) && !chunk.hay.includes(t));
+    if (keyTokens.some((t) => ["bank", "rdm", "vdm", "nlr", "nrp", "nalot", "airdrop"].includes(t) && !chunk.body.includes(t))) {
+      return 0;
+    }
+    if (missing.length === keyTokens.length) return 0;
+  }
+
+  let matched = 0;
+  let score = 0;
+  for (const t of qTokens) {
+    const hit = chunk.hay.includes(t);
+    if (hit) {
+      matched += 1;
+      score += WEAK.has(t) ? 6 : t.length >= 4 ? 22 : 12;
+      if (wholeWord(chunk.hay, t)) score += 10;
+    }
+  }
+  const coverage = matched / qTokens.length;
+  if (coverage < (qTokens.length >= 2 ? 0.5 : 1)) return 0;
+  score += Math.round(coverage * 40);
+
+  if (chunk.hay.includes(qFold)) score += 90;
+  if (acronyms.length && chunk.isDef) score += 120;
+  if (chunk.isNumbered) score += 12;
+
+  const countAsk = /\b(1|jedn[aąey]|solo|samemu|pojedyncz|w\s+jedn)/i.test(query);
+  if (countAsk && chunk.body.includes("osob") && /\b(\d+|co najmniej|wymagan|od\s+\d+|do\s+\d+)\b/.test(chunk.body)) {
+    score += 70;
+    if (/uczestnik|wymagan|liczba/.test(chunk.body)) score += 80;
+    if (/reagow/.test(chunk.body)) score -= 45;
+  }
+
+  for (const hint of DOC_HINTS) {
+    if (hint.keys.some((k) => qFold.includes(k) || qTokens.includes(k))) {
+      if (chunk.ruleId === hint.ruleId) score += 50;
+      else score -= 25;
+    }
+  }
+
   return score;
 }
 
-function uniqueHits(hits: ForumHit[]) {
-  const seen = new Set<string>();
-  const out: ForumHit[] = [];
-  for (const hit of hits) {
-    const key = `${hit.ruleId}:${hit.point ?? hit.lineIndex}:${hit.text}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(hit);
-  }
-  return out;
-}
-
-function toHit(row: IndexedLine, score: number): ForumHit {
+function toHit(chunk: Chunk, score: number): ForumHit & { isDef: boolean } {
   return {
-    ruleId: row.ruleId,
-    ruleTitle: row.ruleTitle,
-    point: row.point,
-    section: row.section,
-    lineIndex: row.lineIndex,
-    text: row.text,
-    penalty: row.penalty,
+    ruleId: chunk.ruleId,
+    ruleTitle: chunk.ruleTitle,
+    point: chunk.point,
+    section: chunk.section,
+    lineIndex: chunk.lineIndex,
+    text: chunk.lead,
+    penalty: chunk.penalty,
     score,
+    isDef: chunk.isDef,
   };
 }
 
-export function searchForum(query: string, limit = 24): ForumHit[] {
+function rank(query: string, limit: number, minScore: number) {
   const q = query.trim();
   if (q.length < 2) return [];
-  const qTokens = expandQuery(q);
-  return uniqueHits(
-    INDEX.map((row) => toHit(row, scoreLine(row, q, qTokens, false)))
-      .filter((hit) => hit.score >= 14)
-      .sort((a, b) => b.score - a.score),
-  ).slice(0, limit);
+  return CHUNKS.map((chunk) => toHit(chunk, scoreChunk(chunk, q)))
+    .filter((hit) => hit.score >= minScore)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
 }
 
-export function askForum(question: string, limit = 5): ForumHit[] {
-  const q = question.trim();
-  if (q.length < 2) return [];
-  const qTokens = expandQuery(q);
-  const ranked = INDEX.map((row) => toHit(row, scoreLine(row, q, qTokens, true)))
-    .filter((hit) => hit.score >= 18)
-    .sort((a, b) => b.score - a.score);
-  const numbered = ranked.filter((hit) => Boolean(hit.point));
-  const rest = ranked.filter((hit) => !hit.point);
-  return uniqueHits([...numbered, ...rest]).slice(0, limit);
+export function searchForum(query: string, limit = 12): ForumHit[] {
+  return rank(query, limit, 28);
+}
+
+export function askForum(question: string, limit = 3): ForumHit[] {
+  const hits = rank(question, 8, 40);
+  if (!hits.length) return [];
+  const qTokens = [...new Set(tokens(question))];
+  const acronymOnly = qTokens.length > 0 && qTokens.every((t) => ACRONYMS.has(t) || WEAK.has(t));
+  if (acronymOnly) {
+    const defs = hits.filter((hit) => hit.isDef);
+    if (defs.length) return defs.slice(0, Math.min(2, limit));
+  }
+  const best = hits[0].score;
+  return hits.filter((hit) => hit.score >= best * 0.78).slice(0, limit);
 }
