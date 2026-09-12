@@ -729,15 +729,16 @@ textarea {
   width: 100% !important;
   min-width: 100% !important;
   flex: 0 0 auto !important;
-  height: 64px !important;
-  min-height: 64px !important;
-  padding: 0 28px !important;
-  gap: 12px;
-  border-radius: 999px !important;
+  height: 80px !important;
+  min-height: 80px !important;
+  margin-top: 24px !important;
+  padding: 0 32px !important;
+  gap: 14px;
+  border-radius: 18px !important;
   background: #5865f2;
   border-color: #5865f2;
   color: #fff;
-  font-size: 16px !important;
+  font-size: 18px !important;
   font-weight: 700;
   letter-spacing: 0.01em;
   box-sizing: border-box;
@@ -748,8 +749,8 @@ textarea {
 }
 
 .settings-btn.discord svg {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
 }
 
