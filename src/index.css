@@ -725,22 +725,19 @@ textarea {
 }
 
 .settings-btn.discord {
-  align-self: stretch !important;
-  width: 100% !important;
-  min-width: 100% !important;
-  flex: 0 0 auto !important;
-  height: 80px !important;
-  min-height: 80px !important;
-  margin-top: 24px !important;
-  padding: 0 32px !important;
-  gap: 14px;
-  border-radius: 18px !important;
+  align-self: stretch;
+  width: 100%;
+  flex: none;
+  height: 50px;
+  min-height: 50px;
+  padding: 0 18px;
+  gap: 10px;
+  border-radius: 12px;
   background: #5865f2;
   border-color: #5865f2;
   color: #fff;
-  font-size: 18px !important;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-size: 14px;
+  font-weight: 600;
   box-sizing: border-box;
 }
 
@@ -749,8 +746,8 @@ textarea {
 }
 
 .settings-btn.discord svg {
-  width: 28px;
-  height: 28px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
 }
 
