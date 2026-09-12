@@ -7,24 +7,30 @@ const isBeta = /-beta/i.test(ver);
 const title = isBeta ? `ARIES ${ver} BETA` : `ARIES ${ver}`;
 const notes = isBeta
   ? [
-      "## BETA",
-      "Wydanie dla beta testerów i developerów.",
+      "## BETA — testerzy i developerzy",
+      "",
+      "Pełne wydanie z Craftem.",
       "",
       "- Forum (zasady Majestic w przeglądarce)",
       "- Craft (czerwony znaczek BETA w menu)",
-      "- Pozostałe poprawki z tej linii",
+      "- Większe przyciski Discord w Ustawieniach",
+      "- Nowy awatar Fretki na stronie Autorzy",
+      "- Pozostałe poprawki panelu i aktualizacji",
       "",
-      "Zwykli użytkownicy powinni brać wydanie stabilne, bez Crafta.",
+      "Zwykli użytkownicy powinni brać wydanie stabilne — bez Crafta.",
     ].join("\n")
   : [
-      "## Stabilna",
-      "Wydanie dla zwykłych użytkowników.",
+      "## Stabilna — zwykli użytkownicy",
+      "",
+      "Wszystko oprócz Crafta.",
       "",
       "- Forum (zasady Majestic w przeglądarce)",
-      "- Poprawki aktualizacji, makr i panelu",
-      "- Craft jest ukryty (tylko beta testerzy)",
+      "- Większe przyciski Discord w Ustawieniach",
+      "- Nowy awatar Fretki na stronie Autorzy",
+      "- Poprawki panelu i aktualizacji",
+      "- Craft jest ukryty",
       "",
-      "Beta testerzy na tym samym instalatorze widzą Craft z czerwonym znaczkiem BETA.",
+      "Beta testerzy i developerzy na tym samym instalatorze widzą Craft z czerwonym znaczkiem BETA.",
     ].join("\n");
 
 const tags = [`v${ver}`, ver];
