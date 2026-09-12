@@ -724,7 +724,7 @@ textarea {
   background: #fff;
 }
 
-.settings-btn.discord {
+.settings-profile .settings-btn {
   align-self: stretch;
   width: 100%;
   flex: none;
@@ -733,19 +733,22 @@ textarea {
   padding: 0 18px;
   gap: 10px;
   border-radius: 12px;
-  background: #5865f2;
-  border-color: #5865f2;
-  color: #fff;
   font-size: 14px;
   font-weight: 600;
   box-sizing: border-box;
+}
+
+.settings-btn.discord {
+  background: #5865f2;
+  border-color: #5865f2;
+  color: #fff;
 }
 
 .settings-btn.discord:hover {
   background: #4752c4;
 }
 
-.settings-btn.discord svg {
+.settings-profile .settings-btn svg {
   width: 18px;
   height: 18px;
   flex-shrink: 0;

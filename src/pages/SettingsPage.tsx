@@ -133,8 +133,8 @@ export function SettingsPage() {
             />
           ) : null}
           {discordConnected ? (
-            <button onClick={disconnectDiscord} className="settings-btn mt-5" type="button">
-              <Unplug size={14} />
+            <button onClick={disconnectDiscord} className="settings-btn mt-5 w-full" type="button">
+              <Unplug size={18} />
               Rozłącz Discord
             </button>
           ) : (
