@@ -20,17 +20,13 @@ const notes = isBeta
       "Zwykli użytkownicy powinni brać wydanie stabilne — bez Crafta.",
     ].join("\n")
   : [
-      "## Stabilna — zwykli użytkownicy",
+      "## Stabilna",
       "",
-      "Wszystko oprócz Crafta.",
+      "- Forum: szukaj i asystent wskazuje konkretny punkt we wszystkich regulaminach",
+      "- Regulamin 1:1, pogrubiane tylko nagłówki typu „Zasady ogólne”",
+      "- Craft i Forum ze znaczkiem BETA — testerzy i developerzy",
       "",
-      "- Forum (zasady Majestic w przeglądarce)",
-      "- Większe przyciski Discord w Ustawieniach",
-      "- Nowy awatar Fretki na stronie Autorzy",
-      "- Poprawki panelu i aktualizacji",
-      "- Craft jest ukryty",
-      "",
-      "Beta testerzy i developerzy na tym samym instalatorze widzą Craft z czerwonym znaczkiem BETA.",
+      "Zwykłe konto nie widzi Forum ani Crafta.",
     ].join("\n");
 
 const tags = [`v${ver}`, ver];
