@@ -3,7 +3,7 @@ import filipek from "@/assets/credits/filipek.webp";
 import rysiasty from "@/assets/credits/rysiasty.webp";
 import szczurek from "@/assets/credits/wisniowka.webp";
 import dorek from "@/assets/credits/dorek.webp";
-import fredka from "@/assets/credits/fredka.png";
+import fredka from "@/assets/credits/fredka.gif";
 
 const PEOPLE = [
   {
