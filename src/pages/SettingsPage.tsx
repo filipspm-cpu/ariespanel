@@ -166,7 +166,7 @@ export function SettingsPage() {
           </div>
 
           <div className="mt-3 text-[12px] text-zinc-500">
-            Aktualizacja schodzi z GitHuba. Zwykłe konto dostaje Forum i poprawki bez Crafta. Beta testerzy i developerzy widzą też Craft z czerwonym znaczkiem BETA.
+            Aktualizacja schodzi z GitHuba. Wydania BETA (regulamin w Forum, Craft) dostają tylko testerzy i developerzy. Zwykłe konto zostaje na wersji stabilnej — bez Crafta i bez tego Forum.
           </div>
 
           <div className={`settings-status ${update?.status === "error" ? "warn" : available ? "on" : ""}`}>

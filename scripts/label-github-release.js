@@ -9,9 +9,9 @@ const notes = isBeta
   ? [
       "## BETA — testerzy i developerzy",
       "",
-      "Pełne wydanie z Craftem.",
+      "Pełne wydanie z Craftem i regulaminem w panelu.",
       "",
-      "- Forum (zasady Majestic w przeglądarce)",
+      "- Forum: zasady wklejone w aplikacji, bez otwierania linków",
       "- Craft (czerwony znaczek BETA w menu)",
       "- Większe przyciski Discord w Ustawieniach",
       "- Nowy awatar Fretki na stronie Autorzy",

@@ -16,6 +16,7 @@ export interface AppSnapshot {
   route: RouteId;
   gameOpen: boolean;
   forumOpen: boolean;
+  forumRuleId: string;
   searchOpen: boolean;
   searchQuery: string;
   onlineCount: number;
@@ -32,6 +33,7 @@ export interface AppSnapshot {
 const defaultSnapshot = (): Omit<AppSnapshot, "route" | "searchOpen" | "searchQuery" | "onlineCount" | "hydrated"> => ({
   gameOpen: true,
   forumOpen: false,
+  forumRuleId: "ogolne",
   macros: [],
   folders: [],
   counters: [],
@@ -91,6 +93,7 @@ type State = AppSnapshot & {
   setRoute: (route: RouteId) => void;
   setGameOpen: (open: boolean) => void;
   setForumOpen: (open: boolean) => void;
+  setForumRule: (id: string) => void;
   setSearchOpen: (open: boolean) => void;
   setSearchQuery: (q: string) => void;
   hydrateFromDisk: (data: Partial<AppSnapshot>) => void;
@@ -125,10 +128,12 @@ export const useAppStore = create<State>((set, get) => ({
     set({
       route,
       gameOpen: gameRoutes.includes(route) ? true : get().gameOpen,
+      forumOpen: route === "forum" ? true : get().forumOpen,
     });
   },
   setGameOpen: (gameOpen) => set({ gameOpen }),
   setForumOpen: (forumOpen) => set({ forumOpen }),
+  setForumRule: (forumRuleId) => set({ route: "forum", forumOpen: true, forumRuleId }),
   setSearchOpen: (searchOpen) => set({ searchOpen }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   hydrateFromDisk: (data) => {
@@ -160,6 +165,7 @@ export const useAppStore = create<State>((set, get) => ({
       },
       settings: { ...defaults.settings, ...data.settings },
       cmd: { ...defaults.cmd, ...data.cmd },
+      forumRuleId: typeof data.forumRuleId === "string" ? data.forumRuleId : defaults.forumRuleId,
       hydrated: true,
     });
   },

@@ -4,12 +4,20 @@ import { visibleNavGroups } from "@/data/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import type { RouteId } from "@/types";
 
-function openNavItem(item: { id: RouteId | "forum"; href?: string }, setRoute: (route: RouteId) => void) {
+function openNavItem(
+  item: { id: RouteId; href?: string; ruleId?: string },
+  setRoute: (route: RouteId) => void,
+  setForumRule: (id: string) => void,
+) {
+  if (item.ruleId) {
+    setForumRule(item.ruleId);
+    return;
+  }
   if (item.href) {
     void window.synvity?.forumOpen(item.href);
     return;
   }
-  if (item.id !== "forum") setRoute(item.id);
+  setRoute(item.id);
 }
 
 export function CommandPalette() {
@@ -18,17 +26,18 @@ export function CommandPalette() {
   const query = useAppStore((s) => s.searchQuery);
   const setQuery = useAppStore((s) => s.setSearchQuery);
   const setRoute = useAppStore((s) => s.setRoute);
+  const setForumRule = useAppStore((s) => s.setForumRule);
   const discordId = useAppStore((s) => s.settings.discordId);
   const rank = useAccountRank(discordId);
   const [index, setIndex] = useState(0);
 
   const items = useMemo(() => {
-    const flat: { id: RouteId | "forum"; label: string; href?: string }[] = [];
+    const flat: { id: RouteId; label: string; href?: string; ruleId?: string }[] = [];
     for (const g of visibleNavGroups(rank)) {
       for (const item of g.items) {
         if (item.children) {
           for (const c of item.children) {
-            flat.push({ id: c.id, label: c.label, href: c.href });
+            flat.push({ id: c.id, label: c.label, href: c.href, ruleId: c.ruleId });
           }
         } else {
           flat.push({
@@ -63,14 +72,14 @@ export function CommandPalette() {
         setIndex((i) => Math.max(0, i - 1));
       }
       if (e.key === "Enter" && items[index]) {
-        openNavItem(items[index], setRoute);
+        openNavItem(items[index], setRoute, setForumRule);
         setOpen(false);
         setQuery("");
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, items, index, setOpen, setRoute, setQuery]);
+  }, [open, items, index, setOpen, setRoute, setForumRule, setQuery]);
 
   if (!open) return null;
 
@@ -90,13 +99,13 @@ export function CommandPalette() {
         <div className="max-h-72 overflow-y-auto py-1">
           {items.map((item, i) => (
             <button
-              key={item.id + item.label}
+              key={`${item.id}-${item.ruleId ?? item.label}`}
               className={`flex h-9 w-full items-center px-4 text-left text-[13px] ${
                 i === index ? "bg-[#1c1c1f] text-white" : "text-zinc-400"
               }`}
               onMouseEnter={() => setIndex(i)}
               onClick={() => {
-                openNavItem(item, setRoute);
+                openNavItem(item, setRoute, setForumRule);
                 setOpen(false);
                 setQuery("");
               }}

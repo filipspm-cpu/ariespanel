@@ -12,6 +12,7 @@ import { CreditsPage } from "@/pages/CreditsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { AboutPage } from "@/pages/AboutPage";
 import { CraftPage } from "@/pages/CraftPage";
+import { ForumPage } from "@/pages/ForumPage";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { useAccountRank } from "@/components/RankBadge";
 import { canAccessRoute } from "@/data/navigation";
@@ -28,6 +29,7 @@ const pages: Record<RouteId, ComponentType> = {
   about: AboutPage,
   credits: CreditsPage,
   craft: CraftPage,
+  forum: ForumPage,
 };
 
 export function AppLayout() {

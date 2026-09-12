@@ -58,11 +58,12 @@ function isBetaUser() {
 }
 
 function applyFeed() {
-  autoUpdater.allowPrerelease = false;
+  const beta = isBetaUser();
+  autoUpdater.allowPrerelease = beta;
   autoUpdater.allowDowngrade = true;
   autoUpdater.disableDifferentialDownload = true;
   autoUpdater.disableWebInstaller = true;
-  autoUpdater.channel = "latest";
+  autoUpdater.channel = beta ? "beta" : "latest";
   autoUpdater.requestHeaders = { "User-Agent": "ARIES-Updater" };
   const nsis = autoUpdater as typeof autoUpdater & {
     verifyUpdateCodeSignature?: (publisherNames: string[], path: string) => Promise<string | null>;

@@ -7,14 +7,16 @@ export type RouteId =
   | "settings"
   | "about"
   | "credits"
-  | "craft";
+  | "craft"
+  | "forum";
 
 export interface NavItem {
-  id: RouteId | "forum";
+  id: RouteId;
   label: string;
   icon: string;
   badge?: string;
   href?: string;
+  ruleId?: string;
   devOnly?: boolean;
   betaOnly?: boolean;
 }

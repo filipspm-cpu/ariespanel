@@ -23,11 +23,12 @@ export const navGroups: NavGroup[] = [
         id: "forum",
         label: "Forum",
         icon: "messages",
+        betaOnly: true,
         children: FORUM_RULES.map((rule) => ({
           id: "forum" as const,
           label: rule.title,
           icon: "scroll",
-          href: rule.url,
+          ruleId: rule.id,
         })),
       },
       { id: "craft", label: "Craft", icon: "hammer", betaOnly: true },
@@ -56,7 +57,7 @@ function withBetaBadge<T extends { betaOnly?: boolean; badge?: string }>(item: T
 }
 
 export function canAccessRoute(route: RouteId, rank: AccountRank | null) {
-  if (route === "craft") return hasBetaAccess(rank);
+  if (route === "craft" || route === "forum") return hasBetaAccess(rank);
   return true;
 }
 
@@ -84,6 +85,7 @@ export const breadcrumbs: Record<RouteId, string[]> = {
   about: ["Dashboard", "O aplikacji"],
   credits: ["Dashboard", "Autorzy"],
   craft: ["Dashboard", "Craft"],
+  forum: ["Dashboard", "Forum"],
 };
 
 export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
@@ -96,4 +98,5 @@ export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
   about: { title: "O aplikacji", subtitle: "ARIES — prywatny panel administracyjny" },
   credits: { title: "Autorzy" },
   craft: { title: "Craft", subtitle: "Tabela krafta frakcji — Majestic Wiki" },
+  forum: { title: "Forum", subtitle: "Regulamin serwera w panelu" },
 };

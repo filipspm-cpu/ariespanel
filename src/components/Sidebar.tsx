@@ -19,7 +19,6 @@ import { BrandMark } from "@/components/BrandMark";
 import { RankBadge, useAccountRank } from "@/components/RankBadge";
 import { visibleNavGroups } from "@/data/navigation";
 import { useAppStore } from "@/store/useAppStore";
-import type { RouteId } from "@/types";
 import { clsx } from "./ui/clsx";
 
 const icons: Record<string, LucideIcon> = {
@@ -95,6 +94,8 @@ export function Sidebar() {
   const setGameOpen = useAppStore((s) => s.setGameOpen);
   const forumOpen = useAppStore((s) => s.forumOpen);
   const setForumOpen = useAppStore((s) => s.setForumOpen);
+  const forumRuleId = useAppStore((s) => s.forumRuleId);
+  const setForumRule = useAppStore((s) => s.setForumRule);
   const setSearchOpen = useAppStore((s) => s.setSearchOpen);
   const settings = useAppStore((s) => s.settings);
   const nick = settings.discordGlobalName || settings.username || "Konto";
@@ -142,18 +143,28 @@ export function Sidebar() {
                     {expanded
                       ? item.children.map((child) => (
                           <NavButton
-                            key={`${child.id}-${child.href ?? child.label}`}
+                            key={`${child.id}-${child.ruleId ?? child.href ?? child.label}`}
                             label={child.label}
                             icon={child.icon}
                             badge={child.badge}
                             indented
-                            active={child.href ? false : route === child.id}
+                            active={
+                              child.ruleId
+                                ? route === "forum" && forumRuleId === child.ruleId
+                                : child.href
+                                  ? false
+                                  : route === child.id
+                            }
                             onClick={() => {
+                              if (child.ruleId) {
+                                setForumRule(child.ruleId);
+                                return;
+                              }
                               if (child.href) {
                                 void window.synvity?.forumOpen(child.href);
                                 return;
                               }
-                              setRoute(child.id as RouteId);
+                              setRoute(child.id);
                             }}
                           />
                         ))
@@ -168,7 +179,7 @@ export function Sidebar() {
                   icon={item.icon}
                   badge={item.badge}
                   active={route === item.id}
-                  onClick={() => setRoute(item.id as RouteId)}
+                  onClick={() => setRoute(item.id)}
                 />
               );
             })}
