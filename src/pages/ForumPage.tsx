@@ -1,46 +1,23 @@
 import { forumRuleById } from "@/data/forumRules";
 import { useAppStore } from "@/store/useAppStore";
 
-const NOTE_RE = /^(wyjaśnienie|uwaga|wyjątek|przykład|w naszym rozumieniu)\b/i;
-const RULE_RE = /^\d+(\.\d+)*/;
-
-function isHeading(line: string) {
+function isSectionTitle(line: string) {
   const t = line.trim();
-  if (!t || t.length > 90) return false;
-  if (RULE_RE.test(t)) return false;
-  if (t.includes(" | ")) return false;
-  if (NOTE_RE.test(t)) return false;
-  return true;
-}
-
-function RuleLine({ line }: { line: string }) {
-  const trimmed = line.trim();
-  if (!trimmed) return <div className="forum-gap" />;
-
-  const pipe = trimmed.lastIndexOf(" | ");
-  const main = pipe > 0 ? trimmed.slice(0, pipe).trim() : trimmed;
-  const penalty = pipe > 0 ? trimmed.slice(pipe + 3).trim() : "";
-
-  if (isHeading(main) && !penalty) {
-    return <h2 className="forum-h">{main}</h2>;
-  }
-
-  const note = NOTE_RE.test(main);
-
-  return (
-    <p className={note ? "forum-note" : "forum-p"}>
-      <span>{main}</span>
-      {penalty ? <span className="forum-penalty">{penalty}</span> : null}
-    </p>
+  if (!t) return false;
+  if (/^\d/.test(t)) return false;
+  if (t.includes("|")) return false;
+  if (t.endsWith(".")) return false;
+  if (t.length > 90) return false;
+  if (/^(wyjaśnienie|uwaga|wyjątek|przykład)\b/i.test(t)) return false;
+  return /^(zasady\b|postanowienia\b|obowiązki lidera\b|warunki dotyczące\b|organizacje kryminalne\b|rodziny i klany\b|dyplomacja\b|dyplomacje\b|działalność\b|liderom zabrania\b|awanse\s*\/\s*zwolnienia\b|wspólne zasady\b|zadania i obowiązki\b)/i.test(
+    t,
   );
 }
 
 export function ForumPage() {
   const forumRuleId = useAppStore((s) => s.forumRuleId);
   const rule = forumRuleById(forumRuleId);
-  const lines = rule.body.replace(/\u200B/g, "").split("\n");
-  const bodyLines =
-    lines[0]?.trim().toLowerCase() === rule.title.trim().toLowerCase() ? lines.slice(1) : lines;
+  const lines = rule.body.replace(/\u200B/g, "").replace(/\r\n/g, "\n").split("\n");
 
   return (
     <div className="studio-page">
@@ -51,9 +28,25 @@ export function ForumPage() {
       </div>
       <div className="studio-body">
         <article className="studio-card forum-card">
-          {bodyLines.map((line, i) => (
-            <RuleLine key={`${i}-${line.slice(0, 24)}`} line={line} />
-          ))}
+          <pre className="forum-pre">
+            {lines.map((line, i) => {
+              const nl = i < lines.length - 1 ? "\n" : "";
+              if (isSectionTitle(line)) {
+                return (
+                  <strong key={i}>
+                    {line}
+                    {nl}
+                  </strong>
+                );
+              }
+              return (
+                <span key={i}>
+                  {line}
+                  {nl}
+                </span>
+              );
+            })}
+          </pre>
         </article>
       </div>
     </div>

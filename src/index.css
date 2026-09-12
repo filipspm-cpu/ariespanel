@@ -1765,42 +1765,16 @@ textarea {
   margin: 0 auto 24px;
 }
 
-.forum-h {
-  margin: 22px 0 10px;
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  color: #fff;
-}
-
-.forum-h:first-child {
-  margin-top: 0;
-}
-
-.forum-p,
-.forum-note {
-  margin: 0 0 8px;
+.forum-pre {
+  margin: 0;
+  font-family: inherit;
   font-size: 13px;
   line-height: 1.65;
+  white-space: pre-wrap;
   color: #c4c4c4;
 }
 
-.forum-note {
-  color: #9a9a9a;
-}
-
-.forum-penalty {
-  display: inline-block;
-  margin-left: 8px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: rgba(228, 91, 91, 0.16);
-  color: #f0a0a0;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.forum-gap {
-  height: 8px;
+.forum-pre strong {
+  font-weight: 650;
+  color: #fff;
 }
