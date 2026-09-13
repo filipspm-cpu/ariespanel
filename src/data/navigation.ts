@@ -23,7 +23,6 @@ export const navGroups: NavGroup[] = [
         id: "forum",
         label: "Forum",
         icon: "messages",
-        betaOnly: true,
         children: FORUM_RULES.map((rule) => ({
           id: "forum" as const,
           label: rule.title,
@@ -31,7 +30,7 @@ export const navGroups: NavGroup[] = [
           ruleId: rule.id,
         })),
       },
-      { id: "craft", label: "Craft", icon: "hammer", betaOnly: true },
+      { id: "craft", label: "Craft", icon: "hammer" },
     ],
   },
   {
@@ -56,8 +55,7 @@ function withBetaBadge<T extends { betaOnly?: boolean; badge?: string }>(item: T
   return { ...item, badge: item.badge || "BETA" };
 }
 
-export function canAccessRoute(route: RouteId, rank: AccountRank | null) {
-  if (route === "craft" || route === "forum") return hasBetaAccess(rank);
+export function canAccessRoute(_route: RouteId, _rank: AccountRank | null) {
   return true;
 }
 

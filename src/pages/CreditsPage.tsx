@@ -25,7 +25,7 @@ const PEOPLE = [
     avatar: szczurek,
   },
   {
-    role: "Beta tester / Logo",
+    role: "Logo",
     name: "Dorek Helper",
     featured: false,
     avatar: dorek,

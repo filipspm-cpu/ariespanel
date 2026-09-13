@@ -182,11 +182,10 @@ function scoreChunk(chunk: Chunk, query: string) {
 
   const keyTokens = qTokens.filter((t) => !WEAK.has(t) && t.length >= 4);
   if (keyTokens.length) {
-    const missing = keyTokens.filter((t) => !chunk.body.includes(t) && !chunk.hay.includes(t));
     if (keyTokens.some((t) => ["bank", "rdm", "vdm", "nlr", "nrp", "nalot", "airdrop"].includes(t) && !chunk.body.includes(t))) {
       return 0;
     }
-    if (missing.length === keyTokens.length) return 0;
+    if (keyTokens.every((t) => !chunk.body.includes(t) && !chunk.hay.includes(t))) return 0;
   }
 
   let matched = 0;

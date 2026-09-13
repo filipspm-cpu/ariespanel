@@ -12,21 +12,19 @@ const notes = isBeta
       "Pełne wydanie z Craftem i regulaminem w panelu.",
       "",
       "- Forum: zasady wklejone w aplikacji, bez otwierania linków",
-      "- Craft (czerwony znaczek BETA w menu)",
+      "- Craft",
       "- Większe przyciski Discord w Ustawieniach",
       "- Nowy awatar Fretki na stronie Autorzy",
       "- Pozostałe poprawki panelu i aktualizacji",
       "",
-      "Zwykli użytkownicy powinni brać wydanie stabilne — bez Crafta.",
+      "Zwykli użytkownicy powinni brać wydanie stabilne.",
     ].join("\n")
   : [
       "## Stabilna",
       "",
       "- Forum: szukaj i asystent wskazuje konkretny punkt we wszystkich regulaminach",
-      "- Regulamin 1:1, pogrubiane tylko nagłówki typu „Zasady ogólne”",
-      "- Craft i Forum ze znaczkiem BETA — testerzy i developerzy",
-      "",
-      "Zwykłe konto nie widzi Forum ani Crafta.",
+      "- Craft i Forum dostępne dla każdego",
+      "- Dorek Helper w Autorach: Logo",
     ].join("\n");
 
 const tags = [`v${ver}`, ver];
