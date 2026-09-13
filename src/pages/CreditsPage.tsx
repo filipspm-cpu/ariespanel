@@ -44,9 +44,10 @@ function CreditRow({
   person: (typeof PEOPLE)[number];
 }) {
   const size = person.featured ? 92 : 64;
+  const gold = person.role === "Main developer" || person.role === "Developer";
   return (
-    <div className={`credits-row ${person.featured ? "credits-row-featured" : ""}`}>
-      <div className="credits-avatar-wrap" style={{ width: size, height: size }}>
+    <div className={`credits-row ${person.featured ? "credits-row-featured" : ""} ${gold ? "credits-row-gold" : ""}`}>
+      <div className={`credits-avatar-wrap ${gold ? "credits-avatar-gold" : ""}`} style={{ width: size, height: size }}>
         <img src={person.avatar} alt="" width={size} height={size} draggable={false} referrerPolicy="no-referrer" />
       </div>
       <div className="credits-meta">

@@ -369,6 +369,17 @@ textarea {
   object-fit: cover;
 }
 
+.credits-avatar-gold {
+  box-shadow:
+    0 0 0 2px #f0d48a,
+    0 0 0 4px #8a6418,
+    0 0 18px rgba(240, 212, 138, 0.55);
+}
+
+.credits-row-gold .credits-role {
+  color: #e8c36a;
+}
+
 .credits-meta {
   min-width: 0;
   text-align: left;
