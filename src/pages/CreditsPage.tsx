@@ -1,5 +1,5 @@
 import { Copyright } from "@/components/Copyright";
-import filipek from "@/assets/credits/filipek.webp";
+import filipek from "@/assets/credits/filipek.gif";
 import rysiasty from "@/assets/credits/rysiasty.webp";
 import szczurek from "@/assets/credits/wisniowka.webp";
 import dorek from "@/assets/credits/dorek.webp";
