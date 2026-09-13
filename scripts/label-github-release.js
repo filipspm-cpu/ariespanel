@@ -22,7 +22,8 @@ const notes = isBeta
   : [
       "## Stabilna",
       "",
-      "- Niższe zużycie CPU/RAM: wolniejsze pętle makr i Spotify, lżejsza nakładka, strony ładują się na żądanie",
+      "- Niższe zużycie CPU/RAM: wolniejsze pętle makr i Spotify, lżejsza nakładka",
+      "- Flaga Polski w belce zamiast emoji PL, z powiewaniem",
       "- Plik makr: długi tekst, [losowe], [licznik] i znaczniki zamiast jednej linii z |",
       "- Autorzy: Dorek (Logo); Dorek dodany jako beta tester",
     ].join("\n");

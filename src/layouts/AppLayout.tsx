@@ -1,24 +1,23 @@
-import { lazy, Suspense, useEffect } from "react";
+import { useEffect } from "react";
 import type { ComponentType } from "react";
 import { TitleBar } from "@/components/TitleBar";
 import { Sidebar } from "@/components/Sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { HomePage } from "@/pages/HomePage";
+import { CmdPage } from "@/pages/CmdPage";
+import { OverlayPage } from "@/pages/OverlayPage";
+import { MacrosPage } from "@/pages/MacrosPage";
+import { CountersPage } from "@/pages/CountersPage";
+import { CreditsPage } from "@/pages/CreditsPage";
+import { SettingsPage } from "@/pages/SettingsPage";
+import { AboutPage } from "@/pages/AboutPage";
+import { CraftPage } from "@/pages/CraftPage";
+import { ForumPage } from "@/pages/ForumPage";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { useAccountRank } from "@/components/RankBadge";
 import { canAccessRoute } from "@/data/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import type { RouteId } from "@/types";
-
-const CmdPage = lazy(() => import("@/pages/CmdPage").then((m) => ({ default: m.CmdPage })));
-const OverlayPage = lazy(() => import("@/pages/OverlayPage").then((m) => ({ default: m.OverlayPage })));
-const MacrosPage = lazy(() => import("@/pages/MacrosPage").then((m) => ({ default: m.MacrosPage })));
-const CountersPage = lazy(() => import("@/pages/CountersPage").then((m) => ({ default: m.CountersPage })));
-const SettingsPage = lazy(() => import("@/pages/SettingsPage").then((m) => ({ default: m.SettingsPage })));
-const AboutPage = lazy(() => import("@/pages/AboutPage").then((m) => ({ default: m.AboutPage })));
-const CreditsPage = lazy(() => import("@/pages/CreditsPage").then((m) => ({ default: m.CreditsPage })));
-const CraftPage = lazy(() => import("@/pages/CraftPage").then((m) => ({ default: m.CraftPage })));
-const ForumPage = lazy(() => import("@/pages/ForumPage").then((m) => ({ default: m.ForumPage })));
 
 const pages: Record<RouteId, ComponentType> = {
   home: HomePage,
@@ -52,9 +51,7 @@ export function AppLayout() {
       <div className="flex min-h-0 flex-1">
         <Sidebar />
         <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
-          <Suspense fallback={<div className="flex h-full items-center justify-center text-[13px] text-zinc-600">Ładowanie…</div>}>
-            <Page />
-          </Suspense>
+          <Page />
         </main>
       </div>
       <CommandPalette />
