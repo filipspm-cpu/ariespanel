@@ -25,8 +25,8 @@ const PEOPLE = [
     avatar: szczurek,
   },
   {
-    role: "Logo",
-    name: "Dorek Helper",
+    role: "Logo · Beta tester",
+    name: "Dorek",
     featured: false,
     avatar: dorek,
   },
@@ -70,7 +70,7 @@ export function CreditsPage() {
         <div className="credits-vignette" />
         <div className="credits-roll">
           {PEOPLE.map((person) => (
-            <CreditRow key={person.name} person={person} />
+            <CreditRow key={`${person.role}-${person.name}`} person={person} />
           ))}
           <Copyright className="credits-copyright" />
         </div>

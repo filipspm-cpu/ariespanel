@@ -22,10 +22,9 @@ const notes = isBeta
   : [
       "## Stabilna",
       "",
-      "- Przycisk Odśwież na stronie głównej pobiera aktualną listę serwerów (omija cache)",
-      "- Forum: szukaj i asystent wskazuje konkretny punkt we wszystkich regulaminach",
-      "- Craft i Forum dostępne dla każdego",
-      "- Dorek Helper w Autorach: Logo",
+      "- Plik makr: długi tekst, [losowe], [licznik] i znaczniki zamiast jednej linii z |",
+      "- Autorzy: Dorek (Logo); Dorek dodany jako beta tester",
+      "- Przycisk Odśwież na stronie głównej pobiera aktualną listę serwerów",
     ].join("\n");
 
 const tags = [`v${ver}`, ver];
