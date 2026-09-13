@@ -22,6 +22,7 @@ const notes = isBeta
   : [
       "## Stabilna",
       "",
+      "- Przycisk Odśwież na stronie głównej pobiera aktualną listę serwerów (omija cache)",
       "- Forum: szukaj i asystent wskazuje konkretny punkt we wszystkich regulaminach",
       "- Craft i Forum dostępne dla każdego",
       "- Dorek Helper w Autorach: Logo",

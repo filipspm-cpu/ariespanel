@@ -77,7 +77,7 @@ const api = {
     ipcRenderer.on("update:status", listener);
     return () => ipcRenderer.removeListener("update:status", listener);
   },
-  majesticServers: () => ipcRenderer.invoke("majestic:servers"),
+  majesticServers: (force?: boolean) => ipcRenderer.invoke("majestic:servers", Boolean(force)),
   discordConnect: () => ipcRenderer.invoke("discord:connect"),
   forumOpen: (url: string) => ipcRenderer.invoke("forum:open", url),
 };

@@ -59,8 +59,9 @@ type MajesticApiServer = {
   region?: string;
 };
 
-async function fetchJson(url: string): Promise<unknown> {
+async function fetchJson(url: string, force = false): Promise<unknown> {
   const res = await fetch(url, {
+    cache: force ? "no-store" : "default",
     headers: { "User-Agent": "ARIES", Accept: "application/json" },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} ${url}`);
@@ -84,14 +85,17 @@ function mapServers(majesticByIp: Map<string, MajesticApiServer>): LiveServerSta
   });
 }
 
-export async function fetchMajesticServerStatuses(): Promise<LiveServerStatus[]> {
-  if (majesticCache && Date.now() - majesticCache.at < MAJESTIC_TTL_MS) {
+export async function fetchMajesticServerStatuses(force = false): Promise<LiveServerStatus[]> {
+  if (!force && majesticCache && Date.now() - majesticCache.at < MAJESTIC_TTL_MS) {
     return majesticCache.data;
   }
 
   const majesticByIp = new Map<string, MajesticApiServer>();
   try {
-    const body = (await fetchJson("https://api.majestic-files.com/meta/servers")) as {
+    const url = force
+      ? `https://api.majestic-files.com/meta/servers?_=${Date.now()}`
+      : "https://api.majestic-files.com/meta/servers";
+    const body = (await fetchJson(url, force)) as {
       result?: { servers?: MajesticApiServer[] };
     };
     for (const s of body.result?.servers ?? []) {

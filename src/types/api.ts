@@ -47,7 +47,7 @@ export interface SynvityApi {
   onUpdateStatus: (cb: (status: UpdateStatus) => void) => () => void;
   updateNotices: () => Promise<UpdateNotice[]>;
   updateNoticesRead: () => Promise<UpdateNotice[]>;
-  majesticServers: () => Promise<import("./index").LiveServerStatus[]>;
+  majesticServers: (force?: boolean) => Promise<import("./index").LiveServerStatus[]>;
   forumOpen: (url: string) => Promise<unknown>;
   discordConnect: () => Promise<{
     id: string;

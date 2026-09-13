@@ -31,13 +31,15 @@ export function MajesticServersPanel() {
   const [error, setError] = useState("");
   const [region, setRegion] = useState<RegionFilter>("all");
   const [sortDesc, setSortDesc] = useState(true);
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
 
-  const load = async () => {
+  const load = async (force = false) => {
     setLoading(true);
     setError("");
     try {
-      const list = await window.synvity?.majesticServers();
+      const list = await window.synvity?.majesticServers(force);
       setServers(list ?? []);
+      setUpdatedAt(Date.now());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Nie udało się pobrać listy serwerów.");
     } finally {
@@ -46,8 +48,8 @@ export function MajesticServersPanel() {
   };
 
   useEffect(() => {
-    void load();
-    const t = setInterval(() => void load(), 90_000);
+    void load(false);
+    const t = setInterval(() => void load(false), 90_000);
     return () => clearInterval(t);
   }, []);
 
@@ -67,10 +69,16 @@ export function MajesticServersPanel() {
         <div>
           <div className="home-servers-title">Serwery Majestic</div>
           <div className="home-servers-sub">
-            <RollingNumber value={onlineCount} ready={!loading} delay={120} /> online
+            <RollingNumber value={onlineCount} ready={!loading || servers.length > 0} delay={120} /> online
           </div>
           <div className="home-servers-meta">
-            Gracze: <RollingNumber value={playersTotal} ready={!loading} delay={180} />
+            Gracze: <RollingNumber value={playersTotal} ready={!loading || servers.length > 0} delay={180} />
+            {updatedAt ? (
+              <>
+                {" · "}
+                {new Date(updatedAt).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              </>
+            ) : null}
           </div>
         </div>
         <div>
@@ -80,7 +88,7 @@ export function MajesticServersPanel() {
               <option value="ru">RU</option>
               <option value="eu">EU</option>
             </select>
-            <button onClick={() => void load()} title="Odśwież">
+            <button type="button" onClick={() => void load(true)} disabled={loading} title="Odśwież listę serwerów">
               <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
               Odśwież
             </button>
@@ -134,7 +142,7 @@ export function MajesticServersPanel() {
                   <div className={`home-servers-count ${playerTone(s.players)}`}>
                     <span className={`mr-2 inline-block h-1.5 w-1.5 rounded-full ${playerDot(s.players)}`} />
                     {s.online ? (
-                      <RollingNumber value={s.players} ready={!loading} delay={220 + i * 22} />
+                      <RollingNumber value={s.players} ready={!loading || servers.length > 0} delay={220 + i * 22} />
                     ) : (
                       "—"
                     )}

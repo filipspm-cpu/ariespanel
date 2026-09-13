@@ -280,7 +280,7 @@ function registerIpc() {
   ipcMain.handle("process:find", () => findGameProcess());
   ipcMain.handle("process:list", () => listWindows());
   ipcMain.handle("spotify:now", () => getSpotifyTrack());
-  ipcMain.handle("majestic:servers", () => fetchMajesticServerStatuses());
+  ipcMain.handle("majestic:servers", (_e, force?: boolean) => fetchMajesticServerStatuses(Boolean(force)));
   ipcMain.handle("discord:connect", () => connectDiscord());
   ipcMain.handle("forum:open", (_e, url: string) => shell.openExternal(assertForumUrl(url)));
 
