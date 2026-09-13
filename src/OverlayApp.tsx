@@ -63,12 +63,13 @@ export function OverlayApp() {
     if (root) root.style.background = "transparent";
   }, []);
 
+  const { overlay, overlayCounters, ticket, specs, track } = payload;
+
   useEffect(() => {
+    if (!overlay.showClock) return;
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
-  }, []);
-
-  const { overlay, overlayCounters, ticket, specs, track } = payload;
+  }, [overlay.showClock]);
   const pills =
     overlayCounters ??
     [

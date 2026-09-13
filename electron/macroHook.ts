@@ -43,9 +43,14 @@ function shiftDown() {
   );
 }
 
-function mappedCharacter(virtualKey: number, fallback: string) {
-  if (virtualKey === VK_5 && shiftDown()) return "%";
-  return fallback;
+let watchedNow = watchedKeys;
+
+function rebuildWatchedKeys() {
+  const need = new Set<string>(["\b", " "]);
+  for (const trigger of triggers) {
+    for (const ch of trigger.sequence) need.add(ch);
+  }
+  watchedNow = watchedKeys.filter(([, character]) => need.has(character) || need.has(character.toLowerCase()));
 }
 
 export function updateMacroTriggers(next: Trigger[]) {
@@ -53,6 +58,7 @@ export function updateMacroTriggers(next: Trigger[]) {
     .map((trigger) => ({ id: trigger.id, sequence: trigger.sequence.trim().toLowerCase() }))
     .filter((trigger) => trigger.sequence.length > 0)
     .sort((a, b) => b.sequence.length - a.sequence.length);
+  rebuildWatchedKeys();
 }
 
 function recordCharacter(character: string) {
@@ -76,13 +82,15 @@ function recordCharacter(character: string) {
 }
 
 function pollKeyboard() {
+  if (!triggers.length) return;
   ensureNative();
-  for (const [virtualKey, character] of watchedKeys) {
+  const shifted = shiftDown();
+  for (const [virtualKey, character] of watchedNow) {
     const down = (GetAsyncKeyState(virtualKey) & 0x8000) !== 0;
     const wasDown = keyDown.get(virtualKey) ?? false;
     keyDown.set(virtualKey, down);
     if (isMacroInjecting() || !down || wasDown) continue;
-    recordCharacter(mappedCharacter(virtualKey, character));
+    recordCharacter(virtualKey === VK_5 && shifted ? "%" : character);
   }
 }
 
@@ -92,7 +100,7 @@ export function startMacroHook(handler: (id: string, eraseCount: number) => void
   if (timer) return;
   keyDown.clear();
   buffer = "";
-  timer = setInterval(pollKeyboard, 8);
+  timer = setInterval(pollKeyboard, 20);
 }
 
 export function stopMacroHook() {

@@ -122,7 +122,7 @@ export function MajesticServersPanel() {
           <div className="home-servers-empty">Ładowanie serwerów…</div>
         ) : (
           <ul>
-            {filtered.map((s, i) => {
+            {filtered.map((s) => {
               const avatar = serverAvatarUrl(s.endpoint);
               return (
                 <li key={s.endpoint} className="home-servers-row">
@@ -142,7 +142,7 @@ export function MajesticServersPanel() {
                   <div className={`home-servers-count ${playerTone(s.players)}`}>
                     <span className={`mr-2 inline-block h-1.5 w-1.5 rounded-full ${playerDot(s.players)}`} />
                     {s.online ? (
-                      <RollingNumber value={s.players} ready={!loading || servers.length > 0} delay={220 + i * 22} />
+                      <RollingNumber value={s.players} ready={!loading || servers.length > 0} delay={0} duration={0} />
                     ) : (
                       "—"
                     )}

@@ -152,10 +152,14 @@ function artFilePath() {
   return path.join(app.getPath("userData"), "spotify-art.bin");
 }
 
+let scriptFile = "";
+
 function scriptPath() {
+  if (scriptFile && fs.existsSync(scriptFile)) return scriptFile;
   const dest = path.join(app.getPath("userData"), "smtc.ps1");
   const art = artFilePath().replace(/\\/g, "\\\\");
   fs.writeFileSync(dest, SMTC_SCRIPT.replace("ART_FILE_PLACEHOLDER", art), "utf8");
+  scriptFile = dest;
   return dest;
 }
 
@@ -352,10 +356,11 @@ function mergeTracks(smtc: SpotifyTrack | null, titled: SpotifyTrack | null, pre
 
 export async function getSpotifyTrack(): Promise<SpotifyTrack | null> {
   if (inflight) return inflight;
-  if (cache.track && Date.now() - cache.at < 2500) return cache.track;
+  if (cache.track && Date.now() - cache.at < 8000) return cache.track;
   inflight = (async () => {
     const titled = fromWindowTitle();
-    const smtc = await fromSmtc();
+    const sameAsCache = titled && cache.track && sameSong(titled, cache.track) && Date.now() - cache.at < 20000;
+    const smtc = sameAsCache ? null : await fromSmtc();
     let track = mergeTracks(smtc, titled, cache.track);
     if (track && !track.artwork) track = await enrichTrack(track);
     cache = { at: Date.now(), track };

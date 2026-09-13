@@ -90,12 +90,14 @@ function createMainWindow() {
     autoHideMenuBar: true,
     frame: false,
     show: false,
-      webPreferences: {
+    webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
-      backgroundThrottling: false,
+      spellcheck: false,
+      backgroundThrottling: true,
+      v8CacheOptions: "code",
     },
   });
 
@@ -109,6 +111,19 @@ function createMainWindow() {
     const icon = appIcon();
     if (!icon.isEmpty()) mainWindow?.setIcon(icon);
     mainWindow?.show();
+  });
+  mainWindow.on("hide", () => {
+    mainWindow?.webContents.setBackgroundThrottling(true);
+    mainWindow?.webContents.setFrameRate(5);
+  });
+  mainWindow.on("show", () => {
+    mainWindow?.webContents.setFrameRate(30);
+  });
+  mainWindow.on("minimize", () => {
+    mainWindow?.webContents.setFrameRate(5);
+  });
+  mainWindow.on("restore", () => {
+    mainWindow?.webContents.setFrameRate(30);
   });
   mainWindow.on("close", (e) => {
     if (!(app as unknown as { isQuiting?: boolean }).isQuiting) {
@@ -158,7 +173,10 @@ export function createOverlayWindow(displayId?: number) {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
+      spellcheck: false,
       backgroundThrottling: false,
+      v8CacheOptions: "code",
+      offscreen: false,
     },
   });
 
@@ -166,6 +184,7 @@ export function createOverlayWindow(displayId?: number) {
   overlayWindow.setAlwaysOnTop(true, "screen-saver");
   overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+  overlayWindow.webContents.setFrameRate(12);
   overlayWindow.webContents.on("did-finish-load", () => {
     void overlayWindow?.webContents.insertCSS(
       "html,body,#root{background:transparent!important;background-color:transparent!important;}",
@@ -212,7 +231,7 @@ function startOverlayFeed() {
   void pushOverlayState();
   overlayFeed = setInterval(() => {
     void pushOverlayState();
-  }, 2500);
+  }, 8000);
 }
 
 function stopOverlayFeed() {
@@ -423,6 +442,19 @@ function registerShortcuts() {
 }
 
 app.commandLine.appendSwitch("enable-transparent-visuals");
+app.commandLine.appendSwitch("disable-features", [
+  "MediaRouter",
+  "DialMediaRouteProvider",
+  "HardwareMediaKeyHandling",
+  "TranslateUI",
+  "AutofillServerCommunication",
+  "OptimizationHints",
+  "InterestFeedContentSuggestions",
+  "CalculateNativeWinOcclusion",
+].join(","));
+app.commandLine.appendSwitch("disable-component-update");
+app.commandLine.appendSwitch("disable-smooth-scrolling");
+app.commandLine.appendSwitch("js-flags", "--max-old-space-size=192");
 app.setAppUserModelId("com.aries.app");
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();

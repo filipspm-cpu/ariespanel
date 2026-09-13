@@ -22,9 +22,9 @@ const notes = isBeta
   : [
       "## Stabilna",
       "",
+      "- Niższe zużycie CPU/RAM: wolniejsze pętle makr i Spotify, lżejsza nakładka, strony ładują się na żądanie",
       "- Plik makr: długi tekst, [losowe], [licznik] i znaczniki zamiast jednej linii z |",
       "- Autorzy: Dorek (Logo); Dorek dodany jako beta tester",
-      "- Przycisk Odśwież na stronie głównej pobiera aktualną listę serwerów",
     ].join("\n");
 
 const tags = [`v${ver}`, ver];

@@ -7,7 +7,7 @@ function easeOut(t: number) {
 export function RollingNumber({
   value,
   delay = 0,
-  duration = 1600,
+  duration = 700,
   ready = true,
   format = (n) => Math.round(n).toLocaleString("pl-PL"),
 }: {
@@ -22,7 +22,8 @@ export function RollingNumber({
 
   useEffect(() => {
     if (!ready) return;
-    if (played.current) {
+    if (played.current || duration <= 0) {
+      played.current = true;
       setShown(value);
       return;
     }
