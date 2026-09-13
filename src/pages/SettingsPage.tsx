@@ -165,10 +165,6 @@ export function SettingsPage() {
             </span>
           </div>
 
-          <div className="mt-3 text-[12px] text-zinc-500">
-            Aktualizacja schodzi z GitHuba. Craft i Forum z regulaminem są dostępne dla każdego.
-          </div>
-
           <div className={`settings-status ${update?.status === "error" ? "warn" : available ? "on" : ""}`}>
             {statusText}
           </div>
