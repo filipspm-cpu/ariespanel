@@ -651,6 +651,65 @@ textarea {
   padding: 4px 0 8px;
 }
 
+.accounts-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.accounts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 14px;
+}
+
+.accounts-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(18, 18, 18, 0.94), rgba(8, 8, 8, 0.9));
+}
+
+.accounts-avatar,
+.accounts-avatar-fallback {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+.accounts-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 22px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.accounts-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.accounts-empty {
+  padding: 48px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: #737373;
+}
+
 .settings-avatar,
 .settings-avatar-img {
   display: flex;

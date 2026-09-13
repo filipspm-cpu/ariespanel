@@ -79,6 +79,8 @@ const api = {
   },
   majesticServers: (force?: boolean) => ipcRenderer.invoke("majestic:servers", Boolean(force)),
   discordConnect: () => ipcRenderer.invoke("discord:connect"),
+  accountsList: () =>
+    ipcRenderer.invoke("accounts:list") as Promise<{ name: string; avatarUrl: string }[]>,
   forumOpen: (url: string) => ipcRenderer.invoke("forum:open", url),
 };
 

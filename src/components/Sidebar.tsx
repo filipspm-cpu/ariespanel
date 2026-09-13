@@ -12,6 +12,7 @@ import {
   Search,
   Settings,
   Terminal,
+  Users,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -29,6 +30,7 @@ const icons: Record<string, LucideIcon> = {
   zap: Zap,
   gauge: Gauge,
   settings: Settings,
+  users: Users,
   info: Info,
   heart: Heart,
   messages: MessagesSquare,

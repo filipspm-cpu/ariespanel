@@ -57,6 +57,7 @@ export interface SynvityApi {
     avatar: string | null;
     avatarUrl: string;
   }>;
+  accountsList: () => Promise<{ name: string; avatarUrl: string }[]>;
 }
 
 export {};

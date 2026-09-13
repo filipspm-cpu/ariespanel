@@ -8,7 +8,8 @@ export type RouteId =
   | "about"
   | "credits"
   | "craft"
-  | "forum";
+  | "forum"
+  | "accounts";
 
 export interface NavItem {
   id: RouteId;

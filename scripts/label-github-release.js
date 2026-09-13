@@ -23,6 +23,7 @@ const notes = isBeta
       "## Stabilna",
       "",
       "- Niższe zużycie CPU/RAM: wolniejsze pętle makr i Spotify, lżejsza nakładka",
+      "- Zakładka Konta (tylko developer): avatar i nazwa osób połączonych z Discordem",
       "- Awatar Filipka: GIF kota przy laptopie",
       "- Usunięty zbędny opis aktualizacji w Ustawieniach systemu",
       "- Flaga Polski w belce zamiast emoji PL, z powiewaniem",

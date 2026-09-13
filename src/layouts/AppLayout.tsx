@@ -9,6 +9,7 @@ import { OverlayPage } from "@/pages/OverlayPage";
 import { MacrosPage } from "@/pages/MacrosPage";
 import { CountersPage } from "@/pages/CountersPage";
 import { CreditsPage } from "@/pages/CreditsPage";
+import { AccountsPage } from "@/pages/AccountsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { AboutPage } from "@/pages/AboutPage";
 import { CraftPage } from "@/pages/CraftPage";
@@ -26,6 +27,7 @@ const pages: Record<RouteId, ComponentType> = {
   macros: MacrosPage,
   counters: CountersPage,
   settings: SettingsPage,
+  accounts: AccountsPage,
   about: AboutPage,
   credits: CreditsPage,
   craft: CraftPage,

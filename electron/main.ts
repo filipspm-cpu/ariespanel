@@ -5,6 +5,7 @@ import { loadState, saveState, AppState } from "./storage";
 import { sendTextToWindow, sendTextForeground, pressKey, findGameProcess, listWindows } from "./windows";
 import { getSpotifyTrack } from "./spotify";
 import { connectDiscord } from "./discord";
+import { listDiscordAccounts, recordDiscordAccount } from "./discordAccounts";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
 import { runMacroById, triggersFromMacros } from "./runMacro";
 import { registerUpdater } from "./updater";
@@ -287,11 +288,30 @@ function registerIpc() {
   ipcMain.handle("window:close", () => mainWindow?.hide());
   ipcMain.handle("window:isMaximized", () => mainWindow?.isMaximized() ?? false);
 
-  ipcMain.handle("state:load", () => loadState());
+  ipcMain.handle("state:load", () => {
+    const state = loadState();
+    if (state.settings.discordId) {
+      void recordDiscordAccount({
+        id: state.settings.discordId,
+        username: state.settings.discordUsername,
+        globalName: state.settings.discordGlobalName,
+        avatarUrl: state.settings.discordAvatarUrl,
+      });
+    }
+    return state;
+  });
   ipcMain.handle("state:save", (_e, partial: Partial<AppState>) => {
     const next = saveState(partial);
     if (partial.macros) {
       updateMacroTriggers(triggersFromMacros(next.macros));
+    }
+    if (partial.settings?.discordId) {
+      void recordDiscordAccount({
+        id: next.settings.discordId,
+        username: next.settings.discordUsername,
+        globalName: next.settings.discordGlobalName,
+        avatarUrl: next.settings.discordAvatarUrl,
+      });
     }
     return next;
   });
@@ -300,7 +320,12 @@ function registerIpc() {
   ipcMain.handle("process:list", () => listWindows());
   ipcMain.handle("spotify:now", () => getSpotifyTrack());
   ipcMain.handle("majestic:servers", (_e, force?: boolean) => fetchMajesticServerStatuses(Boolean(force)));
-  ipcMain.handle("discord:connect", () => connectDiscord());
+  ipcMain.handle("discord:connect", async () => {
+    const profile = await connectDiscord();
+    void recordDiscordAccount(profile);
+    return profile;
+  });
+  ipcMain.handle("accounts:list", () => listDiscordAccounts());
   ipcMain.handle("forum:open", (_e, url: string) => shell.openExternal(assertForumUrl(url)));
 
   ipcMain.handle("displays:list", () =>
