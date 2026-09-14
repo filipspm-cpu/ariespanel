@@ -10,49 +10,62 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
   exit;
 }
 
-$raw = file_get_contents("php://input") ?: "";
+$raw = file_get_contents("php://input");
+if ($raw === false) $raw = "";
 $data = json_decode($raw, true);
 if (!is_array($data)) $data = [];
 
-$auth = (string) ($_SERVER["HTTP_AUTHORIZATION"] ?? "");
+$auth = isset($_SERVER["HTTP_AUTHORIZATION"]) ? (string) $_SERVER["HTTP_AUTHORIZATION"] : "";
 if (stripos($auth, "Bearer ") === 0) $auth = substr($auth, 7);
+
+function req_get($arr, $key) {
+  if (!is_array($arr) || !isset($arr[$key])) return "";
+  return trim((string) $arr[$key]);
+}
 
 function key_ok($data, $auth) {
   $expected = "aries-accounts-v1";
-  $candidates = [
-    $_GET["token"] ?? "",
-    $_GET["aries"] ?? "",
-    $_GET["k"] ?? "",
-    $_GET["key"] ?? "",
-    $data["key"] ?? "",
-    $data["token"] ?? "",
-    $_SERVER["HTTP_X_ARIES_KEY"] ?? "",
-    $_SERVER["HTTP_X_ARIES_TOKEN"] ?? "",
-    $auth,
-  ];
-  foreach ($candidates as $raw) {
-    if (trim((string) $raw) === $expected) return true;
+  $candidates = array(
+    req_get($_GET, "token"),
+    req_get($_GET, "aries"),
+    req_get($_GET, "k"),
+    req_get($_GET, "key"),
+    req_get($data, "key"),
+    req_get($data, "token"),
+    isset($_SERVER["HTTP_X_ARIES_KEY"]) ? trim((string) $_SERVER["HTTP_X_ARIES_KEY"]) : "",
+    isset($_SERVER["HTTP_X_ARIES_TOKEN"]) ? trim((string) $_SERVER["HTTP_X_ARIES_TOKEN"]) : "",
+    trim((string) $auth),
+  );
+  foreach ($candidates as $c) {
+    if ($c === $expected) return true;
   }
   return false;
 }
 
-$authorized = key_ok($data, $auth);
-$method = strtoupper((string) ($_SERVER["REQUEST_METHOD"] ?? "GET"));
-if ($method !== "GET" && !$authorized) {
-  http_response_code(403);
-  echo json_encode(["error" => "forbidden", "accounts" => [], "roles" => []]);
+function json_out($payload, $code = 200) {
+  http_response_code((int) $code);
+  $flags = 0;
+  if (defined("JSON_UNESCAPED_UNICODE")) $flags |= JSON_UNESCAPED_UNICODE;
+  echo json_encode($payload, $flags);
   exit;
 }
 
+$authorized = key_ok($data, $auth);
+$method = strtoupper(isset($_SERVER["REQUEST_METHOD"]) ? (string) $_SERVER["REQUEST_METHOD"] : "GET");
+if ($method !== "GET" && !$authorized) {
+  json_out(array("error" => "forbidden", "accounts" => array(), "roles" => array()), 403);
+}
+
 function client_ip() {
-  $candidates = [
-    $_SERVER["HTTP_CF_CONNECTING_IP"] ?? "",
-    $_SERVER["HTTP_X_REAL_IP"] ?? "",
-    $_SERVER["HTTP_X_FORWARDED_FOR"] ?? "",
-    $_SERVER["REMOTE_ADDR"] ?? "",
-  ];
+  $candidates = array(
+    isset($_SERVER["HTTP_CF_CONNECTING_IP"]) ? $_SERVER["HTTP_CF_CONNECTING_IP"] : "",
+    isset($_SERVER["HTTP_X_REAL_IP"]) ? $_SERVER["HTTP_X_REAL_IP"] : "",
+    isset($_SERVER["HTTP_X_FORWARDED_FOR"]) ? $_SERVER["HTTP_X_FORWARDED_FOR"] : "",
+    isset($_SERVER["REMOTE_ADDR"]) ? $_SERVER["REMOTE_ADDR"] : "",
+  );
   foreach ($candidates as $raw) {
-    $first = trim(explode(",", (string) $raw)[0]);
+    $parts = explode(",", (string) $raw);
+    $first = trim($parts[0]);
     if (filter_var($first, FILTER_VALIDATE_IP)) return $first;
   }
   return "";
@@ -63,15 +76,9 @@ function valid_ip($raw) {
   return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : "";
 }
 
-function json_out($payload, $code = 200) {
-  http_response_code($code);
-  echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
-  exit;
-}
-
 $mysqli = @new mysqli("localhost", "host425499_ariespanel", "Wu8BzxevpdGr86f5WrXr", "host425499_ariespanel");
 if ($mysqli->connect_errno) {
-  json_out(["error" => "db", "accounts" => [], "roles" => []], 500);
+  json_out(array("error" => "db", "accounts" => array(), "roles" => array()), 500);
 }
 $mysqli->set_charset("utf8mb4");
 $mysqli->query(
@@ -103,13 +110,13 @@ function normalize_rank($raw) {
 }
 
 function seed_roles($mysqli) {
-  $seed = [
-    ["1305449847125708811", "Filipek", "filipek_wita", "developer"],
-    ["1039967564664676412", "Rysiasty", "rysiowsky", "developer"],
-    ["1200264556354752565", "wisniofka", "wisniofka", "beta"],
-    ["584315259360247808", "bartssv", "bartssv", "beta"],
-    ["352473379326001152", "Dorek", ".dorek.", "beta"],
-  ];
+  $seed = array(
+    array("1305449847125708811", "Filipek", "filipek_wita", "developer"),
+    array("1039967564664676412", "Rysiasty", "rysiowsky", "developer"),
+    array("1200264556354752565", "wisniofka", "wisniofka", "beta"),
+    array("584315259360247808", "bartssv", "bartssv", "beta"),
+    array("352473379326001152", "Dorek", ".dorek.", "beta"),
+  );
   $stmt = $mysqli->prepare(
     "INSERT IGNORE INTO account_roles (discord_id, name, discord, rank) VALUES (?, ?, ?, ?)"
   );
@@ -121,39 +128,40 @@ function seed_roles($mysqli) {
 }
 
 function list_roles($mysqli) {
-  $out = [];
+  $out = array();
   $result = $mysqli->query("SELECT discord_id, name, discord, rank FROM account_roles ORDER BY rank ASC, name ASC");
   if (!$result) return $out;
   while ($row = $result->fetch_assoc()) {
-    $out[] = [
+    $out[] = array(
       "id" => $row["discord_id"],
       "name" => $row["name"],
       "discord" => $row["discord"],
       "rank" => $row["rank"],
-    ];
+    );
   }
   return $out;
 }
 
 function list_accounts($mysqli) {
-  $out = [];
-  $result = $mysqli->query(
-    "SELECT * FROM discord_accounts ORDER BY COALESCE(last_login, updated_at) DESC, name ASC"
-  );
-  if (!$result) {
-    $result = $mysqli->query("SELECT * FROM discord_accounts ORDER BY name ASC");
-  }
+  $out = array();
+  $result = $mysqli->query("SELECT * FROM discord_accounts ORDER BY name ASC");
   if (!$result) return $out;
   while ($row = $result->fetch_assoc()) {
-    $login = $row["last_login"] ?? "";
-    if (!$login) $login = $row["updated_at"] ?? "";
-    $out[] = [
+    $login = "";
+    if (isset($row["last_login"]) && $row["last_login"]) $login = $row["last_login"];
+    else if (isset($row["updated_at"]) && $row["updated_at"]) $login = $row["updated_at"];
+    $iso = "";
+    if ($login) {
+      $ts = strtotime($login);
+      if ($ts) $iso = date("c", $ts);
+    }
+    $out[] = array(
       "id" => $row["discord_id"],
       "name" => $row["name"],
-      "avatarUrl" => $row["avatar_url"] ?? "",
-      "ip" => $row["ip"] ?? "",
-      "lastLogin" => $login ? date("c", strtotime($login)) : "",
-    ];
+      "avatarUrl" => isset($row["avatar_url"]) ? $row["avatar_url"] : "",
+      "ip" => isset($row["ip"]) ? $row["ip"] : "",
+      "lastLogin" => $iso,
+    );
   }
   return $out;
 }
@@ -195,35 +203,43 @@ function upsert_account($mysqli, $id, $name, $avatar, $ip) {
 
 seed_roles($mysqli);
 
-if ($_SERVER["REQUEST_METHOD"] === "POST" && ($data["action"] ?? "") === "setRank") {
-  $id = preg_replace("/[^0-9]/", "", (string) ($data["id"] ?? ""));
-  $rank = normalize_rank($data["rank"] ?? "");
-  $name = trim((string) ($data["name"] ?? ""));
+$action = req_get($data, "action");
+if ($method === "POST" && $action === "setRank") {
+  $id = preg_replace("/[^0-9]/", "", req_get($data, "id"));
+  $rank = normalize_rank(req_get($data, "rank"));
+  $name = req_get($data, "name");
   if ($id === "") {
-    json_out(["error" => "invalid", "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)], 400);
+    json_out(array("error" => "invalid", "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)), 400);
   }
   if ($rank === "") {
     $stmt = $mysqli->prepare("DELETE FROM account_roles WHERE discord_id = ?");
-    $stmt->bind_param("s", $id);
-    $stmt->execute();
+    if ($stmt) {
+      $stmt->bind_param("s", $id);
+      $stmt->execute();
+    }
   } else {
     $stmt = $mysqli->prepare(
       "INSERT INTO account_roles (discord_id, name, discord, rank) VALUES (?, ?, '', ?)
        ON DUPLICATE KEY UPDATE rank = VALUES(rank), name = IF(VALUES(name) = '', name, VALUES(name))"
     );
-    $stmt->bind_param("sss", $id, $name, $rank);
-    $stmt->execute();
+    if ($stmt) {
+      $stmt->bind_param("sss", $id, $name, $rank);
+      $stmt->execute();
+    }
   }
-  json_out(["ok" => true, "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)]);
+  json_out(array("ok" => true, "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)));
 }
 
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
-  $id = preg_replace("/[^0-9]/", "", (string) ($data["id"] ?? $_GET["id"] ?? ""));
-  $name = trim((string) ($data["name"] ?? ""));
-  $avatar = trim((string) ($data["avatarUrl"] ?? $data["avatar_url"] ?? ""));
-  $ip = valid_ip($data["ip"] ?? "") ?: client_ip();
+if ($method === "POST") {
+  $id = preg_replace("/[^0-9]/", "", req_get($data, "id"));
+  if ($id === "") $id = preg_replace("/[^0-9]/", "", req_get($_GET, "id"));
+  $name = req_get($data, "name");
+  $avatar = req_get($data, "avatarUrl");
+  if ($avatar === "") $avatar = req_get($data, "avatar_url");
+  $ip = valid_ip(req_get($data, "ip"));
+  if ($ip === "") $ip = client_ip();
   if ($id === "" || $name === "") {
-    json_out(["error" => "invalid", "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)], 400);
+    json_out(array("error" => "invalid", "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)), 400);
   }
   if (function_exists("mb_substr")) {
     $name = mb_substr($name, 0, 191);
@@ -234,4 +250,4 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   upsert_account($mysqli, $id, $name, $avatar, $ip);
 }
 
-json_out(["ok" => true, "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)]);
+json_out(array("ok" => true, "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)));
