@@ -105,6 +105,7 @@
       "uninstallerSidebar": "build/installerSidebar.bmp",
       "include": "build/installer.nsh"
     },
+    "generateUpdatesFilesForAllChannels": true,
     "publish": {
       "provider": "github",
       "owner": "filipspm-cpu",

@@ -1,7 +1,6 @@
 import { app, ipcMain, BrowserWindow, Tray, Notification, nativeImage, shell } from "electron";
 import { autoUpdater, type UpdateInfo, type ProgressInfo } from "electron-updater";
 import { loadState } from "./storage";
-import { isBetaTesterId } from "./testers";
 import { closeUpdateProgressWindow, openUpdateProgressWindow, setUpdateProgress } from "./updateProgress";
 import { listUpdateNotices, markUpdateNoticesRead, pushUpdateNotice } from "./updateNotices";
 
@@ -34,7 +33,7 @@ function send(patch: Partial<UpdateStatus>) {
     ...last,
     ...patch,
     currentVersion: app.getVersion(),
-    channel: isBetaUser() ? "beta" : "stable",
+    channel: "stable",
   };
   getWindow()?.webContents.send("update:status", last);
 }
@@ -53,17 +52,12 @@ function openSetup(version?: string) {
   void shell.openExternal(setupUrl(version || last.version));
 }
 
-function isBetaUser() {
-  return isBetaTesterId(loadState().settings.discordId);
-}
-
 function applyFeed() {
-  const beta = isBetaUser();
-  autoUpdater.allowPrerelease = beta;
+  autoUpdater.allowPrerelease = false;
   autoUpdater.allowDowngrade = true;
   autoUpdater.disableDifferentialDownload = true;
   autoUpdater.disableWebInstaller = true;
-  autoUpdater.channel = beta ? "beta" : "latest";
+  autoUpdater.channel = "latest";
   autoUpdater.requestHeaders = { "User-Agent": "ARIES-Updater" };
   const nsis = autoUpdater as typeof autoUpdater & {
     verifyUpdateCodeSignature?: (publisherNames: string[], path: string) => Promise<string | null>;
