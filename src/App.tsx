@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppLayout } from "@/layouts/AppLayout";
-import { BrandMark } from "@/components/BrandMark";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { hydrate } from "@/services/storageClient";
 import { overlayCounterItems } from "@/services/overlayCounters";
 import { calendarDayKey, msUntilNextMidnight } from "@/services/todayStats";
@@ -12,6 +12,8 @@ export function App() {
   const counters = useAppStore((s) => s.counters);
   const overlay = useAppStore((s) => s.overlay);
   const hydrated = useAppStore((s) => s.hydrated);
+  const [splash, setSplash] = useState(true);
+  const splashStarted = useRef(Date.now());
 
   useEffect(() => {
     void hydrate().then((data) => {
@@ -24,6 +26,17 @@ export function App() {
       if (rows) useAppStore.getState().setTesters(rows);
     });
   }, [hydrateFromDisk]);
+
+  useEffect(() => {
+    document.getElementById("boot-splash")?.classList.add("is-hidden");
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const wait = Math.max(0, 1400 - (Date.now() - splashStarted.current));
+    const timer = window.setTimeout(() => setSplash(false), wait);
+    return () => window.clearTimeout(timer);
+  }, [hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -131,8 +144,8 @@ export function App() {
     };
   }, [hydrated]);
 
-  if (!hydrated) {
-    return <div className="flex h-full items-center justify-center bg-syn-bg"><BrandMark /></div>;
+  if (splash) {
+    return <LoadingScreen />;
   }
 
   return <AppLayout />;
