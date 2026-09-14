@@ -30,6 +30,20 @@ if ($key !== "aries-accounts-v1") {
   exit;
 }
 
+function client_ip() {
+  $candidates = [
+    $_SERVER["HTTP_CF_CONNECTING_IP"] ?? "",
+    $_SERVER["HTTP_X_REAL_IP"] ?? "",
+    $_SERVER["HTTP_X_FORWARDED_FOR"] ?? "",
+    $_SERVER["REMOTE_ADDR"] ?? "",
+  ];
+  foreach ($candidates as $raw) {
+    $first = trim(explode(",", (string) $raw)[0]);
+    if (filter_var($first, FILTER_VALIDATE_IP)) return $first;
+  }
+  return "";
+}
+
 $mysqli = @new mysqli("localhost", "host425499_ariespanel", "Wu8BzxevpdGr86f5WrXr", "host425499_ariespanel");
 if ($mysqli->connect_errno) {
   http_response_code(500);
@@ -42,14 +56,19 @@ $mysqli->query(
     discord_id VARCHAR(32) NOT NULL PRIMARY KEY,
     name VARCHAR(191) NOT NULL,
     avatar_url VARCHAR(512) NOT NULL,
+    ip VARCHAR(45) NOT NULL DEFAULT '',
+    last_login TIMESTAMP NULL DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
 );
+@$mysqli->query("ALTER TABLE discord_accounts ADD COLUMN ip VARCHAR(45) NOT NULL DEFAULT ''");
+@$mysqli->query("ALTER TABLE discord_accounts ADD COLUMN last_login TIMESTAMP NULL DEFAULT NULL");
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
   $id = preg_replace("/[^0-9]/", "", (string) ($data["id"] ?? $_GET["id"] ?? ""));
   $name = trim((string) ($data["name"] ?? ""));
   $avatar = trim((string) ($data["avatarUrl"] ?? $data["avatar_url"] ?? ""));
+  $ip = client_ip();
   if ($id === "" || $name === "") {
     http_response_code(400);
     echo json_encode(["error" => "invalid", "accounts" => []]);
@@ -62,21 +81,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   }
   $avatar = substr($avatar, 0, 512);
   $stmt = $mysqli->prepare(
-    "INSERT INTO discord_accounts (discord_id, name, avatar_url) VALUES (?, ?, ?)
-     ON DUPLICATE KEY UPDATE name = VALUES(name), avatar_url = VALUES(avatar_url)"
+    "INSERT INTO discord_accounts (discord_id, name, avatar_url, ip, last_login) VALUES (?, ?, ?, ?, NOW())
+     ON DUPLICATE KEY UPDATE name = VALUES(name), avatar_url = VALUES(avatar_url), ip = VALUES(ip), last_login = NOW()"
   );
-  $stmt->bind_param("sss", $id, $name, $avatar);
+  $stmt->bind_param("ssss", $id, $name, $avatar, $ip);
   $stmt->execute();
 }
 
-$result = $mysqli->query("SELECT discord_id, name, avatar_url FROM discord_accounts ORDER BY updated_at DESC, name ASC");
+$result = $mysqli->query(
+  "SELECT discord_id, name, avatar_url, ip, last_login, updated_at
+   FROM discord_accounts
+   ORDER BY COALESCE(last_login, updated_at) DESC, name ASC"
+);
 $out = [];
 if ($result) {
   while ($row = $result->fetch_assoc()) {
+    $login = $row["last_login"] ?: $row["updated_at"];
     $out[] = [
       "id" => $row["discord_id"],
       "name" => $row["name"],
       "avatarUrl" => $row["avatar_url"],
+      "ip" => $row["ip"] ?? "",
+      "lastLogin" => $login ? date("c", strtotime($login)) : "",
     ];
   }
 }

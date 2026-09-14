@@ -7,6 +7,8 @@ import { loadTesters } from "./testers";
 export type DiscordAccountCard = {
   name: string;
   avatarUrl: string;
+  ip: string;
+  lastLogin: string;
 };
 
 type StoredAccount = DiscordAccountCard & { id: string };
@@ -73,11 +75,27 @@ function parseAccounts(payload: unknown): StoredAccount[] {
       : [];
   return rows
     .map((row) => {
-      const item = row as { id?: string; discord_id?: string; name?: string; avatarUrl?: string; avatar_url?: string };
+      const item = row as {
+        id?: string;
+        discord_id?: string;
+        name?: string;
+        avatarUrl?: string;
+        avatar_url?: string;
+        ip?: string;
+        lastLogin?: string;
+        last_login?: string;
+        updated_at?: string;
+      };
       const id = String(item.id || item.discord_id || "").replace(/\D/g, "");
       const name = String(item.name || "").trim();
       if (!id || !name) return null;
-      return { id, name, avatarUrl: String(item.avatarUrl || item.avatar_url || "") };
+      return {
+        id,
+        name,
+        avatarUrl: String(item.avatarUrl || item.avatar_url || ""),
+        ip: String(item.ip || "").trim(),
+        lastLogin: String(item.lastLogin || item.last_login || item.updated_at || "").trim(),
+      };
     })
     .filter((row): row is StoredAccount => Boolean(row));
 }
@@ -87,6 +105,8 @@ function testerAccounts(): StoredAccount[] {
     id: tester.id.replace(/\D/g, ""),
     name: tester.name,
     avatarUrl: defaultAvatarUrl(tester.id),
+    ip: "",
+    lastLogin: "",
   })).filter((row) => row.id && row.name);
 }
 
@@ -103,6 +123,8 @@ function mergeById(...lists: StoredAccount[][]) {
         id: row.id,
         name: prev.name || row.name,
         avatarUrl: prev.avatarUrl || row.avatarUrl,
+        ip: prev.ip || row.ip || "",
+        lastLogin: prev.lastLogin || row.lastLogin || "",
       });
     }
   }
@@ -110,7 +132,12 @@ function mergeById(...lists: StoredAccount[][]) {
 }
 
 function toCards(rows: StoredAccount[]): DiscordAccountCard[] {
-  return rows.map(({ name, avatarUrl }) => ({ name, avatarUrl }));
+  return rows.map(({ name, avatarUrl, ip, lastLogin }) => ({
+    name,
+    avatarUrl,
+    ip: ip || "",
+    lastLogin: lastLogin || "",
+  }));
 }
 
 async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -144,9 +171,13 @@ async function ensureTable(conn: mysql.Connection) {
       discord_id VARCHAR(32) NOT NULL PRIMARY KEY,
       name VARCHAR(191) NOT NULL,
       avatar_url VARCHAR(512) NOT NULL,
+      ip VARCHAR(45) NOT NULL DEFAULT '',
+      last_login TIMESTAMP NULL DEFAULT NULL,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
+  await conn.query("ALTER TABLE discord_accounts ADD COLUMN ip VARCHAR(45) NOT NULL DEFAULT ''").catch(() => undefined);
+  await conn.query("ALTER TABLE discord_accounts ADD COLUMN last_login TIMESTAMP NULL DEFAULT NULL").catch(() => undefined);
 }
 
 async function mysqlUpsert(account: StoredAccount): Promise<boolean> {
@@ -155,9 +186,9 @@ async function mysqlUpsert(account: StoredAccount): Promise<boolean> {
     conn = await withTimeout(mysqlConn(), 5000);
     await ensureTable(conn);
     await conn.execute(
-      `INSERT INTO discord_accounts (discord_id, name, avatar_url) VALUES (?, ?, ?)
-       ON DUPLICATE KEY UPDATE name = VALUES(name), avatar_url = VALUES(avatar_url)`,
-      [account.id, account.name, account.avatarUrl],
+      `INSERT INTO discord_accounts (discord_id, name, avatar_url, ip, last_login) VALUES (?, ?, ?, ?, NOW())
+       ON DUPLICATE KEY UPDATE name = VALUES(name), avatar_url = VALUES(avatar_url), ip = IF(VALUES(ip) = '', ip, VALUES(ip)), last_login = NOW()`,
+      [account.id, account.name, account.avatarUrl, account.ip || ""],
     );
     return true;
   } catch {
@@ -173,7 +204,7 @@ async function mysqlList(): Promise<StoredAccount[]> {
     conn = await withTimeout(mysqlConn(), 5000);
     await ensureTable(conn);
     const [rows] = await conn.query(
-      "SELECT discord_id, name, avatar_url FROM discord_accounts ORDER BY updated_at DESC, name ASC",
+      "SELECT discord_id, name, avatar_url, ip, last_login, updated_at FROM discord_accounts ORDER BY COALESCE(last_login, updated_at) DESC, name ASC",
     );
     return parseAccounts(rows);
   } catch {
@@ -220,7 +251,7 @@ export async function recordDiscordAccount(profile: {
   const name = cardName(profile).slice(0, 191);
   const avatarUrl = String(profile.avatarUrl || "").slice(0, 512);
   if (!id || !name) return;
-  const account = { id, name, avatarUrl };
+  const account = { id, name, avatarUrl, ip: "", lastLogin: "" };
   upsertLocal(account);
   await Promise.all([mysqlUpsert(account), apiRequest("POST", { id, name, avatarUrl })]);
 }
@@ -228,6 +259,11 @@ export async function recordDiscordAccount(profile: {
 export async function listDiscordAccounts(): Promise<DiscordAccountCard[]> {
   const [sql, php] = await Promise.all([mysqlList(), apiRequest("GET")]);
   const rows = mergeById(parseAccounts(php), sql, readLocal(), testerAccounts());
-  rows.sort((a, b) => a.name.localeCompare(b.name, "pl"));
+  rows.sort((a, b) => {
+    const ta = Date.parse(a.lastLogin || "") || 0;
+    const tb = Date.parse(b.lastLogin || "") || 0;
+    if (tb !== ta) return tb - ta;
+    return a.name.localeCompare(b.name, "pl");
+  });
   return toCards(rows);
 }

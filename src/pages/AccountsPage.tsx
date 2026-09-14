@@ -1,7 +1,20 @@
 import { Copyright } from "@/components/Copyright";
 import { useEffect, useState } from "react";
 
-type AccountCard = { name: string; avatarUrl: string };
+type AccountCard = { name: string; avatarUrl: string; ip?: string; lastLogin?: string };
+
+function formatLogin(value?: string) {
+  if (!value) return "brak logowania";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("pl-PL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export function AccountsPage() {
   const [accounts, setAccounts] = useState<AccountCard[]>([]);
@@ -55,13 +68,15 @@ export function AccountsPage() {
             {accounts.map((account, index) => {
               const letter = account.name.trim().slice(0, 1).toUpperCase() || "A";
               return (
-                <div key={`${account.name}-${account.avatarUrl}-${index}`} className="accounts-card">
+                <div key={`${account.name}-${account.ip}-${index}`} className="accounts-card">
                   {account.avatarUrl ? (
                     <img src={account.avatarUrl} alt="" className="accounts-avatar" draggable={false} />
                   ) : (
                     <div className="accounts-avatar accounts-avatar-fallback">{letter}</div>
                   )}
                   <div className="accounts-name">{account.name}</div>
+                  <div className="accounts-meta">{account.ip || "brak IP"}</div>
+                  <div className="accounts-meta">{formatLogin(account.lastLogin)}</div>
                 </div>
               );
             })}
