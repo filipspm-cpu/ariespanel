@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 export function UpdateBanner() {
   const [status, setStatus] = useState<UpdateStatus | null>(null);
   const setRoute = useAppStore((s) => s.setRoute);
+  const wantsUpdates = useAppStore((s) => s.settings.autoUpdate !== false);
 
   useEffect(() => {
     void window.synvity?.updateStatus().then((s) => setStatus(s));
@@ -13,7 +14,7 @@ export function UpdateBanner() {
     return () => off?.();
   }, []);
 
-  if (!status || status.status !== "available") return null;
+  if (!wantsUpdates || !status || status.status !== "available") return null;
 
   return (
     <div className="update-banner">

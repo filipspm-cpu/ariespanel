@@ -149,6 +149,10 @@ function notifyAvailable(version: string) {
 }
 
 async function checkNow(fromUser: boolean) {
+  if (loadState().settings.autoUpdate === false) {
+    send({ status: "idle", message: undefined, version: undefined });
+    return last;
+  }
   if (!app.isPackaged) {
     if (fromUser) {
       send({
@@ -175,6 +179,7 @@ async function checkNow(fromUser: boolean) {
 }
 
 async function applyUpdate() {
+  if (loadState().settings.autoUpdate === false) return last;
   if (!app.isPackaged) {
     send({ status: "error", message: "Aktualizacja działa po instalacji ARIES, nie w trybie deweloperskim." });
     return last;
@@ -299,7 +304,13 @@ export function registerUpdater(opts: {
 
   ipcMain.handle("app:version", () => app.getVersion());
   ipcMain.handle("update:status", () => ({ ...last, currentVersion: app.getVersion() }));
-  ipcMain.handle("update:check", () => checkNow(true));
+  ipcMain.handle("update:check", () => {
+    if (loadState().settings.autoUpdate === false) {
+      send({ status: "idle", message: undefined, version: undefined });
+      return last;
+    }
+    return checkNow(true);
+  });
   ipcMain.handle("update:install", () => applyUpdate());
   ipcMain.handle("update:openSetup", (_e, version?: string) => {
     openSetup(typeof version === "string" ? version : last.version);

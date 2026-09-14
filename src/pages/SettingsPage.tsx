@@ -4,6 +4,7 @@ import { APP_VERSION } from "@/data/appVersion";
 import { useAppStore } from "@/store/useAppStore";
 import { mergeImportedMacros, parseMacroFile } from "@/services/macroPack";
 import type { UpdateStatus } from "@/types";
+import { Toggle } from "@/components/ui/Toggle";
 import { Download, FileUp, RefreshCw, Unplug } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -25,7 +26,10 @@ export function SettingsPage() {
     return () => off?.();
   }, []);
 
+  const wantsUpdates = settings.autoUpdate !== false;
+
   const check = async () => {
+    if (!wantsUpdates) return;
     setBusy(true);
     const s = await window.synvity?.updateCheck();
     if (s) setUpdate(s);
@@ -160,15 +164,31 @@ export function SettingsPage() {
               <div className="mt-2 text-[22px] font-semibold text-white">v{update?.currentVersion || APP_VERSION}</div>
               <div className="mt-1 text-[12px] text-zinc-500">Zainstalowana wersja</div>
             </div>
-            <span className={`settings-pill ${available ? "on" : ""} ${update?.status === "error" ? "warn" : ""}`}>
-              {available ? "Nowa" : update?.status === "error" ? "Błąd" : "OK"}
+            <span className={`settings-pill ${wantsUpdates && available ? "on" : ""} ${wantsUpdates && update?.status === "error" ? "warn" : ""}`}>
+              {!wantsUpdates ? "OFF" : available ? "Nowa" : update?.status === "error" ? "Błąd" : "OK"}
             </span>
           </div>
 
-          <div className={`settings-status ${update?.status === "error" ? "warn" : available ? "on" : ""}`}>
-            {statusText}
+          <label className="settings-update-opt">
+            <span>
+              <span className="block text-[13px] text-zinc-200">Chcę otrzymywać aktualizacje</span>
+              <span className="mt-0.5 block text-[11px] text-zinc-600">
+                Wyłącz, jeśli nie chcesz sprawdzania nowych wersji.
+              </span>
+            </span>
+            <Toggle
+              checked={wantsUpdates}
+              onChange={(v) => patchSettings({ autoUpdate: v })}
+            />
+          </label>
+
+          <div className={`settings-status ${wantsUpdates && update?.status === "error" ? "warn" : wantsUpdates && available ? "on" : ""}`}>
+            {!wantsUpdates
+              ? "Sprawdzanie aktualizacji jest wyłączone."
+              : statusText}
           </div>
 
+          {wantsUpdates ? (
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <button onClick={() => void check()} disabled={busy} className="settings-btn">
               <RefreshCw size={14} className={busy ? "animate-spin" : ""} />
@@ -188,6 +208,7 @@ export function SettingsPage() {
               Pobierz instalator
             </button>
           </div>
+          ) : null}
         </div>
 
         <div className="studio-card settings-macros">
