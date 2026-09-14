@@ -512,6 +512,29 @@ textarea {
   color: #fff;
 }
 
+.accounts-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 16px auto 0;
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: transparent;
+  color: #f4f4f5;
+  font-size: 13px;
+}
+
+.accounts-refresh:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.accounts-refresh:disabled {
+  opacity: 0.55;
+}
+
 .studio-body {
   position: relative;
   display: block;

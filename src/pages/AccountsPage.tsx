@@ -2,7 +2,8 @@ import { Copyright } from "@/components/Copyright";
 import { RankBadge, useAccountRank } from "@/components/RankBadge";
 import { rankFromRole, type AccountRank } from "@/data/testers";
 import { useAppStore } from "@/store/useAppStore";
-import { useEffect, useState } from "react";
+import { RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 
 type AccountCard = {
   id?: string;
@@ -29,40 +30,46 @@ function formatLogin(value?: string) {
 export function AccountsPage() {
   const [accounts, setAccounts] = useState<AccountCard[]>([]);
   const [ready, setReady] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const setTesters = useAppStore((s) => s.setTesters);
   const myId = useAppStore((s) => s.settings.discordId);
   const myRank = useAccountRank(myId);
 
+  const load = useCallback(async (manual = false) => {
+    const list = window.synvity?.accountsList;
+    if (!list) {
+      setReady(true);
+      return;
+    }
+    if (manual) setRefreshing(true);
+    try {
+      const [rows, testers] = await Promise.all([list(), window.synvity?.ranksList?.() ?? Promise.resolve(undefined)]);
+      setAccounts(rows ?? []);
+      if (testers) setTesters(testers);
+    } catch {
+      if (!manual) setAccounts([]);
+    } finally {
+      setReady(true);
+      setRefreshing(false);
+    }
+  }, [setTesters]);
+
   useEffect(() => {
     let cancelled = false;
-    const load = () => {
-      const list = window.synvity?.accountsList;
-      if (!list) {
-        setReady(true);
-        return;
-      }
-      void list()
-        .then((rows) => {
-          if (cancelled) return;
-          setAccounts(rows ?? []);
-        })
-        .catch(() => {
-          if (!cancelled) setAccounts([]);
-        })
-        .finally(() => {
-          if (!cancelled) setReady(true);
-        });
+    const run = async (manual = false) => {
+      if (cancelled) return;
+      await load(manual);
     };
-    load();
-    const tick = window.setInterval(load, 15000);
-    const onFocus = () => load();
+    void run(false);
+    const tick = window.setInterval(() => void run(false), 15000);
+    const onFocus = () => void run(false);
     window.addEventListener("focus", onFocus);
     return () => {
       cancelled = true;
       window.clearInterval(tick);
       window.removeEventListener("focus", onFocus);
     };
-  }, []);
+  }, [load]);
 
   const changeRank = async (account: AccountCard, rank: string) => {
     if (!account.id || !window.synvity?.ranksSet) return;
@@ -76,6 +83,15 @@ export function AccountsPage() {
       <div className="studio-header">
         <div className="credits-kicker">ARIES PANEL</div>
         <h1>Konta</h1>
+        <button
+          type="button"
+          className="accounts-refresh"
+          onClick={() => void load(true)}
+          disabled={refreshing}
+        >
+          <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+          Odśwież
+        </button>
         <div className="credits-rule" />
       </div>
       <div className="studio-body accounts-body">
