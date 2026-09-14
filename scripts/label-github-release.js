@@ -1,4 +1,6 @@
 const fs = require("fs");
+const os = require("os");
+const path = require("path");
 const { execFileSync } = require("child_process");
 
 const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
@@ -49,3 +51,19 @@ for (const tag of tags) {
   }
 }
 if (lastError) throw lastError;
+
+const publishedTag = tags.find((tag) => {
+  try {
+    execFileSync("gh", ["release", "view", tag], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+});
+if (publishedTag) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "aries-release-"));
+  execFileSync("gh", ["release", "download", publishedTag, "-p", "latest.yml", "-D", dir], { stdio: "inherit" });
+  const latest = fs.readFileSync(path.join(dir, "latest.yml"), "utf8");
+  fs.writeFileSync(path.join(dir, "beta.yml"), latest);
+  execFileSync("gh", ["release", "upload", publishedTag, path.join(dir, "beta.yml"), "--clobber"], { stdio: "inherit" });
+}
