@@ -69,10 +69,6 @@
         "to": "aries-logo.png"
       },
       {
-        "from": "src/data/testers.txt",
-        "to": "testers.txt"
-      },
-      {
         "from": "build/updateCharacter.png",
         "to": "updateCharacter.png"
       }

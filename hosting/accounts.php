@@ -63,6 +63,81 @@ $mysqli->query(
 );
 @$mysqli->query("ALTER TABLE discord_accounts ADD COLUMN ip VARCHAR(45) NOT NULL DEFAULT ''");
 @$mysqli->query("ALTER TABLE discord_accounts ADD COLUMN last_login TIMESTAMP NULL DEFAULT NULL");
+$mysqli->query(
+  "CREATE TABLE IF NOT EXISTS account_roles (
+    discord_id VARCHAR(32) NOT NULL PRIMARY KEY,
+    name VARCHAR(191) NOT NULL DEFAULT '',
+    discord VARCHAR(191) NOT NULL DEFAULT '',
+    rank VARCHAR(32) NOT NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+);
+
+function normalize_rank($raw) {
+  $r = strtolower(trim((string) $raw));
+  if (strpos($r, "dev") !== false) return "developer";
+  if (strpos($r, "beta") !== false) return "beta";
+  return "";
+}
+
+function seed_roles($mysqli) {
+  $countRes = $mysqli->query("SELECT COUNT(*) AS c FROM account_roles");
+  $countRow = $countRes ? $countRes->fetch_assoc() : null;
+  if ((int) ($countRow["c"] ?? 0) > 0) return;
+  $seed = [
+    ["1305449847125708811", "Filipek", "filipek_wita", "developer"],
+    ["1039967564664676412", "Rysiasty", "rysiowsky", "developer"],
+    ["1200264556354752565", "wisniofka", "wisniofka", "beta"],
+    ["584315259360247808", "bartssv", "bartssv", "beta"],
+    ["352473379326001152", "Dorek", ".dorek.", "beta"],
+  ];
+  $stmt = $mysqli->prepare("INSERT INTO account_roles (discord_id, name, discord, rank) VALUES (?, ?, ?, ?)");
+  foreach ($seed as $row) {
+    $stmt->bind_param("ssss", $row[0], $row[1], $row[2], $row[3]);
+    $stmt->execute();
+  }
+}
+
+function list_roles($mysqli) {
+  $out = [];
+  $result = $mysqli->query("SELECT discord_id, name, discord, rank FROM account_roles ORDER BY rank ASC, name ASC");
+  if (!$result) return $out;
+  while ($row = $result->fetch_assoc()) {
+    $out[] = [
+      "id" => $row["discord_id"],
+      "name" => $row["name"],
+      "discord" => $row["discord"],
+      "rank" => $row["rank"],
+    ];
+  }
+  return $out;
+}
+
+seed_roles($mysqli);
+
+if ($_SERVER["REQUEST_METHOD"] === "POST" && ($data["action"] ?? "") === "setRank") {
+  $id = preg_replace("/[^0-9]/", "", (string) ($data["id"] ?? ""));
+  $rank = normalize_rank($data["rank"] ?? "");
+  $name = trim((string) ($data["name"] ?? ""));
+  if ($id === "") {
+    http_response_code(400);
+    echo json_encode(["error" => "invalid", "accounts" => [], "roles" => list_roles($mysqli)]);
+    exit;
+  }
+  if ($rank === "") {
+    $stmt = $mysqli->prepare("DELETE FROM account_roles WHERE discord_id = ?");
+    $stmt->bind_param("s", $id);
+    $stmt->execute();
+  } else {
+    $stmt = $mysqli->prepare(
+      "INSERT INTO account_roles (discord_id, name, discord, rank) VALUES (?, ?, '', ?)
+       ON DUPLICATE KEY UPDATE rank = VALUES(rank), name = IF(VALUES(name) = '', name, VALUES(name))"
+    );
+    $stmt->bind_param("sss", $id, $name, $rank);
+    $stmt->execute();
+  }
+  echo json_encode(["ok" => true, "accounts" => [], "roles" => list_roles($mysqli)]);
+  exit;
+}
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
   $id = preg_replace("/[^0-9]/", "", (string) ($data["id"] ?? $_GET["id"] ?? ""));
@@ -106,4 +181,4 @@ if ($result) {
     ];
   }
 }
-echo json_encode(["ok" => true, "accounts" => $out]);
+echo json_encode(["ok" => true, "accounts" => $out, "roles" => list_roles($mysqli)]);

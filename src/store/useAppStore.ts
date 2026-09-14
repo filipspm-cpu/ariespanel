@@ -12,6 +12,7 @@ import type {
 import { persist } from "@/services/storageClient";
 import { calendarDayKey } from "@/services/todayStats";
 import { migrateMacro } from "@/data/defaultMacros";
+import type { Tester } from "@/data/testers";
 
 export interface AppSnapshot {
   route: RouteId;
@@ -28,6 +29,7 @@ export interface AppSnapshot {
   cmd: CmdSettings;
   settings: AppSettings;
   stats: AppStats;
+  testers: Tester[];
   hydrated: boolean;
 }
 
@@ -72,6 +74,7 @@ const defaultSnapshot = (): Omit<AppSnapshot, "route" | "searchOpen" | "searchQu
     sessionStartedAt: Date.now(),
     onlineDay: calendarDayKey(),
   },
+  testers: [],
 });
 
 function snapshotHud(overlay: OverlaySettings): OverlayHudLayout {
@@ -114,6 +117,7 @@ type State = AppSnapshot & {
   patchCmd: (cmd: Partial<CmdSettings>) => void;
   patchSettings: (settings: Partial<AppSettings>) => void;
   patchStats: (stats: Partial<AppStats>) => void;
+  setTesters: (testers: Tester[]) => void;
 };
 
 import { create } from "zustand";
@@ -175,6 +179,9 @@ export const useAppStore = create<State>((set, get) => ({
       settings: { ...defaults.settings, ...data.settings },
       cmd: { ...defaults.cmd, ...data.cmd },
       forumRuleId: typeof data.forumRuleId === "string" ? data.forumRuleId : defaults.forumRuleId,
+      testers: Array.isArray((data as { testers?: Tester[] }).testers)
+        ? (data as { testers: Tester[] }).testers
+        : get().testers,
       hydrated: true,
     });
   },
@@ -330,4 +337,5 @@ export const useAppStore = create<State>((set, get) => ({
     set({ stats: next });
     void persist({ stats: next });
   },
+  setTesters: (testers) => set({ testers }),
 }));

@@ -1,9 +1,8 @@
-import testersFile from "@/data/testers.txt?raw";
-import { accountRank, parseTesters, type AccountRank } from "@/data/testers";
-
-const testers = parseTesters(testersFile);
+import { accountRank, type AccountRank } from "@/data/testers";
+import { useAppStore } from "@/store/useAppStore";
 
 export function useAccountRank(discordId: string | undefined): AccountRank | null {
+  const testers = useAppStore((s) => s.testers);
   return accountRank(discordId, testers);
 }
 

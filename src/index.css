@@ -714,6 +714,18 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
+.accounts-rank-select {
+  width: 100%;
+  max-width: 140px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #141414;
+  color: #e5e5e5;
+  font-size: 11px;
+  padding: 0 6px;
+}
+
 .accounts-empty {
   padding: 48px 16px;
   text-align: center;

@@ -1,7 +1,17 @@
 import { Copyright } from "@/components/Copyright";
+import { RankBadge, useAccountRank } from "@/components/RankBadge";
+import { rankFromRole, type AccountRank } from "@/data/testers";
+import { useAppStore } from "@/store/useAppStore";
 import { useEffect, useState } from "react";
 
-type AccountCard = { name: string; avatarUrl: string; ip?: string; lastLogin?: string };
+type AccountCard = {
+  id?: string;
+  name: string;
+  avatarUrl: string;
+  ip?: string;
+  lastLogin?: string;
+  rank?: string;
+};
 
 function formatLogin(value?: string) {
   if (!value) return "brak logowania";
@@ -19,6 +29,9 @@ function formatLogin(value?: string) {
 export function AccountsPage() {
   const [accounts, setAccounts] = useState<AccountCard[]>([]);
   const [ready, setReady] = useState(false);
+  const setTesters = useAppStore((s) => s.setTesters);
+  const myId = useAppStore((s) => s.settings.discordId);
+  const myRank = useAccountRank(myId);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +64,13 @@ export function AccountsPage() {
     };
   }, []);
 
+  const changeRank = async (account: AccountCard, rank: string) => {
+    if (!account.id || !window.synvity?.ranksSet) return;
+    const testers = await window.synvity.ranksSet({ id: account.id, rank, name: account.name });
+    if (testers) setTesters(testers);
+    setAccounts((rows) => rows.map((row) => (row.id === account.id ? { ...row, rank } : row)));
+  };
+
   return (
     <div className="studio-page">
       <div className="studio-header">
@@ -67,14 +87,27 @@ export function AccountsPage() {
           <div className="accounts-grid">
             {accounts.map((account, index) => {
               const letter = account.name.trim().slice(0, 1).toUpperCase() || "A";
+              const rank = rankFromRole(account.rank || "") as AccountRank | null;
               return (
-                <div key={`${account.name}-${account.ip}-${index}`} className="accounts-card">
+                <div key={`${account.id || account.name}-${index}`} className="accounts-card">
                   {account.avatarUrl ? (
                     <img src={account.avatarUrl} alt="" className="accounts-avatar" draggable={false} />
                   ) : (
                     <div className="accounts-avatar accounts-avatar-fallback">{letter}</div>
                   )}
                   <div className="accounts-name">{account.name}</div>
+                  <RankBadge rank={rank} size="xs" />
+                  {myRank === "developer" && account.id ? (
+                    <select
+                      className="accounts-rank-select"
+                      value={rank || ""}
+                      onChange={(e) => void changeRank(account, e.target.value)}
+                    >
+                      <option value="">brak rangi</option>
+                      <option value="developer">Developer</option>
+                      <option value="beta">Beta tester</option>
+                    </select>
+                  ) : null}
                   <div className="accounts-meta">{account.ip || "brak IP"}</div>
                   <div className="accounts-meta">{formatLogin(account.lastLogin)}</div>
                 </div>

@@ -20,6 +20,8 @@ export function App() {
       } else {
         hydrateFromDisk({});
       }
+    }).then(() => window.synvity?.ranksList?.()).then((rows) => {
+      if (rows) useAppStore.getState().setTesters(rows);
     });
   }, [hydrateFromDisk]);
 

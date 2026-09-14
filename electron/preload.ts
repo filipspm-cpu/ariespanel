@@ -80,7 +80,11 @@ const api = {
   majesticServers: (force?: boolean) => ipcRenderer.invoke("majestic:servers", Boolean(force)),
   discordConnect: () => ipcRenderer.invoke("discord:connect"),
   accountsList: () =>
-    ipcRenderer.invoke("accounts:list") as Promise<{ name: string; avatarUrl: string; ip?: string; lastLogin?: string }[]>,
+    ipcRenderer.invoke("accounts:list") as Promise<
+      { id?: string; name: string; avatarUrl: string; ip?: string; lastLogin?: string; rank?: string }[]
+    >,
+  ranksList: () => ipcRenderer.invoke("ranks:list"),
+  ranksSet: (payload: { id: string; rank: string; name?: string }) => ipcRenderer.invoke("ranks:set", payload),
   forumOpen: (url: string) => ipcRenderer.invoke("forum:open", url),
 };
 

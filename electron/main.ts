@@ -6,6 +6,7 @@ import { sendTextToWindow, sendTextForeground, pressKey, findGameProcess, listWi
 import { getSpotifyTrack } from "./spotify";
 import { connectDiscord } from "./discord";
 import { listDiscordAccounts, recordDiscordAccount } from "./discordAccounts";
+import { refreshAccountRoles, setAccountRank } from "./testers";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
 import { runMacroById, triggersFromMacros } from "./runMacro";
 import { registerUpdater } from "./updater";
@@ -327,6 +328,10 @@ function registerIpc() {
     return profile;
   });
   ipcMain.handle("accounts:list", () => listDiscordAccounts());
+  ipcMain.handle("ranks:list", () => refreshAccountRoles());
+  ipcMain.handle("ranks:set", (_e, payload: { id?: string; rank?: string; name?: string }) =>
+    setAccountRank(String(payload?.id || ""), String(payload?.rank || ""), payload?.name),
+  );
   ipcMain.handle("forum:open", (_e, url: string) => shell.openExternal(assertForumUrl(url)));
 
   ipcMain.handle("displays:list", () =>
@@ -494,9 +499,10 @@ if (!gotSingleInstanceLock) {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   if (!gotSingleInstanceLock) return;
   trustPublisherCert();
+  await refreshAccountRoles();
   registerIpc();
   createMainWindow();
   createTray();

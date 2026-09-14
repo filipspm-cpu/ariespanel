@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { app } from "electron";
+import { apiRequest } from "./accountsApi";
 
 export type Tester = {
   name: string;
@@ -9,35 +10,78 @@ export type Tester = {
   role: string;
 };
 
-function parseLine(line: string): Tester | null {
-  const trimmed = line.trim();
-  if (!trimmed || trimmed.startsWith("#")) return null;
-  const parts = trimmed.split("|").map((p) => p.trim());
-  if (parts.length < 4 || !parts[2]) return null;
-  return { name: parts[0], discord: parts[1], id: parts[2], role: parts[3] };
+let cached: Tester[] = [];
+
+function cachePath() {
+  return path.join(app.getPath("userData"), "account-roles.json");
 }
 
-function testersPath() {
-  return [
-    path.join(process.resourcesPath, "testers.txt"),
-    path.join(app.getAppPath(), "src", "data", "testers.txt"),
-    path.join(__dirname, "..", "src", "data", "testers.txt"),
-    path.join(process.cwd(), "src", "data", "testers.txt"),
-  ].find((file) => fs.existsSync(file));
+function parseRoles(payload: unknown): Tester[] {
+  const rows =
+    payload && typeof payload === "object" && Array.isArray((payload as { roles?: unknown }).roles)
+      ? (payload as { roles: unknown[] }).roles
+      : [];
+  return rows
+    .map((row) => {
+      const item = row as { id?: string; discord_id?: string; name?: string; discord?: string; rank?: string; role?: string };
+      const id = String(item.id || item.discord_id || "").replace(/\D/g, "");
+      const rank = String(item.rank || item.role || "").trim();
+      if (!id || !rank) return null;
+      return {
+        id,
+        name: String(item.name || "").trim() || "Konto",
+        discord: String(item.discord || "").trim(),
+        role: rank,
+      };
+    })
+    .filter((row): row is Tester => Boolean(row));
 }
 
-export function loadTesters(): Tester[] {
-  const file = testersPath();
-  if (!file) return [];
+function writeCache(rows: Tester[]) {
+  cached = rows;
   try {
-    return fs
-      .readFileSync(file, "utf-8")
-      .split(/\r?\n/)
-      .map(parseLine)
-      .filter((row): row is Tester => Boolean(row));
+    fs.writeFileSync(cachePath(), JSON.stringify(rows, null, 2), "utf8");
+  } catch {
+    /* ignore */
+  }
+}
+
+function readCache(): Tester[] {
+  try {
+    const raw = JSON.parse(fs.readFileSync(cachePath(), "utf8")) as Tester[];
+    return Array.isArray(raw) ? raw.filter((row) => row?.id && row?.role) : [];
   } catch {
     return [];
   }
+}
+
+export function loadTesters(): Tester[] {
+  if (cached.length) return cached;
+  cached = readCache();
+  return cached;
+}
+
+export function ingestRolesPayload(payload: unknown): Tester[] {
+  const roles = parseRoles(payload);
+  if (roles.length) writeCache(roles);
+  return loadTesters();
+}
+
+export async function refreshAccountRoles(): Promise<Tester[]> {
+  const payload = await apiRequest("GET");
+  return ingestRolesPayload(payload);
+}
+
+export async function setAccountRank(id: string, rank: string, name?: string): Promise<Tester[]> {
+  const payload = await apiRequest("POST", {
+    action: "setRank",
+    id,
+    rank,
+    name: name || "",
+  });
+  ingestRolesPayload(payload);
+  if (!loadTesters().length) await refreshAccountRoles();
+  return loadTesters();
 }
 
 export function isBetaTesterId(discordId: string | undefined) {
