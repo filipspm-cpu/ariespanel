@@ -12,6 +12,7 @@ import {
   Search,
   Settings,
   Terminal,
+  Users,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -29,6 +30,7 @@ const icons: Record<string, LucideIcon> = {
   zap: Zap,
   gauge: Gauge,
   settings: Settings,
+  users: Users,
   info: Info,
   heart: Heart,
   messages: MessagesSquare,
@@ -70,7 +72,7 @@ function NavButton({
       {badge ? (
         <span
           className={clsx(
-            "rounded-[4px] px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide",
+            "shrink-0 rounded-[4px] px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide",
             badge.toLowerCase() === "beta" ? "bg-red-500 text-white" : "bg-syn-green text-black",
           )}
         >
@@ -130,6 +132,7 @@ export function Sidebar() {
                     <NavButton
                       label={item.label}
                       icon={item.icon}
+                      badge={item.badge}
                       chevron
                       open={expanded}
                       onClick={() => {

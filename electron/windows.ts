@@ -111,12 +111,18 @@ export interface ProcessInfo {
 
 const GAME_HINTS = ["majestic", "gta5", "gtav", "fivem", "ragemp", "altv", "playgtav"];
 
+let windowsCache: { at: number; list: ProcessInfo[] } = { at: 0, list: [] };
+
 export function listWindows(): ProcessInfo[] {
+  const now = Date.now();
+  if (now - windowsCache.at < 1500 && windowsCache.list.length) return windowsCache.list;
   try {
-    return listWindowsNative();
+    const list = listWindowsNative();
+    windowsCache = { at: now, list };
+    return list;
   } catch (err) {
     console.warn("listWindows failed", err);
-    return [];
+    return windowsCache.list;
   }
 }
 

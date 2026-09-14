@@ -165,10 +165,6 @@ export function SettingsPage() {
             </span>
           </div>
 
-          <div className="mt-3 text-[12px] text-zinc-500">
-            Aktualizacja schodzi z GitHuba. Wydania BETA (regulamin w Forum, Craft) dostają tylko testerzy i developerzy. Zwykłe konto zostaje na wersji stabilnej — bez Crafta i bez tego Forum.
-          </div>
-
           <div className={`settings-status ${update?.status === "error" ? "warn" : available ? "on" : ""}`}>
             {statusText}
           </div>
@@ -199,10 +195,26 @@ export function SettingsPage() {
           <div className="mt-2 text-[18px] font-medium text-white">Szybkie makra z pliku</div>
           <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-zinc-500">
             Wrzuć plik <span className="text-zinc-300">.txt</span> albo{" "}
-            <span className="text-zinc-300">.ariesmacros</span>. Jedna linia to jeden trigger:
+            <span className="text-zinc-300">.ariesmacros</span>. Krótki tekst, długi blok, losowe opcje
+            i licznik zapisują się znacznikami:
           </p>
-          <pre className="settings-code">{`.w = Witam | Hejka | Cześć
-.p = Poczekaj chwilę.`}</pre>
+          <pre className="settings-code">{`.p = Poczekaj chwilę.
+
+.w:
+  [losowe]
+    Witam
+    Hejka
+    Cześć
+
+.ogloszenie:
+  [tekst]
+    Szanowni Państwo,
+    Proszę o spokój na kanale.
+
+.ticket:
+  [licznik:ticket]
+  [tekst]
+    Przyjąłem zgłoszenie.`}</pre>
           <input
             ref={fileRef}
             type="file"

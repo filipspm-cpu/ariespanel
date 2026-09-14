@@ -5,6 +5,7 @@ import { loadState, saveState, AppState } from "./storage";
 import { sendTextToWindow, sendTextForeground, pressKey, findGameProcess, listWindows } from "./windows";
 import { getSpotifyTrack } from "./spotify";
 import { connectDiscord } from "./discord";
+import { listDiscordAccounts, recordDiscordAccount } from "./discordAccounts";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
 import { runMacroById, triggersFromMacros } from "./runMacro";
 import { registerUpdater } from "./updater";
@@ -90,12 +91,14 @@ function createMainWindow() {
     autoHideMenuBar: true,
     frame: false,
     show: false,
-      webPreferences: {
+    webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
-      backgroundThrottling: false,
+      spellcheck: false,
+      backgroundThrottling: true,
+      v8CacheOptions: "code",
     },
   });
 
@@ -109,6 +112,19 @@ function createMainWindow() {
     const icon = appIcon();
     if (!icon.isEmpty()) mainWindow?.setIcon(icon);
     mainWindow?.show();
+  });
+  mainWindow.on("hide", () => {
+    mainWindow?.webContents.setBackgroundThrottling(true);
+    mainWindow?.webContents.setFrameRate(5);
+  });
+  mainWindow.on("show", () => {
+    mainWindow?.webContents.setFrameRate(30);
+  });
+  mainWindow.on("minimize", () => {
+    mainWindow?.webContents.setFrameRate(5);
+  });
+  mainWindow.on("restore", () => {
+    mainWindow?.webContents.setFrameRate(30);
   });
   mainWindow.on("close", (e) => {
     if (!(app as unknown as { isQuiting?: boolean }).isQuiting) {
@@ -158,7 +174,10 @@ export function createOverlayWindow(displayId?: number) {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
+      spellcheck: false,
       backgroundThrottling: false,
+      v8CacheOptions: "code",
+      offscreen: false,
     },
   });
 
@@ -166,6 +185,7 @@ export function createOverlayWindow(displayId?: number) {
   overlayWindow.setAlwaysOnTop(true, "screen-saver");
   overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+  overlayWindow.webContents.setFrameRate(12);
   overlayWindow.webContents.on("did-finish-load", () => {
     void overlayWindow?.webContents.insertCSS(
       "html,body,#root{background:transparent!important;background-color:transparent!important;}",
@@ -212,7 +232,7 @@ function startOverlayFeed() {
   void pushOverlayState();
   overlayFeed = setInterval(() => {
     void pushOverlayState();
-  }, 2500);
+  }, 8000);
 }
 
 function stopOverlayFeed() {
@@ -268,11 +288,30 @@ function registerIpc() {
   ipcMain.handle("window:close", () => mainWindow?.hide());
   ipcMain.handle("window:isMaximized", () => mainWindow?.isMaximized() ?? false);
 
-  ipcMain.handle("state:load", () => loadState());
+  ipcMain.handle("state:load", () => {
+    const state = loadState();
+    if (state.settings.discordId) {
+      void recordDiscordAccount({
+        id: state.settings.discordId,
+        username: state.settings.discordUsername,
+        globalName: state.settings.discordGlobalName,
+        avatarUrl: state.settings.discordAvatarUrl,
+      });
+    }
+    return state;
+  });
   ipcMain.handle("state:save", (_e, partial: Partial<AppState>) => {
     const next = saveState(partial);
     if (partial.macros) {
       updateMacroTriggers(triggersFromMacros(next.macros));
+    }
+    if (partial.settings?.discordId) {
+      void recordDiscordAccount({
+        id: next.settings.discordId,
+        username: next.settings.discordUsername,
+        globalName: next.settings.discordGlobalName,
+        avatarUrl: next.settings.discordAvatarUrl,
+      });
     }
     return next;
   });
@@ -280,8 +319,13 @@ function registerIpc() {
   ipcMain.handle("process:find", () => findGameProcess());
   ipcMain.handle("process:list", () => listWindows());
   ipcMain.handle("spotify:now", () => getSpotifyTrack());
-  ipcMain.handle("majestic:servers", () => fetchMajesticServerStatuses());
-  ipcMain.handle("discord:connect", () => connectDiscord());
+  ipcMain.handle("majestic:servers", (_e, force?: boolean) => fetchMajesticServerStatuses(Boolean(force)));
+  ipcMain.handle("discord:connect", async () => {
+    const profile = await connectDiscord();
+    void recordDiscordAccount(profile);
+    return profile;
+  });
+  ipcMain.handle("accounts:list", () => listDiscordAccounts());
   ipcMain.handle("forum:open", (_e, url: string) => shell.openExternal(assertForumUrl(url)));
 
   ipcMain.handle("displays:list", () =>
@@ -423,6 +467,19 @@ function registerShortcuts() {
 }
 
 app.commandLine.appendSwitch("enable-transparent-visuals");
+app.commandLine.appendSwitch("disable-features", [
+  "MediaRouter",
+  "DialMediaRouteProvider",
+  "HardwareMediaKeyHandling",
+  "TranslateUI",
+  "AutofillServerCommunication",
+  "OptimizationHints",
+  "InterestFeedContentSuggestions",
+  "CalculateNativeWinOcclusion",
+].join(","));
+app.commandLine.appendSwitch("disable-component-update");
+app.commandLine.appendSwitch("disable-smooth-scrolling");
+app.commandLine.appendSwitch("js-flags", "--max-old-space-size=192");
 app.setAppUserModelId("com.aries.app");
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock();

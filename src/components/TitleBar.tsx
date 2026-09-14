@@ -5,6 +5,22 @@ import { APP_VERSION } from "@/data/appVersion";
 import { useAppStore } from "@/store/useAppStore";
 import type { UpdateNotice, UpdateStatus } from "@/types";
 
+function PolishFlag() {
+  return (
+    <span className="pl-flag" title="Polska" aria-label="Polska">
+      <span className="pl-flag-pole" />
+      <span className="pl-flag-cloth">
+        {Array.from({ length: 10 }, (_, i) => (
+          <span key={i} className="pl-flag-strip" style={{ animationDelay: `${i * 0.09}s` }}>
+            <span className="pl-flag-white" />
+            <span className="pl-flag-red" />
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
 function Clock() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -86,9 +102,8 @@ export function TitleBar() {
       </div>
       <Clock />
       <div className="no-drag z-10 ml-auto flex items-center gap-1">
-        <span className="mr-1 flex h-6 items-center gap-1.5 rounded px-1.5 text-[11px] text-syn-sub">
-          <span className="text-[13px] leading-none">🇵🇱</span>
-          <span>PL</span>
+        <span className="mr-1 flex h-6 items-center px-1">
+          <PolishFlag />
         </span>
         <div className="relative" ref={noticeRef}>
           <button

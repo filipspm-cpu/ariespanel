@@ -23,7 +23,6 @@ export const navGroups: NavGroup[] = [
         id: "forum",
         label: "Forum",
         icon: "messages",
-        betaOnly: true,
         children: FORUM_RULES.map((rule) => ({
           id: "forum" as const,
           label: rule.title,
@@ -31,7 +30,7 @@ export const navGroups: NavGroup[] = [
           ruleId: rule.id,
         })),
       },
-      { id: "craft", label: "Craft", icon: "hammer", betaOnly: true },
+      { id: "craft", label: "Craft", icon: "hammer" },
     ],
   },
   {
@@ -39,6 +38,7 @@ export const navGroups: NavGroup[] = [
     label: "Ustawienia",
     items: [
       { id: "settings", label: "Ustawienia systemu", icon: "settings" },
+      { id: "accounts", label: "Konta", icon: "users", devOnly: true },
       { id: "about", label: "O aplikacji", icon: "info" },
       { id: "credits", label: "Autorzy", icon: "heart" },
     ],
@@ -57,7 +57,7 @@ function withBetaBadge<T extends { betaOnly?: boolean; badge?: string }>(item: T
 }
 
 export function canAccessRoute(route: RouteId, rank: AccountRank | null) {
-  if (route === "craft" || route === "forum") return hasBetaAccess(rank);
+  if (route === "accounts") return rank === "developer";
   return true;
 }
 
@@ -82,6 +82,7 @@ export const breadcrumbs: Record<RouteId, string[]> = {
   macros: ["Dashboard", "Gra", "Makra"],
   counters: ["Dashboard", "Gra", "Statystyki"],
   settings: ["Dashboard", "Ustawienia systemu"],
+  accounts: ["Dashboard", "Ustawienia", "Konta"],
   about: ["Dashboard", "O aplikacji"],
   credits: ["Dashboard", "Autorzy"],
   craft: ["Dashboard", "Craft"],
@@ -95,6 +96,7 @@ export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
   macros: { title: "Makra" },
   counters: { title: "Statystyki" },
   settings: { title: "Ustawienia systemu" },
+  accounts: { title: "Konta", subtitle: "Użytkownicy połączeni z Discordem" },
   about: { title: "O aplikacji", subtitle: "ARIES — prywatny panel administracyjny" },
   credits: { title: "Autorzy" },
   craft: { title: "Craft", subtitle: "Tabela krafta frakcji — Majestic Wiki" },

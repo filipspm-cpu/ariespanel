@@ -1,5 +1,5 @@
 import { Copyright } from "@/components/Copyright";
-import filipek from "@/assets/credits/filipek.webp";
+import filipek from "@/assets/credits/filipek.gif";
 import rysiasty from "@/assets/credits/rysiasty.webp";
 import szczurek from "@/assets/credits/wisniowka.webp";
 import dorek from "@/assets/credits/dorek.webp";
@@ -25,8 +25,8 @@ const PEOPLE = [
     avatar: szczurek,
   },
   {
-    role: "Beta tester / Logo",
-    name: "Dorek Helper",
+    role: "Logo · Beta tester",
+    name: "Dorek",
     featured: false,
     avatar: dorek,
   },
@@ -44,9 +44,10 @@ function CreditRow({
   person: (typeof PEOPLE)[number];
 }) {
   const size = person.featured ? 92 : 64;
+  const gold = person.role === "Main developer" || person.role === "Developer";
   return (
-    <div className={`credits-row ${person.featured ? "credits-row-featured" : ""}`}>
-      <div className="credits-avatar-wrap" style={{ width: size, height: size }}>
+    <div className={`credits-row ${person.featured ? "credits-row-featured" : ""} ${gold ? "credits-row-gold" : ""}`}>
+      <div className={`credits-avatar-wrap ${gold ? "credits-avatar-gold" : ""}`} style={{ width: size, height: size }}>
         <img src={person.avatar} alt="" width={size} height={size} draggable={false} referrerPolicy="no-referrer" />
       </div>
       <div className="credits-meta">
@@ -69,7 +70,7 @@ export function CreditsPage() {
         <div className="credits-vignette" />
         <div className="credits-roll">
           {PEOPLE.map((person) => (
-            <CreditRow key={person.name} person={person} />
+            <CreditRow key={`${person.role}-${person.name}`} person={person} />
           ))}
           <Copyright className="credits-copyright" />
         </div>

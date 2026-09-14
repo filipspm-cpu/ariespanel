@@ -1,7 +1,7 @@
 {
   "name": "aries",
   "productName": "ARIES",
-  "version": "1.0.28-beta.1",
+  "version": "1.0.43",
   "description": "ARIES — prywatny panel administracyjny",
   "author": "ARIES",
   "copyright": "Copyright © 2026 ARIES",
@@ -22,6 +22,7 @@
     "electron-updater": "^6.8.9",
     "koffi": "^2.10.1",
     "lucide-react": "^0.511.0",
+    "mysql2": "^3.24.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.1",
@@ -112,7 +113,7 @@
       "provider": "github",
       "owner": "filipspm-cpu",
       "repo": "ariespanel",
-      "releaseType": "prerelease"
+      "releaseType": "release"
     }
   },
   "allowScripts": {
