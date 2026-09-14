@@ -8,7 +8,7 @@ import { connectDiscord } from "./discord";
 import { listDiscordAccounts, recordDiscordAccount } from "./discordAccounts";
 import { refreshAccountRoles, setAccountRank } from "./testers";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
-import { runMacroById, triggersFromMacros } from "./runMacro";
+import { runMacroById, setOverlayRefresh, triggersFromMacros } from "./runMacro";
 import { registerUpdater } from "./updater";
 import { fetchMajesticServerStatuses } from "./majesticStatus";
 import { trustPublisherCert } from "./trustPublisher";
@@ -234,7 +234,7 @@ function startOverlayFeed() {
   void pushOverlayState();
   overlayFeed = setInterval(() => {
     void pushOverlayState();
-  }, 8000);
+  }, 1000);
 }
 
 function stopOverlayFeed() {
@@ -306,6 +306,9 @@ function registerIpc() {
     const next = saveState(partial);
     if (partial.macros) {
       updateMacroTriggers(triggersFromMacros(next.macros));
+    }
+    if (partial.counters) {
+      void pushOverlayState();
     }
     if (partial.settings?.discordId) {
       void recordDiscordAccount({
@@ -504,6 +507,9 @@ app.whenReady().then(async () => {
   trustPublisherCert();
   await refreshAccountRoles();
   registerIpc();
+  setOverlayRefresh(() => {
+    void pushOverlayState();
+  });
   createMainWindow();
   createTray();
   registerUpdater({

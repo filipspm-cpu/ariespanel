@@ -32,6 +32,7 @@ async function runStep(step: MacroStep, macros: Macro[], ctx: { inChat: boolean 
       };
     });
     saveState({ counters });
+    refreshOverlay();
     return;
   }
   if (step.type === "call-function") {
@@ -81,6 +82,11 @@ export function triggersFromMacros(macros: Macro[]): { id: string; sequence: str
 }
 
 let running = false;
+let refreshOverlay = () => {};
+
+export function setOverlayRefresh(fn: () => void) {
+  refreshOverlay = fn;
+}
 
 export async function runMacroById(macroId: string, eraseCount: number): Promise<void> {
   if (running) return;
