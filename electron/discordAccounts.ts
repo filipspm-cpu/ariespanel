@@ -19,9 +19,8 @@ const DB = {
 
 const API_KEY = "aries-accounts-v1";
 const API_URLS = [
-  "https://host425499.lh.pl/accounts.php",
-  "https://host425499.lh.pl/aries/accounts.php",
-  "https://s425499.lh.pl/accounts.php",
+  "https://filipekweb.pl/aries/accounts.php",
+  "https://www.filipekweb.pl/aries/accounts.php",
 ];
 
 function cardName(profile: { globalName?: string; username?: string; name?: string }) {
@@ -167,7 +166,9 @@ async function apiRequest(method: "GET" | "POST", body?: unknown): Promise<unkno
       4000,
     );
     if (!res.ok) throw new Error(String(res.status));
-    return res.json();
+    const text = (await res.text()).trim();
+    if (!text) throw new Error("empty");
+    return JSON.parse(text) as unknown;
   });
   try {
     return await Promise.any(attempts);
