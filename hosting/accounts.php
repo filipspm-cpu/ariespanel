@@ -138,9 +138,6 @@ function seed_roles($mysqli) {
   $seed = array(
     array("1305449847125708811", "Filipek", "filipek_wita", "developer"),
     array("1039967564664676412", "Rysiasty", "rysiowsky", "developer"),
-    array("1200264556354752565", "wisniofka", "wisniofka", "beta"),
-    array("584315259360247808", "bartssv", "bartssv", "beta"),
-    array("352473379326001152", "Dorek", ".dorek.", "beta"),
   );
   $stmt = $mysqli->prepare(
     "INSERT IGNORE INTO account_roles (discord_id, name, discord, rank) VALUES (?, ?, ?, ?)"

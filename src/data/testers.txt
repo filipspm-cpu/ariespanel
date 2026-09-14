@@ -1,2 +1,2 @@
-# Rangi developer / beta tester są w bazie na filipekweb.pl (tabela account_roles).
-# Ten plik nie jest już używany przez aplikację.
+# Rangi są tylko w tabeli account_roles na hostingu.
+# Ten plik nie jest używany. Nie wpisuj tu beta testerów.

@@ -13,9 +13,6 @@ export type Tester = {
 const FALLBACK_ROLES: Tester[] = [
   { id: "1305449847125708811", name: "Filipek", discord: "filipek_wita", role: "developer" },
   { id: "1039967564664676412", name: "Rysiasty", discord: "rysiowsky", role: "developer" },
-  { id: "1200264556354752565", name: "wisniofka", discord: "wisniofka", role: "beta" },
-  { id: "584315259360247808", name: "bartssv", discord: "bartssv", role: "beta" },
-  { id: "352473379326001152", name: "Dorek", discord: ".dorek.", role: "beta" },
 ];
 
 let cached: Tester[] = [];
