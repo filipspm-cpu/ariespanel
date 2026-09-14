@@ -324,7 +324,7 @@ function registerIpc() {
   ipcMain.handle("majestic:servers", (_e, force?: boolean) => fetchMajesticServerStatuses(Boolean(force)));
   ipcMain.handle("discord:connect", async () => {
     const profile = await connectDiscord();
-    void recordDiscordAccount(profile);
+    void recordDiscordAccount(profile, { login: true });
     return profile;
   });
   ipcMain.handle("accounts:list", () => listDiscordAccounts());

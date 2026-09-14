@@ -53,10 +53,27 @@ function writeLocal(rows: StoredAccount[]) {
   fs.writeFileSync(localPath(), JSON.stringify(rows, null, 2), "utf8");
 }
 
+function newerLogin(a?: string, b?: string) {
+  const ta = Date.parse(a || "") || 0;
+  const tb = Date.parse(b || "") || 0;
+  if (tb > ta) return b || "";
+  return a || b || "";
+}
+
 function upsertLocal(account: StoredAccount) {
+  const prev = readLocal().find((row) => row.id === account.id);
+  const merged: StoredAccount = {
+    id: account.id,
+    name: account.name || prev?.name || "Konto",
+    avatarUrl: account.avatarUrl || prev?.avatarUrl || "",
+    ip: account.ip || prev?.ip || "",
+    lastLogin: newerLogin(account.lastLogin, prev?.lastLogin),
+    rank: account.rank || prev?.rank || "",
+  };
   const rows = readLocal().filter((row) => row.id !== account.id);
-  rows.unshift(account);
+  rows.unshift(merged);
   writeLocal(rows.slice(0, 500));
+  return merged;
 }
 
 function parseAccounts(payload: unknown): StoredAccount[] {
@@ -118,7 +135,7 @@ function mergeById(...lists: StoredAccount[][]) {
         name: prev.name || row.name,
         avatarUrl: prev.avatarUrl || row.avatarUrl,
         ip: prev.ip || row.ip || "",
-        lastLogin: prev.lastLogin || row.lastLogin || "",
+        lastLogin: newerLogin(prev.lastLogin, row.lastLogin),
         rank: prev.rank || row.rank || "",
       });
     }
@@ -211,19 +228,37 @@ async function mysqlList(): Promise<StoredAccount[]> {
   }
 }
 
-export async function recordDiscordAccount(profile: {
-  id?: string;
-  username?: string;
-  globalName?: string;
-  avatarUrl?: string;
-}): Promise<void> {
+async function fetchPublicIp(): Promise<string> {
+  try {
+    const res = await withTimeout(fetch("https://api.ipify.org?format=json"), 4000);
+    if (!res.ok) return "";
+    const data = (await res.json()) as { ip?: string };
+    const ip = String(data.ip || "").trim();
+    return ip && ip.length <= 45 ? ip : "";
+  } catch {
+    return "";
+  }
+}
+
+export async function recordDiscordAccount(
+  profile: {
+    id?: string;
+    username?: string;
+    globalName?: string;
+    avatarUrl?: string;
+  },
+  opts?: { login?: boolean },
+): Promise<void> {
   const id = String(profile.id || "").replace(/\D/g, "");
   const name = cardName(profile).slice(0, 191);
   const avatarUrl = String(profile.avatarUrl || "").slice(0, 512);
   if (!id || !name) return;
-  const account = { id, name, avatarUrl, ip: "", lastLogin: "", rank: "" };
-  upsertLocal(account);
-  await Promise.all([mysqlUpsert(account), apiRequest("POST", { id, name, avatarUrl })]);
+  const prev = readLocal().find((row) => row.id === id);
+  const captureLogin = Boolean(opts?.login || !prev?.ip || !prev?.lastLogin);
+  const ip = captureLogin ? await fetchPublicIp() : "";
+  const lastLogin = captureLogin ? new Date().toISOString() : "";
+  const account = upsertLocal({ id, name, avatarUrl, ip, lastLogin, rank: "" });
+  await Promise.all([mysqlUpsert(account), apiRequest("POST", { id, name, avatarUrl, ip: account.ip })]);
 }
 
 export async function listDiscordAccounts(): Promise<DiscordAccountCard[]> {

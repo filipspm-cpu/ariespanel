@@ -26,7 +26,7 @@ $key = (string) (
 );
 if ($key !== "aries-accounts-v1") {
   http_response_code(403);
-  echo json_encode(["error" => "forbidden", "accounts" => []]);
+  echo json_encode(["error" => "forbidden", "accounts" => [], "roles" => []]);
   exit;
 }
 
@@ -44,11 +44,20 @@ function client_ip() {
   return "";
 }
 
+function valid_ip($raw) {
+  $ip = trim((string) $raw);
+  return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : "";
+}
+
+function json_out($payload, $code = 200) {
+  http_response_code($code);
+  echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+  exit;
+}
+
 $mysqli = @new mysqli("localhost", "host425499_ariespanel", "Wu8BzxevpdGr86f5WrXr", "host425499_ariespanel");
 if ($mysqli->connect_errno) {
-  http_response_code(500);
-  echo json_encode(["error" => "db", "accounts" => []]);
-  exit;
+  json_out(["error" => "db", "accounts" => [], "roles" => []], 500);
 }
 $mysqli->set_charset("utf8mb4");
 $mysqli->query(
@@ -57,12 +66,12 @@ $mysqli->query(
     name VARCHAR(191) NOT NULL,
     avatar_url VARCHAR(512) NOT NULL,
     ip VARCHAR(45) NOT NULL DEFAULT '',
-    last_login TIMESTAMP NULL DEFAULT NULL,
+    last_login DATETIME NULL DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
 );
 @$mysqli->query("ALTER TABLE discord_accounts ADD COLUMN ip VARCHAR(45) NOT NULL DEFAULT ''");
-@$mysqli->query("ALTER TABLE discord_accounts ADD COLUMN last_login TIMESTAMP NULL DEFAULT NULL");
+@$mysqli->query("ALTER TABLE discord_accounts ADD COLUMN last_login DATETIME NULL DEFAULT NULL");
 $mysqli->query(
   "CREATE TABLE IF NOT EXISTS account_roles (
     discord_id VARCHAR(32) NOT NULL PRIMARY KEY,
@@ -80,9 +89,6 @@ function normalize_rank($raw) {
 }
 
 function seed_roles($mysqli) {
-  $countRes = $mysqli->query("SELECT COUNT(*) AS c FROM account_roles");
-  $countRow = $countRes ? $countRes->fetch_assoc() : null;
-  if ((int) ($countRow["c"] ?? 0) > 0) return;
   $seed = [
     ["1305449847125708811", "Filipek", "filipek_wita", "developer"],
     ["1039967564664676412", "Rysiasty", "rysiowsky", "developer"],
@@ -90,7 +96,10 @@ function seed_roles($mysqli) {
     ["584315259360247808", "bartssv", "bartssv", "beta"],
     ["352473379326001152", "Dorek", ".dorek.", "beta"],
   ];
-  $stmt = $mysqli->prepare("INSERT INTO account_roles (discord_id, name, discord, rank) VALUES (?, ?, ?, ?)");
+  $stmt = $mysqli->prepare(
+    "INSERT IGNORE INTO account_roles (discord_id, name, discord, rank) VALUES (?, ?, ?, ?)"
+  );
+  if (!$stmt) return;
   foreach ($seed as $row) {
     $stmt->bind_param("ssss", $row[0], $row[1], $row[2], $row[3]);
     $stmt->execute();
@@ -112,6 +121,64 @@ function list_roles($mysqli) {
   return $out;
 }
 
+function list_accounts($mysqli) {
+  $out = [];
+  $result = $mysqli->query(
+    "SELECT * FROM discord_accounts ORDER BY COALESCE(last_login, updated_at) DESC, name ASC"
+  );
+  if (!$result) {
+    $result = $mysqli->query("SELECT * FROM discord_accounts ORDER BY name ASC");
+  }
+  if (!$result) return $out;
+  while ($row = $result->fetch_assoc()) {
+    $login = $row["last_login"] ?? "";
+    if (!$login) $login = $row["updated_at"] ?? "";
+    $out[] = [
+      "id" => $row["discord_id"],
+      "name" => $row["name"],
+      "avatarUrl" => $row["avatar_url"] ?? "",
+      "ip" => $row["ip"] ?? "",
+      "lastLogin" => $login ? date("c", strtotime($login)) : "",
+    ];
+  }
+  return $out;
+}
+
+function upsert_account($mysqli, $id, $name, $avatar, $ip) {
+  $stmt = $mysqli->prepare(
+    "INSERT INTO discord_accounts (discord_id, name, avatar_url, ip, last_login) VALUES (?, ?, ?, ?, NOW())
+     ON DUPLICATE KEY UPDATE
+       name = VALUES(name),
+       avatar_url = VALUES(avatar_url),
+       ip = IF(VALUES(ip) = '', ip, VALUES(ip)),
+       last_login = NOW()"
+  );
+  if ($stmt) {
+    $stmt->bind_param("ssss", $id, $name, $avatar, $ip);
+    if ($stmt->execute()) return true;
+  }
+  $stmt = $mysqli->prepare(
+    "INSERT INTO discord_accounts (discord_id, name, avatar_url) VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE name = VALUES(name), avatar_url = VALUES(avatar_url)"
+  );
+  if (!$stmt) return false;
+  $stmt->bind_param("sss", $id, $name, $avatar);
+  if (!$stmt->execute()) return false;
+  if ($ip !== "") {
+    $upd = $mysqli->prepare("UPDATE discord_accounts SET ip = ? WHERE discord_id = ?");
+    if ($upd) {
+      $upd->bind_param("ss", $ip, $id);
+      $upd->execute();
+    }
+  }
+  $login = $mysqli->prepare("UPDATE discord_accounts SET last_login = NOW() WHERE discord_id = ?");
+  if ($login) {
+    $login->bind_param("s", $id);
+    $login->execute();
+  }
+  return true;
+}
+
 seed_roles($mysqli);
 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && ($data["action"] ?? "") === "setRank") {
@@ -119,9 +186,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($data["action"] ?? "") === "setRan
   $rank = normalize_rank($data["rank"] ?? "");
   $name = trim((string) ($data["name"] ?? ""));
   if ($id === "") {
-    http_response_code(400);
-    echo json_encode(["error" => "invalid", "accounts" => [], "roles" => list_roles($mysqli)]);
-    exit;
+    json_out(["error" => "invalid", "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)], 400);
   }
   if ($rank === "") {
     $stmt = $mysqli->prepare("DELETE FROM account_roles WHERE discord_id = ?");
@@ -135,19 +200,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && ($data["action"] ?? "") === "setRan
     $stmt->bind_param("sss", $id, $name, $rank);
     $stmt->execute();
   }
-  echo json_encode(["ok" => true, "accounts" => [], "roles" => list_roles($mysqli)]);
-  exit;
+  json_out(["ok" => true, "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)]);
 }
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
   $id = preg_replace("/[^0-9]/", "", (string) ($data["id"] ?? $_GET["id"] ?? ""));
   $name = trim((string) ($data["name"] ?? ""));
   $avatar = trim((string) ($data["avatarUrl"] ?? $data["avatar_url"] ?? ""));
-  $ip = client_ip();
+  $ip = valid_ip($data["ip"] ?? "") ?: client_ip();
   if ($id === "" || $name === "") {
-    http_response_code(400);
-    echo json_encode(["error" => "invalid", "accounts" => []]);
-    exit;
+    json_out(["error" => "invalid", "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)], 400);
   }
   if (function_exists("mb_substr")) {
     $name = mb_substr($name, 0, 191);
@@ -155,30 +217,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $name = substr($name, 0, 191);
   }
   $avatar = substr($avatar, 0, 512);
-  $stmt = $mysqli->prepare(
-    "INSERT INTO discord_accounts (discord_id, name, avatar_url, ip, last_login) VALUES (?, ?, ?, ?, NOW())
-     ON DUPLICATE KEY UPDATE name = VALUES(name), avatar_url = VALUES(avatar_url), ip = VALUES(ip), last_login = NOW()"
-  );
-  $stmt->bind_param("ssss", $id, $name, $avatar, $ip);
-  $stmt->execute();
+  upsert_account($mysqli, $id, $name, $avatar, $ip);
 }
 
-$result = $mysqli->query(
-  "SELECT discord_id, name, avatar_url, ip, last_login, updated_at
-   FROM discord_accounts
-   ORDER BY COALESCE(last_login, updated_at) DESC, name ASC"
-);
-$out = [];
-if ($result) {
-  while ($row = $result->fetch_assoc()) {
-    $login = $row["last_login"] ?: $row["updated_at"];
-    $out[] = [
-      "id" => $row["discord_id"],
-      "name" => $row["name"],
-      "avatarUrl" => $row["avatar_url"],
-      "ip" => $row["ip"] ?? "",
-      "lastLogin" => $login ? date("c", strtotime($login)) : "",
-    ];
-  }
-}
-echo json_encode(["ok" => true, "accounts" => $out, "roles" => list_roles($mysqli)]);
+json_out(["ok" => true, "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)]);
