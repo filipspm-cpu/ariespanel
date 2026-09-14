@@ -22,6 +22,7 @@ const notes = isBeta
   : [
       "## Stabilna",
       "",
+      "- Konta: pełna lista znanych użytkowników + awatary z Discorda po połączeniu",
       "- Czas w aplikacji, reporty i statystyki na nakładce zerują się codziennie o 00:00",
       "- Niższe zużycie CPU/RAM: wolniejsze pętle makr i Spotify, lżejsza nakładka",
       "- Zakładka Konta (tylko developer): avatar i nazwa osób połączonych z Discordem",

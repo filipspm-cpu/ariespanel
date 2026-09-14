@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { app } from "electron";
 import mysql from "mysql2/promise";
+import { loadTesters } from "./testers";
 
 export type DiscordAccountCard = {
   name: string;
@@ -27,6 +28,20 @@ function cardName(profile: { globalName?: string; username?: string; name?: stri
   return (profile.globalName || profile.username || profile.name || "Konto").trim() || "Konto";
 }
 
+function defaultAvatarUrl(id: string) {
+  try {
+    const index = Number(BigInt(id) >> 22n) % 6;
+    return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
+  } catch {
+    return "https://cdn.discordapp.com/embed/avatars/0.png";
+  }
+}
+
+function withKey(url: string) {
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}k=${encodeURIComponent(API_KEY)}`;
+}
+
 function localPath() {
   return path.join(app.getPath("userData"), "discord-accounts.json");
 }
@@ -50,35 +65,52 @@ function upsertLocal(account: StoredAccount) {
   writeLocal(rows.slice(0, 500));
 }
 
-function parseCards(payload: unknown): DiscordAccountCard[] | null {
+function parseAccounts(payload: unknown): StoredAccount[] {
   const rows = Array.isArray(payload)
     ? payload
     : payload && typeof payload === "object" && Array.isArray((payload as { accounts?: unknown }).accounts)
       ? (payload as { accounts: unknown[] }).accounts
-      : null;
-  if (!rows) return null;
+      : [];
   return rows
     .map((row) => {
-      const item = row as { name?: string; avatarUrl?: string; avatar_url?: string };
+      const item = row as { id?: string; discord_id?: string; name?: string; avatarUrl?: string; avatar_url?: string };
+      const id = String(item.id || item.discord_id || "").replace(/\D/g, "");
       const name = String(item.name || "").trim();
-      if (!name) return null;
-      return { name, avatarUrl: String(item.avatarUrl || item.avatar_url || "") };
+      if (!id || !name) return null;
+      return { id, name, avatarUrl: String(item.avatarUrl || item.avatar_url || "") };
     })
-    .filter((row): row is DiscordAccountCard => Boolean(row));
+    .filter((row): row is StoredAccount => Boolean(row));
 }
 
-function mergeCards(...lists: DiscordAccountCard[][]) {
-  const seen = new Set<string>();
-  const out: DiscordAccountCard[] = [];
+function testerAccounts(): StoredAccount[] {
+  return loadTesters().map((tester) => ({
+    id: tester.id.replace(/\D/g, ""),
+    name: tester.name,
+    avatarUrl: defaultAvatarUrl(tester.id),
+  })).filter((row) => row.id && row.name);
+}
+
+function mergeById(...lists: StoredAccount[][]) {
+  const map = new Map<string, StoredAccount>();
   for (const list of lists) {
     for (const row of list) {
-      const key = `${row.name.toLowerCase()}|${row.avatarUrl}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      out.push(row);
+      const prev = map.get(row.id);
+      if (!prev) {
+        map.set(row.id, row);
+        continue;
+      }
+      map.set(row.id, {
+        id: row.id,
+        name: prev.name || row.name,
+        avatarUrl: prev.avatarUrl || row.avatarUrl,
+      });
     }
   }
-  return out;
+  return [...map.values()];
+}
+
+function toCards(rows: StoredAccount[]): DiscordAccountCard[] {
+  return rows.map(({ name, avatarUrl }) => ({ name, avatarUrl }));
 }
 
 async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -135,35 +167,36 @@ async function mysqlUpsert(account: StoredAccount): Promise<boolean> {
   }
 }
 
-async function mysqlList(): Promise<DiscordAccountCard[] | null> {
+async function mysqlList(): Promise<StoredAccount[]> {
   let conn: mysql.Connection | undefined;
   try {
     conn = await withTimeout(mysqlConn(), 5000);
     await ensureTable(conn);
     const [rows] = await conn.query(
-      "SELECT name, avatar_url FROM discord_accounts ORDER BY updated_at DESC, name ASC",
+      "SELECT discord_id, name, avatar_url FROM discord_accounts ORDER BY updated_at DESC, name ASC",
     );
-    return parseCards(rows);
+    return parseAccounts(rows);
   } catch {
-    return null;
+    return [];
   } finally {
     await conn?.end().catch(() => undefined);
   }
 }
 
 async function apiRequest(method: "GET" | "POST", body?: unknown): Promise<unknown | null> {
-  const attempts = API_URLS.map(async (url) => {
+  const attempts = API_URLS.map(async (base) => {
     const res = await withTimeout(
-      fetch(url, {
+      fetch(withKey(base), {
         method,
         headers: {
           "Content-Type": "application/json",
           "X-Aries-Key": API_KEY,
-          "User-Agent": "ARIES",
+          Authorization: `Bearer ${API_KEY}`,
+          Accept: "application/json",
         },
-        body: method === "POST" ? JSON.stringify(body ?? {}) : undefined,
+        body: method === "POST" ? JSON.stringify({ ...(body as object), key: API_KEY }) : undefined,
       }),
-      4000,
+      12000,
     );
     if (!res.ok) throw new Error(String(res.status));
     const text = (await res.text()).trim();
@@ -194,6 +227,7 @@ export async function recordDiscordAccount(profile: {
 
 export async function listDiscordAccounts(): Promise<DiscordAccountCard[]> {
   const [sql, php] = await Promise.all([mysqlList(), apiRequest("GET")]);
-  const local = readLocal().map(({ name, avatarUrl }) => ({ name, avatarUrl }));
-  return mergeCards(sql ?? [], parseCards(php) ?? [], local);
+  const rows = mergeById(parseAccounts(php), sql, readLocal(), testerAccounts());
+  rows.sort((a, b) => a.name.localeCompare(b.name, "pl"));
+  return toCards(rows);
 }

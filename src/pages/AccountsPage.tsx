@@ -9,24 +9,32 @@ export function AccountsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const list = window.synvity?.accountsList;
-    if (!list) {
-      setReady(true);
-      return;
-    }
-    void list()
-      .then((rows) => {
-        if (cancelled) return;
-        setAccounts(rows ?? []);
-      })
-      .catch(() => {
-        if (!cancelled) setAccounts([]);
-      })
-      .finally(() => {
-        if (!cancelled) setReady(true);
-      });
+    const load = () => {
+      const list = window.synvity?.accountsList;
+      if (!list) {
+        setReady(true);
+        return;
+      }
+      void list()
+        .then((rows) => {
+          if (cancelled) return;
+          setAccounts(rows ?? []);
+        })
+        .catch(() => {
+          if (!cancelled) setAccounts([]);
+        })
+        .finally(() => {
+          if (!cancelled) setReady(true);
+        });
+    };
+    load();
+    const tick = window.setInterval(load, 15000);
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
     return () => {
       cancelled = true;
+      window.clearInterval(tick);
+      window.removeEventListener("focus", onFocus);
     };
   }, []);
 

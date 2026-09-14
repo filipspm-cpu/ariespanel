@@ -1,25 +1,39 @@
 <?php
-// Publiczny adres: https://filipekweb.pl/aries/accounts.php
+error_reporting(0);
+ini_set("display_errors", "0");
 header("Content-Type: application/json; charset=utf-8");
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, X-Aries-Key");
+header("Access-Control-Allow-Headers: Content-Type, X-Aries-Key, Authorization");
 if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
   http_response_code(204);
   exit;
 }
 
-$key = $_SERVER["HTTP_X_ARIES_KEY"] ?? "";
+$raw = file_get_contents("php://input") ?: "";
+$data = json_decode($raw, true);
+if (!is_array($data)) $data = [];
+
+$auth = (string) ($_SERVER["HTTP_AUTHORIZATION"] ?? "");
+if (stripos($auth, "Bearer ") === 0) $auth = substr($auth, 7);
+$key = (string) (
+  $_GET["k"]
+  ?? $_GET["key"]
+  ?? $data["key"]
+  ?? $_SERVER["HTTP_X_ARIES_KEY"]
+  ?? $auth
+  ?? ""
+);
 if ($key !== "aries-accounts-v1") {
   http_response_code(403);
-  echo json_encode(["error" => "forbidden"]);
+  echo json_encode(["error" => "forbidden", "accounts" => []]);
   exit;
 }
 
 $mysqli = @new mysqli("localhost", "host425499_ariespanel", "Wu8BzxevpdGr86f5WrXr", "host425499_ariespanel");
 if ($mysqli->connect_errno) {
   http_response_code(500);
-  echo json_encode(["error" => "db"]);
+  echo json_encode(["error" => "db", "accounts" => []]);
   exit;
 }
 $mysqli->set_charset("utf8mb4");
@@ -33,14 +47,12 @@ $mysqli->query(
 );
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-  $raw = file_get_contents("php://input");
-  $data = json_decode($raw ?: "[]", true) ?: [];
-  $id = preg_replace("/[^0-9]/", "", (string) ($data["id"] ?? ""));
+  $id = preg_replace("/[^0-9]/", "", (string) ($data["id"] ?? $_GET["id"] ?? ""));
   $name = trim((string) ($data["name"] ?? ""));
-  $avatar = trim((string) ($data["avatarUrl"] ?? ""));
+  $avatar = trim((string) ($data["avatarUrl"] ?? $data["avatar_url"] ?? ""));
   if ($id === "" || $name === "") {
     http_response_code(400);
-    echo json_encode(["error" => "invalid"]);
+    echo json_encode(["error" => "invalid", "accounts" => []]);
     exit;
   }
   if (function_exists("mb_substr")) {
@@ -55,18 +67,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   );
   $stmt->bind_param("sss", $id, $name, $avatar);
   $stmt->execute();
-  echo json_encode(["ok" => true]);
-  exit;
 }
 
-$result = $mysqli->query("SELECT name, avatar_url FROM discord_accounts ORDER BY updated_at DESC, name ASC");
+$result = $mysqli->query("SELECT discord_id, name, avatar_url FROM discord_accounts ORDER BY updated_at DESC, name ASC");
 $out = [];
 if ($result) {
   while ($row = $result->fetch_assoc()) {
     $out[] = [
+      "id" => $row["discord_id"],
       "name" => $row["name"],
       "avatarUrl" => $row["avatar_url"],
     ];
   }
 }
-echo json_encode($out);
+echo json_encode(["ok" => true, "accounts" => $out]);
