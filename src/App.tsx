@@ -3,6 +3,7 @@ import { AppLayout } from "@/layouts/AppLayout";
 import { BrandMark } from "@/components/BrandMark";
 import { hydrate } from "@/services/storageClient";
 import { overlayCounterItems } from "@/services/overlayCounters";
+import { calendarDayKey, msUntilNextMidnight } from "@/services/todayStats";
 import { useAppStore } from "@/store/useAppStore";
 
 export function App() {
@@ -80,16 +81,52 @@ export function App() {
 
   useEffect(() => {
     if (!hydrated) return;
-    const t = setInterval(() => {
+
+    const flushOnline = (resetDay: boolean) => {
       const s = useAppStore.getState().stats;
-      const elapsed = Date.now() - s.sessionStartedAt;
+      const today = calendarDayKey();
+      const elapsed = Math.max(0, Date.now() - s.sessionStartedAt);
+      if (resetDay || s.onlineDay !== today) {
+        useAppStore.getState().patchStats({
+          appOnlineMs: 0,
+          sessionStartedAt: Date.now(),
+          onlineDay: today,
+        });
+        return;
+      }
       if (elapsed < 20000) return;
       useAppStore.getState().patchStats({
         appOnlineMs: s.appOnlineMs + elapsed,
         sessionStartedAt: Date.now(),
+        onlineDay: today,
       });
-    }, 30000);
-    return () => clearInterval(t);
+    };
+
+    const pushOverlay = () => {
+      const state = useAppStore.getState();
+      if (!state.overlay.enabled) return;
+      void window.synvity?.overlayPush({
+        overlay: state.overlay,
+        overlayCounters: overlayCounterItems(state.counters),
+        now: Date.now(),
+      });
+    };
+
+    const onMidnight = () => {
+      flushOnline(true);
+      pushOverlay();
+    };
+
+    const tick = setInterval(() => flushOnline(false), 30000);
+    let midnight = window.setTimeout(function arm() {
+      onMidnight();
+      midnight = window.setTimeout(arm, msUntilNextMidnight());
+    }, msUntilNextMidnight());
+
+    return () => {
+      clearInterval(tick);
+      window.clearTimeout(midnight);
+    };
   }, [hydrated]);
 
   if (!hydrated) {

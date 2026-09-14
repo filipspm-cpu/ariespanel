@@ -167,6 +167,7 @@ export interface AppStats {
   eventSpecsToday: number;
   appOnlineMs: number;
   sessionStartedAt: number;
+  onlineDay: string;
 }
 
 export interface SpotifyTrack {

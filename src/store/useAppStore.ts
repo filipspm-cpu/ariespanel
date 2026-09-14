@@ -10,6 +10,7 @@ import type {
   RouteId,
 } from "@/types";
 import { persist } from "@/services/storageClient";
+import { calendarDayKey } from "@/services/todayStats";
 import { migrateMacro } from "@/data/defaultMacros";
 
 export interface AppSnapshot {
@@ -69,6 +70,7 @@ const defaultSnapshot = (): Omit<AppSnapshot, "route" | "searchOpen" | "searchQu
     eventSpecsToday: 0,
     appOnlineMs: 0,
     sessionStartedAt: Date.now(),
+    onlineDay: calendarDayKey(),
   },
 });
 
@@ -158,11 +160,18 @@ export const useAppStore = create<State>((set, get) => ({
         },
         previousLayout: overlayIn?.previousLayout ?? null,
       },
-      stats: {
-        ...defaults.stats,
-        ...data.stats,
-        sessionStartedAt: Date.now(),
-      },
+      stats: (() => {
+        const today = calendarDayKey();
+        const incoming = data.stats;
+        const sameDay = incoming?.onlineDay === today;
+        return {
+          ...defaults.stats,
+          ...incoming,
+          appOnlineMs: sameDay ? incoming?.appOnlineMs ?? 0 : 0,
+          onlineDay: today,
+          sessionStartedAt: Date.now(),
+        };
+      })(),
       settings: { ...defaults.settings, ...data.settings },
       cmd: { ...defaults.cmd, ...data.cmd },
       forumRuleId: typeof data.forumRuleId === "string" ? data.forumRuleId : defaults.forumRuleId,

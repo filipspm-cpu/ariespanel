@@ -116,6 +116,7 @@ export interface AppState {
     eventSpecsToday: number;
     appOnlineMs: number;
     sessionStartedAt: number;
+    onlineDay?: string;
   };
 }
 
@@ -197,6 +198,7 @@ const defaultState = (): AppState => ({
     eventSpecsToday: 0,
     appOnlineMs: 0,
     sessionStartedAt: Date.now(),
+    onlineDay: undefined,
   },
 });
 

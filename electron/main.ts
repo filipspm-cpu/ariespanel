@@ -11,6 +11,7 @@ import { runMacroById, triggersFromMacros } from "./runMacro";
 import { registerUpdater } from "./updater";
 import { fetchMajesticServerStatuses } from "./majesticStatus";
 import { trustPublisherCert } from "./trustPublisher";
+import { todayCount } from "./todayStats";
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 let mainWindow: BrowserWindow | null = null;
@@ -213,9 +214,9 @@ async function pushOverlayState() {
   const state = loadState();
   const overlayCounters = state.counters
     .filter((c) => c.showInOverlay)
-    .map((c) => ({ id: c.id, name: c.name, value: c.value, color: c.color }));
-  const ticket = state.counters.find((c) => c.id === "ticket")?.value ?? 0;
-  const specs = state.counters.find((c) => c.id === "event-specs")?.value ?? 0;
+    .map((c) => ({ id: c.id, name: c.name, value: todayCount(c.history), color: c.color }));
+  const ticket = todayCount(state.counters.find((c) => c.id === "ticket")?.history);
+  const specs = todayCount(state.counters.find((c) => c.id === "event-specs")?.history);
   const track = state.overlay.showSpotify ? await getSpotifyTrack() : null;
   overlayWindow.webContents.send("overlay:state", {
     overlay: state.overlay,

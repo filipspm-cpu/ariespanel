@@ -97,7 +97,7 @@ export function HomePage() {
         <StatCard
           title="Czas w aplikacji"
           value={onlineMin}
-          hint="Czas pracy tej instalacji, bez przerw między sesjami."
+          hint="Dziś od 00:00 — zeruje się o północy."
           delay={250}
           format={(n) => formatDuration(Math.max(0, n) * 60000)}
         />
