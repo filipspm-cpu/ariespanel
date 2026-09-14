@@ -110,15 +110,21 @@ function parseAccounts(payload: unknown): StoredAccount[] {
     .filter((row): row is StoredAccount => Boolean(row));
 }
 
-function testerAccounts(): StoredAccount[] {
-  return loadTesters().map((tester) => ({
-    id: tester.id.replace(/\D/g, ""),
-    name: tester.name,
-    avatarUrl: defaultAvatarUrl(tester.id),
+function knownAccounts(): StoredAccount[] {
+  return [
+    { id: "1305449847125708811", name: "Filipek", discord: "filipek_wita" },
+    { id: "1039967564664676412", name: "Rysiasty", discord: "rysiowsky" },
+    { id: "1200264556354752565", name: "wisniofka", discord: "wisniofka" },
+    { id: "584315259360247808", name: "bartssv", discord: "bartssv" },
+    { id: "352473379326001152", name: "Dorek", discord: ".dorek." },
+  ].map((person) => ({
+    id: person.id,
+    name: person.name,
+    avatarUrl: defaultAvatarUrl(person.id),
     ip: "",
     lastLogin: "",
-    rank: tester.role,
-  })).filter((row) => row.id && row.name);
+    rank: "",
+  }));
 }
 
 function mergeById(...lists: StoredAccount[][]) {
@@ -264,11 +270,11 @@ export async function recordDiscordAccount(
 export async function listDiscordAccounts(): Promise<DiscordAccountCard[]> {
   const [sql, php] = await Promise.all([mysqlList(), apiRequest("GET")]);
   ingestRolesPayload(php);
-  const rows = mergeById(parseAccounts(php), sql, readLocal(), testerAccounts());
+  const rows = mergeById(parseAccounts(php), sql, readLocal(), knownAccounts());
   const testers = loadTesters();
   const rankById = new Map(testers.map((t) => [t.id, t.role]));
   for (const row of rows) {
-    row.rank = row.rank || rankById.get(row.id) || "";
+    row.rank = rankById.get(row.id) || "";
   }
   rows.sort((a, b) => {
     const ta = Date.parse(a.lastLogin || "") || 0;

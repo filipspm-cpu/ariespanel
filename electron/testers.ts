@@ -19,6 +19,7 @@ const FALLBACK_ROLES: Tester[] = [
 ];
 
 let cached: Tester[] = [];
+let loaded = false;
 
 function cachePath() {
   return path.join(app.getPath("userData"), "account-roles.json");
@@ -47,6 +48,7 @@ function parseRoles(payload: unknown): Tester[] {
 
 function writeCache(rows: Tester[]) {
   cached = rows;
+  loaded = true;
   try {
     fs.writeFileSync(cachePath(), JSON.stringify(rows, null, 2), "utf8");
   } catch {
@@ -63,23 +65,26 @@ function readCache(): Tester[] {
   }
 }
 
-function withFallback(rows: Tester[]): Tester[] {
-  const map = new Map(rows.map((row) => [row.id, row]));
-  for (const seed of FALLBACK_ROLES) {
-    if (!map.has(seed.id)) map.set(seed.id, seed);
-  }
-  return [...map.values()];
+function payloadOk(payload: unknown): payload is { roles: unknown[] } {
+  return Boolean(
+    payload &&
+      typeof payload === "object" &&
+      (payload as { ok?: unknown }).ok === true &&
+      Array.isArray((payload as { roles?: unknown }).roles),
+  );
 }
 
 export function loadTesters(): Tester[] {
-  if (cached.length) return cached;
-  cached = withFallback(readCache());
+  if (loaded) return cached;
+  cached = readCache();
+  loaded = true;
+  if (!cached.length) cached = FALLBACK_ROLES;
   return cached;
 }
 
 export function ingestRolesPayload(payload: unknown): Tester[] {
-  const roles = parseRoles(payload);
-  if (roles.length) writeCache(withFallback(roles));
+  if (!payloadOk(payload)) return loadTesters();
+  writeCache(parseRoles(payload));
   return loadTesters();
 }
 
@@ -95,8 +100,21 @@ export async function setAccountRank(id: string, rank: string, name?: string): P
     rank,
     name: name || "",
   });
-  ingestRolesPayload(payload);
-  if (!loadTesters().length) await refreshAccountRoles();
+  if (payloadOk(payload)) {
+    ingestRolesPayload(payload);
+  } else {
+    const next = loadTesters().filter((row) => row.id !== id);
+    const normalized = /dev/i.test(rank) ? "developer" : /beta/i.test(rank) ? "beta" : "";
+    if (normalized) {
+      next.push({
+        id,
+        name: name || "Konto",
+        discord: "",
+        role: normalized,
+      });
+    }
+    writeCache(next);
+  }
   return loadTesters();
 }
 

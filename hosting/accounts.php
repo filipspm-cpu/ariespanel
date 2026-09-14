@@ -132,6 +132,9 @@ function normalize_rank($raw) {
 }
 
 function seed_roles($mysqli) {
+  $countRes = $mysqli->query("SELECT COUNT(*) AS c FROM account_roles");
+  $countRow = $countRes ? $countRes->fetch_assoc() : null;
+  if ((int) (isset($countRow["c"]) ? $countRow["c"] : 0) > 0) return;
   $seed = array(
     array("1305449847125708811", "Filipek", "filipek_wita", "developer"),
     array("1039967564664676412", "Rysiasty", "rysiowsky", "developer"),
