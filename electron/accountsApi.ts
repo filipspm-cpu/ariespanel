@@ -6,7 +6,7 @@ const API_URLS = [
 
 function withKey(url: string) {
   const sep = url.includes("?") ? "&" : "?";
-  return `${url}${sep}k=${encodeURIComponent(API_KEY)}`;
+  return `${url}${sep}token=${encodeURIComponent(API_KEY)}&k=${encodeURIComponent(API_KEY)}`;
 }
 
 async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {

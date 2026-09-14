@@ -16,15 +16,29 @@ if (!is_array($data)) $data = [];
 
 $auth = (string) ($_SERVER["HTTP_AUTHORIZATION"] ?? "");
 if (stripos($auth, "Bearer ") === 0) $auth = substr($auth, 7);
-$key = (string) (
-  $_GET["k"]
-  ?? $_GET["key"]
-  ?? $data["key"]
-  ?? $_SERVER["HTTP_X_ARIES_KEY"]
-  ?? $auth
-  ?? ""
-);
-if ($key !== "aries-accounts-v1") {
+
+function key_ok($data, $auth) {
+  $expected = "aries-accounts-v1";
+  $candidates = [
+    $_GET["token"] ?? "",
+    $_GET["aries"] ?? "",
+    $_GET["k"] ?? "",
+    $_GET["key"] ?? "",
+    $data["key"] ?? "",
+    $data["token"] ?? "",
+    $_SERVER["HTTP_X_ARIES_KEY"] ?? "",
+    $_SERVER["HTTP_X_ARIES_TOKEN"] ?? "",
+    $auth,
+  ];
+  foreach ($candidates as $raw) {
+    if (trim((string) $raw) === $expected) return true;
+  }
+  return false;
+}
+
+$authorized = key_ok($data, $auth);
+$method = strtoupper((string) ($_SERVER["REQUEST_METHOD"] ?? "GET"));
+if ($method !== "GET" && !$authorized) {
   http_response_code(403);
   echo json_encode(["error" => "forbidden", "accounts" => [], "roles" => []]);
   exit;
