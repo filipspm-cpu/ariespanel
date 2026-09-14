@@ -9,7 +9,6 @@ type AccountCard = {
   id?: string;
   name: string;
   avatarUrl: string;
-  ip?: string;
   lastLogin?: string;
   rank?: string;
 };
@@ -124,7 +123,6 @@ export function AccountsPage() {
                       <option value="beta">Beta tester</option>
                     </select>
                   ) : null}
-                  <div className="accounts-meta">{account.ip || "brak IP"}</div>
                   <div className="accounts-meta">{formatLogin(account.lastLogin)}</div>
                 </div>
               );

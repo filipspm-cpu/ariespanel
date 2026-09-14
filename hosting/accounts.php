@@ -70,26 +70,6 @@ if ($method !== "GET" && !$authorized) {
   json_out(array("error" => "forbidden", "accounts" => array(), "roles" => array()), 403);
 }
 
-function client_ip() {
-  $candidates = array(
-    isset($_SERVER["HTTP_CF_CONNECTING_IP"]) ? $_SERVER["HTTP_CF_CONNECTING_IP"] : "",
-    isset($_SERVER["HTTP_X_REAL_IP"]) ? $_SERVER["HTTP_X_REAL_IP"] : "",
-    isset($_SERVER["HTTP_X_FORWARDED_FOR"]) ? $_SERVER["HTTP_X_FORWARDED_FOR"] : "",
-    isset($_SERVER["REMOTE_ADDR"]) ? $_SERVER["REMOTE_ADDR"] : "",
-  );
-  foreach ($candidates as $raw) {
-    $parts = explode(",", (string) $raw);
-    $first = trim($parts[0]);
-    if (filter_var($first, FILTER_VALIDATE_IP)) return $first;
-  }
-  return "";
-}
-
-function valid_ip($raw) {
-  $ip = trim((string) $raw);
-  return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : "";
-}
-
 try {
   $mysqli = @new mysqli("localhost", "host425499_ariespanel", "Wu8BzxevpdGr86f5WrXr", "host425499_ariespanel");
 } catch (Exception $e) {
@@ -181,24 +161,23 @@ function list_accounts($mysqli) {
       "id" => $row["discord_id"],
       "name" => $row["name"],
       "avatarUrl" => isset($row["avatar_url"]) ? $row["avatar_url"] : "",
-      "ip" => isset($row["ip"]) ? $row["ip"] : "",
       "lastLogin" => $iso,
     );
   }
   return $out;
 }
 
-function upsert_account($mysqli, $id, $name, $avatar, $ip) {
+function upsert_account($mysqli, $id, $name, $avatar) {
   $stmt = $mysqli->prepare(
-    "INSERT INTO discord_accounts (discord_id, name, avatar_url, ip, last_login) VALUES (?, ?, ?, ?, NOW())
+    "INSERT INTO discord_accounts (discord_id, name, avatar_url, ip, last_login) VALUES (?, ?, ?, '', NOW())
      ON DUPLICATE KEY UPDATE
        name = VALUES(name),
        avatar_url = VALUES(avatar_url),
-       ip = IF(VALUES(ip) = '', ip, VALUES(ip)),
+       ip = '',
        last_login = NOW()"
   );
   if ($stmt) {
-    $stmt->bind_param("ssss", $id, $name, $avatar, $ip);
+    $stmt->bind_param("sss", $id, $name, $avatar);
     if ($stmt->execute()) return true;
   }
   $stmt = $mysqli->prepare(
@@ -208,12 +187,10 @@ function upsert_account($mysqli, $id, $name, $avatar, $ip) {
   if (!$stmt) return false;
   $stmt->bind_param("sss", $id, $name, $avatar);
   if (!$stmt->execute()) return false;
-  if ($ip !== "") {
-    $upd = $mysqli->prepare("UPDATE discord_accounts SET ip = ? WHERE discord_id = ?");
-    if ($upd) {
-      $upd->bind_param("ss", $ip, $id);
-      $upd->execute();
-    }
+  $clear = $mysqli->prepare("UPDATE discord_accounts SET ip = '' WHERE discord_id = ?");
+  if ($clear) {
+    $clear->bind_param("s", $id);
+    $clear->execute();
   }
   $login = $mysqli->prepare("UPDATE discord_accounts SET last_login = NOW() WHERE discord_id = ?");
   if ($login) {
@@ -261,8 +238,6 @@ if ($method === "POST") {
   $name = req_get($data, "name");
   $avatar = req_get($data, "avatarUrl");
   if ($avatar === "") $avatar = req_get($data, "avatar_url");
-  $ip = valid_ip(req_get($data, "ip"));
-  if ($ip === "") $ip = client_ip();
   if ($id === "" || $name === "") {
     json_out(array("error" => "invalid", "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)), 400);
   }
@@ -272,7 +247,7 @@ if ($method === "POST") {
     $name = substr($name, 0, 191);
   }
   $avatar = substr($avatar, 0, 512);
-  upsert_account($mysqli, $id, $name, $avatar, $ip);
+  upsert_account($mysqli, $id, $name, $avatar);
 }
 
 json_out(array("ok" => true, "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)));

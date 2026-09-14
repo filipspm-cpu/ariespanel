@@ -66,7 +66,7 @@ function upsertLocal(account: StoredAccount) {
     id: account.id,
     name: account.name || prev?.name || "Konto",
     avatarUrl: account.avatarUrl || prev?.avatarUrl || "",
-    ip: account.ip || prev?.ip || "",
+    ip: "",
     lastLogin: newerLogin(account.lastLogin, prev?.lastLogin),
     rank: account.rank || prev?.rank || "",
   };
@@ -90,7 +90,6 @@ function parseAccounts(payload: unknown): StoredAccount[] {
         name?: string;
         avatarUrl?: string;
         avatar_url?: string;
-        ip?: string;
         lastLogin?: string;
         last_login?: string;
         updated_at?: string;
@@ -102,7 +101,7 @@ function parseAccounts(payload: unknown): StoredAccount[] {
         id,
         name,
         avatarUrl: String(item.avatarUrl || item.avatar_url || ""),
-        ip: String(item.ip || "").trim(),
+        ip: "",
         lastLogin: String(item.lastLogin || item.last_login || item.updated_at || "").trim(),
         rank: "",
       };
@@ -140,7 +139,7 @@ function mergeById(...lists: StoredAccount[][]) {
         id: row.id,
         name: prev.name || row.name,
         avatarUrl: prev.avatarUrl || row.avatarUrl,
-        ip: prev.ip || row.ip || "",
+        ip: "",
         lastLogin: newerLogin(prev.lastLogin, row.lastLogin),
         rank: prev.rank || row.rank || "",
       });
@@ -206,9 +205,9 @@ async function mysqlUpsert(account: StoredAccount): Promise<boolean> {
     conn = await withTimeout(mysqlConn(), 5000);
     await ensureTable(conn);
     await conn.execute(
-      `INSERT INTO discord_accounts (discord_id, name, avatar_url, ip, last_login) VALUES (?, ?, ?, ?, NOW())
-       ON DUPLICATE KEY UPDATE name = VALUES(name), avatar_url = VALUES(avatar_url), ip = IF(VALUES(ip) = '', ip, VALUES(ip)), last_login = NOW()`,
-      [account.id, account.name, account.avatarUrl, account.ip || ""],
+      `INSERT INTO discord_accounts (discord_id, name, avatar_url, last_login) VALUES (?, ?, ?, NOW())
+       ON DUPLICATE KEY UPDATE name = VALUES(name), avatar_url = VALUES(avatar_url), ip = '', last_login = NOW()`,
+      [account.id, account.name, account.avatarUrl],
     );
     return true;
   } catch {
@@ -224,25 +223,13 @@ async function mysqlList(): Promise<StoredAccount[]> {
     conn = await withTimeout(mysqlConn(), 5000);
     await ensureTable(conn);
     const [rows] = await conn.query(
-      "SELECT discord_id, name, avatar_url, ip, last_login, updated_at FROM discord_accounts ORDER BY COALESCE(last_login, updated_at) DESC, name ASC",
+      "SELECT discord_id, name, avatar_url, last_login, updated_at FROM discord_accounts ORDER BY COALESCE(last_login, updated_at) DESC, name ASC",
     );
     return parseAccounts(rows);
   } catch {
     return [];
   } finally {
     await conn?.end().catch(() => undefined);
-  }
-}
-
-async function fetchPublicIp(): Promise<string> {
-  try {
-    const res = await withTimeout(fetch("https://api.ipify.org?format=json"), 4000);
-    if (!res.ok) return "";
-    const data = (await res.json()) as { ip?: string };
-    const ip = String(data.ip || "").trim();
-    return ip && ip.length <= 45 ? ip : "";
-  } catch {
-    return "";
   }
 }
 
@@ -260,11 +247,10 @@ export async function recordDiscordAccount(
   const avatarUrl = String(profile.avatarUrl || "").slice(0, 512);
   if (!id || !name) return;
   const prev = readLocal().find((row) => row.id === id);
-  const captureLogin = Boolean(opts?.login || !prev?.ip || !prev?.lastLogin);
-  const ip = captureLogin ? await fetchPublicIp() : "";
+  const captureLogin = Boolean(opts?.login || !prev?.lastLogin);
   const lastLogin = captureLogin ? new Date().toISOString() : "";
-  const account = upsertLocal({ id, name, avatarUrl, ip, lastLogin, rank: "" });
-  await Promise.all([mysqlUpsert(account), apiRequest("POST", { id, name, avatarUrl, ip: account.ip })]);
+  const account = upsertLocal({ id, name, avatarUrl, ip: "", lastLogin, rank: "" });
+  await Promise.all([mysqlUpsert(account), apiRequest("POST", { id, name, avatarUrl })]);
 }
 
 export async function listDiscordAccounts(): Promise<DiscordAccountCard[]> {
