@@ -110,8 +110,7 @@
       "provider": "github",
       "owner": "filipspm-cpu",
       "repo": "ariespanel",
-      "releaseType": "release",
-      "releaseNotes": " "
+      "releaseType": "release"
     }
   },
   "allowScripts": {
