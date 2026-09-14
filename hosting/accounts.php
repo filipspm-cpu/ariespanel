@@ -1,6 +1,9 @@
 <?php
 error_reporting(0);
 ini_set("display_errors", "0");
+if (function_exists("mysqli_report")) {
+  mysqli_report(MYSQLI_REPORT_OFF);
+}
 header("Content-Type: application/json; charset=utf-8");
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
@@ -9,6 +12,15 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
   http_response_code(204);
   exit;
 }
+
+$ARIES_DONE = false;
+register_shutdown_function(function () {
+  global $ARIES_DONE;
+  if ($ARIES_DONE) return;
+  $err = error_get_last();
+  $detail = is_array($err) ? $err["message"] : "fatal";
+  echo json_encode(array("error" => "php", "detail" => $detail, "accounts" => array(), "roles" => array()));
+});
 
 $raw = file_get_contents("php://input");
 if ($raw === false) $raw = "";
@@ -43,6 +55,8 @@ function key_ok($data, $auth) {
 }
 
 function json_out($payload, $code = 200) {
+  global $ARIES_DONE;
+  $ARIES_DONE = true;
   http_response_code((int) $code);
   $flags = 0;
   if (defined("JSON_UNESCAPED_UNICODE")) $flags |= JSON_UNESCAPED_UNICODE;
@@ -76,31 +90,39 @@ function valid_ip($raw) {
   return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : "";
 }
 
-$mysqli = @new mysqli("localhost", "host425499_ariespanel", "Wu8BzxevpdGr86f5WrXr", "host425499_ariespanel");
-if ($mysqli->connect_errno) {
-  json_out(array("error" => "db", "accounts" => array(), "roles" => array()), 500);
+try {
+  $mysqli = @new mysqli("localhost", "host425499_ariespanel", "Wu8BzxevpdGr86f5WrXr", "host425499_ariespanel");
+} catch (Exception $e) {
+  json_out(array("error" => "db", "detail" => $e->getMessage(), "accounts" => array(), "roles" => array()), 200);
+}
+if (!$mysqli || $mysqli->connect_errno) {
+  json_out(array("error" => "db", "accounts" => array(), "roles" => array()), 200);
 }
 $mysqli->set_charset("utf8mb4");
-$mysqli->query(
-  "CREATE TABLE IF NOT EXISTS discord_accounts (
-    discord_id VARCHAR(32) NOT NULL PRIMARY KEY,
-    name VARCHAR(191) NOT NULL,
-    avatar_url VARCHAR(512) NOT NULL,
-    ip VARCHAR(45) NOT NULL DEFAULT '',
-    last_login DATETIME NULL DEFAULT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-);
-@$mysqli->query("ALTER TABLE discord_accounts ADD COLUMN ip VARCHAR(45) NOT NULL DEFAULT ''");
-@$mysqli->query("ALTER TABLE discord_accounts ADD COLUMN last_login DATETIME NULL DEFAULT NULL");
-$mysqli->query(
-  "CREATE TABLE IF NOT EXISTS account_roles (
-    discord_id VARCHAR(32) NOT NULL PRIMARY KEY,
-    name VARCHAR(191) NOT NULL DEFAULT '',
-    discord VARCHAR(191) NOT NULL DEFAULT '',
-    rank VARCHAR(32) NOT NULL
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
-);
+try {
+  $mysqli->query(
+    "CREATE TABLE IF NOT EXISTS discord_accounts (
+      discord_id VARCHAR(32) NOT NULL PRIMARY KEY,
+      name VARCHAR(191) NOT NULL,
+      avatar_url VARCHAR(512) NOT NULL,
+      ip VARCHAR(45) NOT NULL DEFAULT '',
+      last_login DATETIME NULL DEFAULT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+  );
+  $mysqli->query("ALTER TABLE discord_accounts ADD COLUMN ip VARCHAR(45) NOT NULL DEFAULT ''");
+  $mysqli->query("ALTER TABLE discord_accounts ADD COLUMN last_login DATETIME NULL DEFAULT NULL");
+  $mysqli->query(
+    "CREATE TABLE IF NOT EXISTS account_roles (
+      discord_id VARCHAR(32) NOT NULL PRIMARY KEY,
+      name VARCHAR(191) NOT NULL DEFAULT '',
+      discord VARCHAR(191) NOT NULL DEFAULT '',
+      rank VARCHAR(32) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+  );
+} catch (Exception $e) {
+  /* kolumny mogły już istnieć */
+}
 
 function normalize_rank($raw) {
   $r = strtolower(trim((string) $raw));
@@ -201,7 +223,10 @@ function upsert_account($mysqli, $id, $name, $avatar, $ip) {
   return true;
 }
 
-seed_roles($mysqli);
+try {
+  seed_roles($mysqli);
+} catch (Exception $e) {
+}
 
 $action = req_get($data, "action");
 if ($method === "POST" && $action === "setRank") {
