@@ -8,17 +8,24 @@ let MapVirtualKeyW: (code: number, type: number) => number;
 let SetForegroundWindow: (h: unknown) => boolean;
 let ShowWindow: (h: unknown, n: number) => boolean;
 let GetForegroundWindow: () => unknown;
-let GetWindowThreadProcessId: (h: unknown, pid: Buffer) => number;
-let AttachThreadInput: (a: number, b: number, f: boolean) => boolean;
-let GetCurrentThreadId: () => number;
+let GetWindowThreadProcessId: (h: unknown, pid: number[]) => number;
 let AllowSetForegroundWindow: (pid: number) => boolean;
 let IsWindowVisible: (h: unknown) => boolean;
 let GetWindowTextW: (h: unknown, buf: Buffer, n: number) => number;
+let GetClassNameW: (h: unknown, buf: Buffer, n: number) => number;
 let EnumWindowsProc: unknown;
 let EnumWindows: (cb: unknown, lp: number) => boolean;
 let IsIconic: (h: unknown) => boolean;
+let IsWindow: (h: unknown) => boolean;
+let BringWindowToTop: (h: unknown) => boolean;
+let OpenProcess: (access: number, inherit: boolean, pid: number) => unknown;
+let CloseHandle: (h: unknown) => boolean;
+let QueryFullProcessImageNameW: (h: unknown, flags: number, buf: Buffer, size: number[]) => boolean;
 let INPUT: unknown;
 let nativeReady = false;
+
+const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
+const VK_MENU = 0x12;
 
 function ensureNative() {
   if (nativeReady) return;
@@ -67,16 +74,17 @@ function ensureNative() {
   GetForegroundWindow = user32.func("void * __stdcall GetForegroundWindow()") as () => unknown;
   GetWindowThreadProcessId = user32.func(
     "uint32 __stdcall GetWindowThreadProcessId(void *hWnd, _Out_ uint32 *lpdwProcessId)",
-  ) as (h: unknown, pid: Buffer) => number;
-  AttachThreadInput = user32.func(
-    "bool __stdcall AttachThreadInput(uint32 idAttach, uint32 idAttachTo, bool fAttach)",
-  ) as (a: number, b: number, f: boolean) => boolean;
-  GetCurrentThreadId = kernel32.func("uint32 __stdcall GetCurrentThreadId()") as () => number;
+  ) as (h: unknown, pid: number[]) => number;
   AllowSetForegroundWindow = user32.func("bool __stdcall AllowSetForegroundWindow(uint32 dwProcessId)") as (
     pid: number,
   ) => boolean;
   IsWindowVisible = user32.func("bool __stdcall IsWindowVisible(void *hWnd)") as (h: unknown) => boolean;
-  GetWindowTextW = user32.func("int __stdcall GetWindowTextW(void *hWnd, _Out_ uint16 *lpString, int nMaxCount)") as (
+  GetWindowTextW = user32.func("int __stdcall GetWindowTextW(void *hWnd, void *lpString, int nMaxCount)") as (
+    h: unknown,
+    buf: Buffer,
+    n: number,
+  ) => number;
+  GetClassNameW = user32.func("int __stdcall GetClassNameW(void *hWnd, void *lpClassName, int nMaxCount)") as (
     h: unknown,
     buf: Buffer,
     n: number,
@@ -87,12 +95,22 @@ function ensureNative() {
     lp: number,
   ) => boolean;
   IsIconic = user32.func("bool __stdcall IsIconic(void *hWnd)") as (h: unknown) => boolean;
+  IsWindow = user32.func("bool __stdcall IsWindow(void *hWnd)") as (h: unknown) => boolean;
+  BringWindowToTop = user32.func("bool __stdcall BringWindowToTop(void *hWnd)") as (h: unknown) => boolean;
+  OpenProcess = kernel32.func(
+    "void * __stdcall OpenProcess(uint32 dwDesiredAccess, bool bInheritHandle, uint32 dwProcessId)",
+  ) as (access: number, inherit: boolean, pid: number) => unknown;
+  CloseHandle = kernel32.func("bool __stdcall CloseHandle(void *hObject)") as (h: unknown) => boolean;
+  QueryFullProcessImageNameW = kernel32.func(
+    "bool __stdcall QueryFullProcessImageNameW(void *hProcess, uint32 dwFlags, void *lpExeName, _Inout_ uint32 *lpdwSize)",
+  ) as (h: unknown, flags: number, buf: Buffer, size: number[]) => boolean;
   nativeReady = true;
 }
 
 const KEYEVENTF_KEYUP = 0x0002;
 const INPUT_KEYBOARD = 1;
 const SW_RESTORE = 9;
+const SW_SHOW = 5;
 const VK_RETURN = 0x0d;
 const VK_TAB = 0x09;
 const VK_CONTROL = 0x11;
@@ -107,15 +125,119 @@ export interface ProcessInfo {
   pid: number;
   title: string;
   name: string;
+  className?: string;
 }
 
-const GAME_HINTS = ["majestic", "gta5", "gtav", "fivem", "ragemp", "altv", "playgtav"];
+export type PublicProcess = {
+  pid: number;
+  title: string;
+  name: string;
+};
+
+const GAME_EXE =
+  /(?:^|[^a-z0-9])(gta5(?:_enhanced)?|playgta[v5]?|fivem(?:_.*)?|ragemp(?:_.*)?|rage-?mp|altv(?:-client)?|majestic)(?:\.exe)?$/i;
+const GAME_CLASS = /^(grcwindow|ragemp|altv)/i;
+const GAME_TITLE =
+  /majestic|grand theft|gta\s*[v5]|gtav|gta5|gta\s*5|fivem|five\s*m|ragemp|rage\s*mp|rage multiplayer|alt:?v|roleplay|playgta/i;
+const NOT_GAME_EXE = /(?:chrome|msedge|firefox|discord|spotify|code|explorer|aries|electron)\.exe$/i;
+
+export function scoreGameWindow(w: { title: string; name: string; className?: string }): number {
+  const exe = (w.name || "").replace(/^.*[/\\]/, "").toLowerCase();
+  const title = (w.title || "").toLowerCase();
+  const cls = (w.className || "").toLowerCase();
+  if (NOT_GAME_EXE.test(exe) && !GAME_EXE.test(exe)) return 0;
+
+  let score = 0;
+  if (/^gta5(?:_enhanced)?\.exe$/.test(exe)) score += 120;
+  else if (GAME_EXE.test(exe)) score += 80;
+  if (GAME_CLASS.test(cls)) score += 70;
+  if (/majestic/.test(title)) score += 40;
+  if (GAME_TITLE.test(title)) score += 30;
+  if (/(launcher|rockstar|social club)/.test(title) && !/grand theft/.test(title)) score -= 45;
+  return score;
+}
+
+export function toPublicProcess(p: ProcessInfo | null): PublicProcess | null {
+  if (!p) return null;
+  return {
+    pid: p.pid,
+    title: p.title || p.name,
+    name: p.name,
+  };
+}
 
 let windowsCache: { at: number; list: ProcessInfo[] } = { at: 0, list: [] };
 
-export function listWindows(): ProcessInfo[] {
+function readUtf16(buf: Buffer): string {
+  return buf.toString("utf16le").replace(/\u0000.*$/, "").trim();
+}
+
+function hwndKey(h: unknown): string {
+  if (h == null) return "";
+  if (typeof h === "bigint" || typeof h === "number") return String(h);
+  try {
+    const address = (koffi as { address?: (ptr: unknown) => unknown }).address;
+    if (typeof address === "function") return String(address(h));
+  } catch {
+    /* ignore */
+  }
+  return String(h);
+}
+
+function sameHwnd(a: unknown, b: unknown): boolean {
+  const left = hwndKey(a);
+  const right = hwndKey(b);
+  return Boolean(left) && left === right;
+}
+
+function getWindowTitle(hwnd: unknown): string {
+  const buf = Buffer.alloc(1024);
+  const n = GetWindowTextW(hwnd, buf, 512);
+  if (n <= 0) return "";
+  return readUtf16(buf);
+}
+
+function getClassName(hwnd: unknown): string {
+  const buf = Buffer.alloc(512);
+  const n = GetClassNameW(hwnd, buf, 256);
+  if (n <= 0) return "";
+  return readUtf16(buf);
+}
+
+function getProcessExe(pid: number): string {
+  if (!pid) return "";
+  let handle: unknown;
+  try {
+    handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+    if (!handle) return "";
+    const buf = Buffer.alloc(1024);
+    const size = [512];
+    const ok = QueryFullProcessImageNameW(handle, 0, buf, size);
+    if (!ok) return "";
+    const raw = readUtf16(buf);
+    return raw.split(/[/\\]/).pop() || raw;
+  } catch {
+    return "";
+  } finally {
+    if (handle) {
+      try {
+        CloseHandle(handle);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+}
+
+function windowPid(hwnd: unknown): number {
+  const pidOut = [0];
+  GetWindowThreadProcessId(hwnd, pidOut);
+  return pidOut[0] >>> 0;
+}
+
+export function listWindows(force = false): ProcessInfo[] {
   const now = Date.now();
-  if (now - windowsCache.at < 1500 && windowsCache.list.length) return windowsCache.list;
+  if (!force && now - windowsCache.at < 1500 && windowsCache.list.length) return windowsCache.list;
   try {
     const list = listWindowsNative();
     windowsCache = { at: now, list };
@@ -130,50 +252,83 @@ function listWindowsNative(): ProcessInfo[] {
   ensureNative();
   const result: ProcessInfo[] = [];
   const cb = koffi.register((hWnd: unknown) => {
-    if (!IsWindowVisible(hWnd)) return true;
-    const buf = Buffer.alloc(1024);
-    const n = GetWindowTextW(hWnd, buf, 512);
-    if (n <= 0) return true;
-    const title = buf.toString("utf16le").replace(/\u0000.*$/, "");
-    if (!title) return true;
-    const pidBuf = Buffer.alloc(4);
-    GetWindowThreadProcessId(hWnd, pidBuf);
-    const pid = pidBuf.readUInt32LE(0);
-    result.push({ hwnd: hWnd, pid, title, name: title });
+    try {
+      if (!IsWindowVisible(hWnd)) return true;
+      const title = getWindowTitle(hWnd);
+      const pid = windowPid(hWnd);
+      const exe = getProcessExe(pid);
+      const className = getClassName(hWnd);
+      const info: ProcessInfo = {
+        hwnd: hWnd,
+        pid,
+        title,
+        name: exe || title,
+        className,
+      };
+      if (!title && scoreGameWindow(info) <= 0) return true;
+      result.push(info);
+    } catch {
+      /* skip broken hwnd */
+    }
     return true;
   }, koffi.pointer(EnumWindowsProc));
 
-  EnumWindows(cb, 0);
-  koffi.unregister(cb);
+  try {
+    EnumWindows(cb, 0);
+  } finally {
+    koffi.unregister(cb);
+  }
   return result;
 }
 
-export function findGameProcess(): ProcessInfo | null {
-  const windows = listWindows();
-  const scored = windows.filter((w) => GAME_HINTS.some((h) => w.title.toLowerCase().includes(h)));
-  if (scored.length) {
-    const majestic = scored.find((w) => /majestic/i.test(w.title));
-    return majestic ?? scored[0];
-  }
-  return windows.find((w) => /grand theft|gta|roleplay/i.test(w.title)) ?? null;
+export function findGameProcess(force = false): ProcessInfo | null {
+  const windows = listWindows(force);
+  const ranked = windows
+    .map((w) => ({ w, score: scoreGameWindow(w) }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score);
+  return ranked[0]?.w ?? null;
 }
 
-function focusWindow(hwnd: unknown | null) {
+export function findTargetWindow(pid?: number | null, title?: string | null): ProcessInfo | null {
+  const windows = listWindows(true);
+  if (pid) {
+    const byPid = windows.filter((w) => w.pid === pid);
+    if (title) {
+      const exact = byPid.find((w) => w.title === title);
+      if (exact) return exact;
+    }
+    if (byPid.length) {
+      return [...byPid].sort((a, b) => scoreGameWindow(b) - scoreGameWindow(a))[0];
+    }
+  }
+  return findGameProcess(true);
+}
+
+async function focusWindow(hwnd: unknown | null): Promise<boolean> {
   ensureNative();
-  if (!hwnd) return;
+  if (!hwnd) return false;
   try {
+    if (!IsWindow(hwnd)) return false;
+    if (sameHwnd(GetForegroundWindow(), hwnd)) return true;
     if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
-    const fg = GetForegroundWindow();
-    const pidDummy = Buffer.alloc(4);
-    const fgThread = GetWindowThreadProcessId(fg, pidDummy);
-    const targetThread = GetWindowThreadProcessId(hwnd, pidDummy);
-    const cur = GetCurrentThreadId();
-    AttachThreadInput(cur, fgThread, true);
-    AttachThreadInput(cur, targetThread, true);
+    ShowWindow(hwnd, SW_SHOW);
     AllowSetForegroundWindow(0xffffffff);
-    SetForegroundWindow(hwnd);
-    AttachThreadInput(cur, fgThread, false);
-    AttachThreadInput(cur, targetThread, false);
+
+    for (let attempt = 0; attempt < 4; attempt++) {
+      if (attempt) await sleep(45);
+      const scan = MapVirtualKeyW(VK_MENU, 0);
+      sendEvents([keyboardEvent(VK_MENU, scan, 0)]);
+      try {
+        BringWindowToTop(hwnd);
+      } catch {
+        /* optional */
+      }
+      SetForegroundWindow(hwnd);
+      sendEvents([keyboardEvent(VK_MENU, scan, KEYEVENTF_KEYUP)]);
+      await sleep(40);
+      if (sameHwnd(GetForegroundWindow(), hwnd)) return true;
+    }
   } catch {
     try {
       SetForegroundWindow(hwnd);
@@ -181,6 +336,7 @@ function focusWindow(hwnd: unknown | null) {
       /* ignore */
     }
   }
+  return sameHwnd(GetForegroundWindow(), hwnd);
 }
 
 function keyboardEvent(wVk: number, wScan: number, dwFlags: number) {
@@ -236,28 +392,34 @@ async function tapVk(vk: number) {
   ensureNative();
   const scan = MapVirtualKeyW(vk, 0);
   sendEvents([keyboardEvent(vk, scan, 0)]);
-  await sleep(15);
+  await sleep(20);
   sendEvents([keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
+}
+
+async function writeClipboard(text: string) {
+  clipboard.writeText(text);
+  for (let i = 0; i < 10 && clipboard.readText() !== text; i++) {
+    clipboard.writeText(text);
+    await sleep(16);
+  }
 }
 
 async function pasteText(text: string) {
   ensureNative();
   if (!text) return;
-  const previous = clipboard.readText();
-  clipboard.writeText(text);
-  await sleep(20);
+  await writeClipboard(text);
+  await sleep(30);
   const ctrlScan = MapVirtualKeyW(VK_CONTROL, 0);
   const vScan = MapVirtualKeyW(VK_V, 0);
   sendEvents([keyboardEvent(VK_CONTROL, ctrlScan, 0)]);
-  await sleep(12);
+  await sleep(20);
   sendEvents([keyboardEvent(VK_V, vScan, 0)]);
-  await sleep(18);
+  await sleep(28);
   sendEvents([
     keyboardEvent(VK_V, vScan, KEYEVENTF_KEYUP),
     keyboardEvent(VK_CONTROL, ctrlScan, KEYEVENTF_KEYUP),
   ]);
-  await sleep(90);
-  clipboard.writeText(previous);
+  await sleep(Math.max(260, Math.min(800, 180 + text.length * 3)));
 }
 
 async function typeLine(text: string) {
@@ -295,29 +457,52 @@ async function typeText(text: string, options: TypeTextOptions) {
   const toSend = chatLines
     ? splitChatLines(text)
     : text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-  for (let i = 0; i < toSend.length; i++) {
-    const last = i === toSend.length - 1;
-    if (reopenChat && i > 0) {
-      await tapVk(0x54);
-      await sleep(140);
+  const previous = clipboard.readText();
+  try {
+    for (let i = 0; i < toSend.length; i++) {
+      const last = i === toSend.length - 1;
+      if (reopenChat && i > 0) {
+        await tapVk(0x54);
+        await sleep(180);
+      }
+      await typeLine(toSend[i]);
+      await sleep(70);
+      if (chatLines || (options.pressEnter && last)) {
+        await tapVk(VK_RETURN);
+        if (!last) await sleep(260);
+      }
     }
-    await typeLine(toSend[i]);
-    await sleep(25);
-    if (chatLines || (options.pressEnter && last)) {
-      await tapVk(VK_RETURN);
-      if (!last) await sleep(220);
-    }
+    await sleep(80);
+  } finally {
+    clipboard.writeText(previous);
   }
 }
 
-export function pressKey(hwnd: unknown | null, key: string) {
-  focusWindow(hwnd);
+export async function pressKey(hwnd: unknown | null, key: string) {
+  await focusWindow(hwnd);
   keyTap(key);
 }
 
 export async function sendTextToWindow(hwnd: unknown | null, text: string, pressEnter: boolean) {
-  focusWindow(hwnd);
+  await focusWindow(hwnd);
   await typeText(text, { pressEnter });
+}
+
+export async function sendCommandToWindow(
+  hwnd: unknown | null,
+  text: string,
+  options: { pressT?: boolean; pressEnter?: boolean },
+) {
+  const focused = await focusWindow(hwnd);
+  if (hwnd && !focused) {
+    await sleep(80);
+    await focusWindow(hwnd);
+  }
+  if (options.pressT) {
+    await tapVk(0x54);
+    await sleep(200);
+  }
+  await typeText(text, { pressEnter: Boolean(options.pressEnter) });
 }
 
 export async function sendTextForeground(text: string, pressEnterOrOptions: boolean | TypeTextOptions = false) {

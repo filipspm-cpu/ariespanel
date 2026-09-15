@@ -7,8 +7,8 @@ export interface SynvityApi {
   isMaximized: () => Promise<boolean>;
   loadState: () => Promise<unknown>;
   saveState: (partial: unknown) => Promise<unknown>;
-  findProcess: () => Promise<{ pid: number; title: string; name: string } | null>;
-  listWindows: () => Promise<unknown>;
+  findProcess: (force?: boolean) => Promise<{ pid: number; title: string; name: string } | null>;
+  listWindows: (force?: boolean) => Promise<{ pid: number; title: string; name: string }[]>;
   spotifyNow: () => Promise<import("./index").SpotifyTrack | null>;
   listDisplays: () => Promise<
     { id: number; label: string; bounds: { x: number; y: number; width: number; height: number }; primary: boolean }[]
@@ -25,7 +25,9 @@ export interface SynvityApi {
     pressT: boolean;
     reverse: boolean;
     pressEnter: boolean;
-  }) => Promise<unknown>;
+    pid?: number | null;
+    title?: string | null;
+  }) => Promise<{ ok: boolean; error?: string; aborted?: boolean } | unknown>;
   cmdStop: () => Promise<unknown>;
   macroSend: (
     text: string,
@@ -34,7 +36,7 @@ export interface SynvityApi {
   ) => Promise<unknown>;
   macroPress: (key: string) => Promise<unknown>;
   registerTriggers: (triggers: { id: string; sequence: string }[]) => Promise<unknown>;
-  onCmdProgress: (cb: (data: { command: string }) => void) => () => void;
+  onCmdProgress: (cb: (data: { command: string; index?: number; total?: number }) => void) => () => void;
   onCmdDone: (cb: (data: { aborted: boolean }) => void) => () => void;
   onCommandPalette: (cb: () => void) => () => void;
   onOpenSettings: (cb: () => void) => () => void;
