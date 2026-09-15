@@ -72,6 +72,7 @@ export function MacrosPage() {
   const [selectedId, setSelectedId] = useState<string | null>(macros[0]?.id ?? null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [packMsg, setPackMsg] = useState("");
+  const [confirmClear, setConfirmClear] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const selected = macros.find((m) => m.id === selectedId) ?? null;
@@ -115,6 +116,13 @@ export function MacrosPage() {
     const current = useAppStore.getState().macros;
     setMacros(current.filter((m) => m.id !== id));
     if (selectedId === id) setSelectedId(current.find((m) => m.id !== id)?.id ?? null);
+  };
+
+  const clearAllMacros = () => {
+    setMacros([]);
+    setSelectedId(null);
+    setConfirmClear(false);
+    setPackMsg("Usunięto wszystkie makra");
   };
 
   const importDefaults = () => {
@@ -189,6 +197,35 @@ export function MacrosPage() {
             className="h-8 w-full rounded-md border px-2 text-[12px]"
           />
           {packMsg ? <div className="mt-2 text-[11px] text-emerald-400">{packMsg}</div> : null}
+          {macros.length ? (
+            confirmClear ? (
+              <div className="mt-2 flex gap-1">
+                <button
+                  type="button"
+                  className="h-8 flex-1 rounded-md border border-red-500/40 bg-red-500/15 text-[12px] font-medium text-red-300 hover:bg-red-500/25 hover:text-white"
+                  onClick={clearAllMacros}
+                >
+                  Na pewno?
+                </button>
+                <button
+                  type="button"
+                  className="h-8 rounded-md border border-white/[0.08] px-2 text-[12px] text-zinc-400 hover:bg-white/5 hover:text-white"
+                  onClick={() => setConfirmClear(false)}
+                >
+                  Anuluj
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="mt-2 flex h-8 w-full items-center justify-center gap-1.5 rounded-md border border-white/[0.08] text-[12px] text-zinc-500 hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-300"
+                onClick={() => setConfirmClear(true)}
+              >
+                <Trash2 size={12} />
+                Usuń wszystkie makra
+              </button>
+            )
+          ) : null}
         </div>
         <div className="flex-1 overflow-auto px-2 pb-3">
           {filtered.filter((m) => m.folderId === null).map((m) => (

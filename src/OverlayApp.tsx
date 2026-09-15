@@ -169,7 +169,7 @@ export function OverlayApp() {
           }}
           onCommit={(x, y) => commitPos("clock", x, y)}
         >
-          <div className="text-[20px] font-semibold tabular-nums tracking-wide text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+          <div className="rounded-lg bg-black px-3 py-1.5 text-[20px] font-semibold tabular-nums tracking-wide text-white">
             {time}
           </div>
         </Draggable>
