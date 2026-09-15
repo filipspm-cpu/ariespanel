@@ -7,27 +7,39 @@ interface OverlayPayload {
   ticket?: number;
   specs?: number;
   track?: SpotifyTrack | null;
+  notice?: { title: string; body: string; version?: string } | null;
 }
+
+const defaultPositions = {
+  reports: { x: 50, y: 8, scale: 1 },
+  spotify: { x: 50, y: 91, scale: 1 },
+  clock: { x: 1.4, y: 95, scale: 0.75 },
+  push: { x: 82, y: 6, scale: 1 },
+};
 
 const fallbackOverlay: OverlaySettings = {
   displayId: null,
   enabled: false,
-  editMode: false,
+  editMode: typeof window !== "undefined" && !window.synvityOverlay,
   showReports: true,
   showSpotify: true,
   showClock: true,
   showRadial: false,
-  showPush: false,
-  positions: {
-    reports: { x: 50, y: 8, scale: 1 },
-    spotify: { x: 50, y: 91, scale: 1 },
-    clock: { x: 1.4, y: 95, scale: 0.75 },
-  },
+  showPush: true,
+  positions: defaultPositions,
   previousLayout: null,
 };
 
 function migratePositions(overlay: OverlaySettings): OverlaySettings {
-  return overlay;
+  return {
+    ...overlay,
+    positions: {
+      reports: { ...defaultPositions.reports, ...overlay.positions?.reports },
+      spotify: { ...defaultPositions.spotify, ...overlay.positions?.spotify },
+      clock: { ...defaultPositions.clock, ...overlay.positions?.clock },
+      push: { ...defaultPositions.push, ...overlay.positions?.push },
+    },
+  };
 }
 
 function useScreenScale() {
@@ -63,7 +75,7 @@ export function OverlayApp() {
     if (root) root.style.background = "transparent";
   }, []);
 
-  const { overlay, overlayCounters, ticket, specs, track } = payload;
+  const { overlay, overlayCounters, ticket, specs, track, notice } = payload;
 
   useEffect(() => {
     if (!overlay.showClock) return;
@@ -98,6 +110,7 @@ export function OverlayApp() {
           overlay: next,
           track: data.track === undefined ? prev.track : data.track,
           overlayCounters: data.overlayCounters ?? prev.overlayCounters,
+          notice: data.notice === undefined ? prev.notice : data.notice,
         };
         if (dragging.current) {
           merged.overlay = { ...next, positions: overlayRef.current.positions };
@@ -125,7 +138,7 @@ export function OverlayApp() {
     };
   }, [overlay.editMode]);
 
-  const commitPos = (key: "reports" | "spotify" | "clock", x: number, y: number) => {
+  const commitPos = (key: "reports" | "spotify" | "clock" | "push", x: number, y: number) => {
     const positions = {
       ...overlayRef.current.positions,
       [key]: { ...overlayRef.current.positions[key], x, y },
@@ -175,6 +188,21 @@ export function OverlayApp() {
         </Draggable>
       ) : null}
 
+      {overlay.showPush && (notice || overlay.editMode) ? (
+        <Draggable
+          enabled={overlay.editMode}
+          x={overlay.positions.push?.x ?? defaultPositions.push.x}
+          y={overlay.positions.push?.y ?? defaultPositions.push.y}
+          scale={(overlay.positions.push?.scale || 1) * uiScale}
+          onDragStart={() => {
+            dragging.current = true;
+          }}
+          onCommit={(x, y) => commitPos("push", x, y)}
+        >
+          <PushCard notice={notice ?? null} placeholder={overlay.editMode && !notice} />
+        </Draggable>
+      ) : null}
+
       {overlay.showSpotify ? (
         <Draggable
           enabled={overlay.editMode}
@@ -190,6 +218,27 @@ export function OverlayApp() {
           <SpotifyWidget track={track ?? null} />
         </Draggable>
       ) : null}
+    </div>
+  );
+}
+
+function PushCard({
+  notice,
+  placeholder,
+}: {
+  notice: { title: string; body: string; version?: string } | null;
+  placeholder?: boolean;
+}) {
+  return (
+    <div className="w-[280px] rounded-xl bg-black px-3.5 py-2.5 text-white">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+        {notice?.title || "Powiadomienia"}
+      </div>
+      <div className="mt-1 text-[13px] font-medium leading-snug">
+        {notice?.body || "Tu będą przychodzić powiadomienia"}
+      </div>
+      {notice?.version ? <div className="mt-1 text-[12px] tabular-nums text-zinc-400">v{notice.version}</div> : null}
+      {placeholder ? <div className="mt-1 text-[11px] text-zinc-500">Przesuń w trybie edycji</div> : null}
     </div>
   );
 }

@@ -110,6 +110,7 @@ export function OverlayPage() {
             <div className="ink-card divide-y divide-white/[0.06]">
               <Row
                 title="Powiadomienia push"
+                hint="Na nakładce, w wybranym miejscu. W trybie edycji przesuń ramkę."
                 checked={overlay.showPush}
                 onChange={(v) => patchOverlay({ showPush: v })}
               />
@@ -170,7 +171,7 @@ export function OverlayPage() {
             <div className="ink-card p-4">
               <div className="text-[13px] font-medium text-white">Rozmiar elementów</div>
               <p className="mt-1 text-[12px] text-zinc-500">
-                Suwakiem zmniejszasz lub powiększasz statystyki, Spotify i zegar na nakładce.
+                Suwakiem zmniejszasz lub powiększasz statystyki, Spotify, zegar i powiadomienia na nakładce.
               </p>
               <div className="mt-4 grid gap-5">
                 <ScaleSlider
@@ -208,6 +209,19 @@ export function OverlayPage() {
                       positions: {
                         ...overlay.positions,
                         clock: { ...overlay.positions.clock, scale },
+                      },
+                    })
+                  }
+                />
+                <ScaleSlider
+                  label="Powiadomienia"
+                  value={overlay.positions.push?.scale || 1}
+                  onRemember={() => useAppStore.getState().rememberOverlayLayout()}
+                  onChange={(scale) =>
+                    patchOverlay({
+                      positions: {
+                        ...overlay.positions,
+                        push: { ...(overlay.positions.push ?? { x: 82, y: 6, scale: 1 }), scale },
                       },
                     })
                   }

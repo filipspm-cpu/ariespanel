@@ -53,6 +53,7 @@ const defaultSnapshot = (): Omit<AppSnapshot, "route" | "searchOpen" | "searchQu
       reports: { x: 50, y: 8, scale: 1 },
       spotify: { x: 50, y: 91, scale: 1 },
       clock: { x: 1.4, y: 95, scale: 0.75 },
+      push: { x: 82, y: 6, scale: 1 },
     },
     previousLayout: null,
   },
@@ -78,6 +79,7 @@ const defaultSnapshot = (): Omit<AppSnapshot, "route" | "searchOpen" | "searchQu
 });
 
 function snapshotHud(overlay: OverlaySettings): OverlayHudLayout {
+  const fallback = defaultSnapshot().overlay.positions;
   return {
     showReports: overlay.showReports,
     showSpotify: overlay.showSpotify,
@@ -85,9 +87,10 @@ function snapshotHud(overlay: OverlaySettings): OverlayHudLayout {
     showRadial: overlay.showRadial,
     showPush: overlay.showPush,
     positions: {
-      reports: { ...overlay.positions.reports },
-      spotify: { ...overlay.positions.spotify },
-      clock: { ...overlay.positions.clock },
+      reports: { ...fallback.reports, ...overlay.positions.reports },
+      spotify: { ...fallback.spotify, ...overlay.positions.spotify },
+      clock: { ...fallback.clock, ...overlay.positions.clock },
+      push: { ...fallback.push, ...overlay.positions.push },
     },
   };
 }
@@ -161,6 +164,7 @@ export const useAppStore = create<State>((set, get) => ({
           reports: { ...defaults.overlay.positions.reports, ...overlayIn?.positions?.reports },
           spotify: { ...defaults.overlay.positions.spotify, ...overlayIn?.positions?.spotify },
           clock: { ...defaults.overlay.positions.clock, ...overlayIn?.positions?.clock },
+          push: { ...defaults.overlay.positions.push, ...overlayIn?.positions?.push },
         },
         previousLayout: overlayIn?.previousLayout ?? null,
       },
@@ -284,6 +288,7 @@ export const useAppStore = create<State>((set, get) => ({
             reports: { ...prev.positions.reports, ...overlay.positions.reports },
             spotify: { ...prev.positions.spotify, ...overlay.positions.spotify },
             clock: { ...prev.positions.clock, ...overlay.positions.clock },
+            push: { ...prev.positions.push, ...overlay.positions.push },
           }
         : prev.positions,
     };
@@ -305,9 +310,17 @@ export const useAppStore = create<State>((set, get) => ({
   restoreOverlayPrevious: () => {
     const current = get().overlay;
     if (!current.previousLayout) return;
+    const prev = current.previousLayout;
+    const fallback = defaultSnapshot().overlay.positions;
     const next: OverlaySettings = {
       ...current,
-      ...current.previousLayout,
+      ...prev,
+      positions: {
+        reports: { ...fallback.reports, ...prev.positions.reports },
+        spotify: { ...fallback.spotify, ...prev.positions.spotify },
+        clock: { ...fallback.clock, ...prev.positions.clock },
+        push: { ...fallback.push, ...prev.positions.push },
+      },
       previousLayout: snapshotHud(current),
     };
     set({ overlay: next });

@@ -22,7 +22,7 @@ export function UpdateBanner() {
         <span className="update-banner-dot" />
         <Download size={13} strokeWidth={1.8} />
         <span>
-          Dostępna aktualizacja <em>v{status.version}</em>
+          Dostępna jest nowa aktualizacja <em>v{status.version}</em>
         </span>
         <span className="update-banner-hint">Wejdź w ustawienia i kliknij Zaktualizuj.</span>
       </div>

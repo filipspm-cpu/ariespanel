@@ -9,7 +9,7 @@ import { listDiscordAccounts, recordDiscordAccount } from "./discordAccounts";
 import { refreshAccountRoles, setAccountRank } from "./testers";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
 import { runMacroById, setOverlayRefresh, triggersFromMacros } from "./runMacro";
-import { registerUpdater } from "./updater";
+import { registerUpdater, overlayUpdateNotice } from "./updater";
 import { fetchMajesticServerStatuses } from "./majesticStatus";
 import { trustPublisherCert } from "./trustPublisher";
 import { todayCount } from "./todayStats";
@@ -66,6 +66,7 @@ function persistOverlay(patch: Partial<AppState["overlay"]>) {
           reports: { ...current.overlay.positions.reports, ...patch.positions.reports },
           spotify: { ...current.overlay.positions.spotify, ...patch.positions.spotify },
           clock: { ...current.overlay.positions.clock, ...patch.positions.clock },
+          push: { ...current.overlay.positions.push, ...patch.positions.push },
         }
       : current.overlay.positions,
   };
@@ -225,6 +226,7 @@ async function pushOverlayState() {
     ticket,
     specs,
     track,
+    notice: overlayUpdateNotice(),
     now: Date.now(),
   });
 }

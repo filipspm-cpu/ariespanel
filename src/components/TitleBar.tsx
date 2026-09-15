@@ -133,7 +133,7 @@ export function TitleBar() {
                       }}
                     >
                       <div className="notice-row-title">
-                        {n.kind === "installed" ? `Zainstalowano v${n.version}` : `Dostępna v${n.version}`}
+                        {n.kind === "installed" ? `Zainstalowano v${n.version}` : `Dostępna jest nowa aktualizacja v${n.version}`}
                       </div>
                       <div className="notice-row-time">{formatNoticeTime(n.at)}</div>
                     </button>

@@ -1,4 +1,4 @@
-import { app, ipcMain, BrowserWindow, Tray, Notification, nativeImage, shell } from "electron";
+import { app, ipcMain, BrowserWindow, nativeImage, shell } from "electron";
 import { autoUpdater, type UpdateInfo, type ProgressInfo } from "electron-updater";
 import { loadState } from "./storage";
 import { closeUpdateProgressWindow, openUpdateProgressWindow, setUpdateProgress } from "./updateProgress";
@@ -25,7 +25,6 @@ let checking = false;
 let applying = false;
 let notifiedVersion = "";
 let getWindow: () => BrowserWindow | null = () => null;
-let getTray: () => Tray | null = () => null;
 let getIcon: () => Electron.NativeImage = () => nativeImage.createEmpty();
 
 function send(patch: Partial<UpdateStatus>) {
@@ -107,39 +106,23 @@ function showPanel() {
   win.focus();
 }
 
+export function getUpdateStatus(): UpdateStatus {
+  return { ...last, currentVersion: app.getVersion(), channel: "stable" };
+}
+
+export function overlayUpdateNotice() {
+  if (last.status !== "available" && last.status !== "downloaded") return null;
+  return {
+    title: "ARIES",
+    body: "Dostępna jest nowa aktualizacja",
+    version: last.version,
+  };
+}
+
 function notifyAvailable(version: string) {
   pushUpdateNotice(app.getVersion(), { version, at: Date.now(), kind: "available" });
   if (notifiedVersion === version) return;
   notifiedVersion = version;
-  const body = `Dostępna aktualizacja ${version}. Wejdź w Ustawienia i kliknij Zaktualizuj.`;
-  try {
-    if (Notification.isSupported()) {
-      const note = new Notification({
-        title: "ARIES",
-        body,
-        icon: getIcon(),
-      });
-      note.on("click", () => {
-        const win = getWindow();
-        if (!win) return;
-        win.show();
-        win.focus();
-        win.webContents.send("ui:openSettings");
-      });
-      note.show();
-    }
-  } catch {
-    /* ignore */
-  }
-  try {
-    getTray()?.displayBalloon({
-      title: "ARIES",
-      content: body,
-      icon: getIcon(),
-    });
-  } catch {
-    /* ignore */
-  }
 }
 
 async function checkNow(fromUser: boolean) {
@@ -230,11 +213,10 @@ function finishInstall() {
 
 export function registerUpdater(opts: {
   getWindow: () => BrowserWindow | null;
-  getTray: () => Tray | null;
+  getTray?: () => unknown;
   getIcon: () => Electron.NativeImage;
 }) {
   getWindow = opts.getWindow;
-  getTray = opts.getTray;
   getIcon = opts.getIcon;
 
   autoUpdater.autoDownload = false;
