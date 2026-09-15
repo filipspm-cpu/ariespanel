@@ -1494,6 +1494,10 @@ textarea {
   padding: 12px 14px;
 }
 
+.cmd-process.ok {
+  border-color: rgba(134, 239, 172, 0.28);
+}
+
 .cmd-process span {
   display: block;
   font-size: 11px;
@@ -1508,6 +1512,7 @@ textarea {
   font-size: 13px;
   font-weight: 500;
   color: #fff;
+  overflow-wrap: anywhere;
 }
 
 .cmd-process em {
@@ -1516,6 +1521,17 @@ textarea {
   font-style: normal;
   font-size: 11px;
   color: #5c5c5c;
+}
+
+.cmd-process-select {
+  margin-top: 10px;
+}
+
+.cmd-error {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #fca5a5;
 }
 
 .cmd-option {

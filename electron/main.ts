@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, native
 import fs from "fs";
 import path from "path";
 import { loadState, saveState, AppState } from "./storage";
-import { sendTextToWindow, sendTextForeground, pressKey, findGameProcess, listWindows } from "./windows";
+import { sendTextForeground, pressKey, findGameProcess, findTargetWindow, listWindows, sendCommandToWindow, toPublicProcess } from "./windows";
 import { getSpotifyTrack } from "./spotify";
 import { connectDiscord } from "./discord";
 import { listDiscordAccounts, recordDiscordAccount } from "./discordAccounts";
@@ -321,8 +321,10 @@ function registerIpc() {
     return next;
   });
 
-  ipcMain.handle("process:find", () => findGameProcess());
-  ipcMain.handle("process:list", () => listWindows());
+  ipcMain.handle("process:find", (_e, force?: boolean) => toPublicProcess(findGameProcess(Boolean(force))));
+  ipcMain.handle("process:list", (_e, force?: boolean) =>
+    listWindows(Boolean(force)).map((w) => toPublicProcess(w)).filter((row): row is NonNullable<typeof row> => Boolean(row)),
+  );
   ipcMain.handle("spotify:now", () => getSpotifyTrack());
   ipcMain.handle("majestic:servers", (_e, force?: boolean) => fetchMajesticServerStatuses(Boolean(force)));
   ipcMain.handle("discord:connect", async () => {
@@ -395,38 +397,46 @@ function registerIpc() {
         pressT: boolean;
         reverse: boolean;
         pressEnter: boolean;
+        pid?: number | null;
+        title?: string | null;
       },
     ) => {
       if (cmdRunning) return { ok: false, error: "already-running" };
       cmdRunning = true;
       cmdAbort = false;
-      const processInfo = findGameProcess();
-      let commands = payload.commands.map((c) => c.trim()).filter(Boolean);
-      if (payload.reverse) commands = [...commands].reverse();
-      const interval = Math.max(100, payload.intervalMs || 500);
-
-      for (const command of commands) {
-        if (cmdAbort) break;
-        if (processInfo?.hwnd) {
-          if (payload.pressT) {
-            pressKey(processInfo.hwnd, "T");
-            await sleep(80);
-          }
-          await sendTextToWindow(processInfo.hwnd, command, payload.pressEnter);
-        } else {
-          if (payload.pressT) {
-            pressKey(null, "T");
-            await sleep(80);
-          }
-          await sendTextToWindow(null, command, payload.pressEnter);
+      try {
+        let commands = payload.commands.map((c) => c.trim()).filter(Boolean);
+        if (payload.reverse) commands = [...commands].reverse();
+        const interval = Math.max(100, payload.intervalMs || 500);
+        let processInfo = findTargetWindow(payload.pid, payload.title);
+        if (!processInfo) {
+          return { ok: false, error: "no-game" };
         }
-        mainWindow?.webContents.send("cmd:progress", { command });
-        await sleep(interval);
-      }
 
-      cmdRunning = false;
-      mainWindow?.webContents.send("cmd:done", { aborted: cmdAbort });
-      return { ok: true, aborted: cmdAbort, target: processInfo };
+        for (let i = 0; i < commands.length; i++) {
+          if (cmdAbort) break;
+          const command = commands[i];
+          processInfo = findTargetWindow(payload.pid ?? processInfo.pid, payload.title) ?? processInfo;
+          await sendCommandToWindow(processInfo.hwnd, command, {
+            pressT: payload.pressT,
+            pressEnter: payload.pressEnter,
+          });
+          mainWindow?.webContents.send("cmd:progress", {
+            command,
+            index: i + 1,
+            total: commands.length,
+          });
+          await sleep(interval);
+        }
+
+        return { ok: true, aborted: cmdAbort, target: toPublicProcess(processInfo) };
+      } catch (err) {
+        console.warn("cmd:run failed", err);
+        return { ok: false, error: "failed" };
+      } finally {
+        cmdRunning = false;
+        mainWindow?.webContents.send("cmd:done", { aborted: cmdAbort });
+      }
     },
   );
 
@@ -453,9 +463,9 @@ function registerIpc() {
     },
   );
 
-  ipcMain.handle("macro:press", (_e, key: string) => {
+  ipcMain.handle("macro:press", async (_e, key: string) => {
     const processInfo = findGameProcess();
-    pressKey(processInfo?.hwnd ?? null, key);
+    await pressKey(processInfo?.hwnd ?? null, key);
     return true;
   });
 

@@ -7,8 +7,8 @@ const api = {
   isMaximized: () => ipcRenderer.invoke("window:isMaximized") as Promise<boolean>,
   loadState: () => ipcRenderer.invoke("state:load"),
   saveState: (partial: unknown) => ipcRenderer.invoke("state:save", partial),
-  findProcess: () => ipcRenderer.invoke("process:find"),
-  listWindows: () => ipcRenderer.invoke("process:list"),
+  findProcess: (force?: boolean) => ipcRenderer.invoke("process:find", Boolean(force)),
+  listWindows: (force?: boolean) => ipcRenderer.invoke("process:list", Boolean(force)),
   spotifyNow: () => ipcRenderer.invoke("spotify:now"),
   listDisplays: () => ipcRenderer.invoke("displays:list"),
   overlayOpen: (payload?: { displayId?: number; editMode?: boolean }) =>
@@ -28,6 +28,8 @@ const api = {
     pressT: boolean;
     reverse: boolean;
     pressEnter: boolean;
+    pid?: number | null;
+    title?: string | null;
   }) => ipcRenderer.invoke("cmd:run", payload),
   cmdStop: () => ipcRenderer.invoke("cmd:stop"),
   macroSend: (
@@ -38,7 +40,7 @@ const api = {
   macroPress: (key: string) => ipcRenderer.invoke("macro:press", key),
   registerTriggers: (triggers: { id: string; sequence: string }[]) =>
     ipcRenderer.invoke("macro:registerTriggers", triggers),
-  onCmdProgress: (cb: (data: { command: string }) => void) => {
+  onCmdProgress: (cb: (data: { command: string; index?: number; total?: number }) => void) => {
     const listener = (_: unknown, data: { command: string }) => cb(data);
     ipcRenderer.on("cmd:progress", listener);
     return () => ipcRenderer.removeListener("cmd:progress", listener);
