@@ -105,6 +105,7 @@ export interface OverlayHudLayout {
     reports: { x: number; y: number; scale: number };
     spotify: { x: number; y: number; scale: number };
     clock: { x: number; y: number; scale: number };
+    push: { x: number; y: number; scale: number };
   };
 }
 
@@ -188,7 +189,6 @@ export interface DisplayInfo {
 }
 
 export interface ProcessInfo {
-  hwnd: unknown;
   pid: number;
   title: string;
   name: string;

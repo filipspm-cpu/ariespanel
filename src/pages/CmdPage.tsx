@@ -10,7 +10,9 @@ export function CmdPage() {
   const [running, setRunning] = useState(false);
   const [lastCommand, setLastCommand] = useState<string | null>(null);
   const [processLabel, setProcessLabel] = useState("Nie wykryto procesu gry");
+  const [processName, setProcessName] = useState("");
   const [pid, setPid] = useState<number | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
 
   const commands = useMemo(
     () =>
@@ -24,14 +26,21 @@ export function CmdPage() {
   const dupes = commands.length - new Set(commands).size;
 
   const refreshProcess = async () => {
-    const proc = await window.synvity?.findProcess();
-    if (proc) {
-      setProcessLabel(proc.title);
-      setPid(proc.pid);
-    } else {
-      setProcessLabel("Nie wykryto procesu gry");
-      setPid(null);
+    try {
+      const proc = await window.synvity?.findProcess();
+      if (proc) {
+        setProcessLabel(proc.title);
+        setProcessName(proc.name);
+        setPid(proc.pid);
+        return proc;
+      }
+    } catch {
+      /* native lookup can fail without taking the page down */
     }
+    setProcessLabel("Nie wykryto procesu gry");
+    setProcessName("");
+    setPid(null);
+    return null;
   };
 
   useEffect(() => {
@@ -51,14 +60,34 @@ export function CmdPage() {
 
   const run = async () => {
     if (!commands.length || running) return;
+    setStatus(null);
+    setLastCommand(null);
     setRunning(true);
-    await window.synvity?.cmdRun({
-      commands,
-      intervalMs: cmd.intervalMs,
-      pressT: cmd.pressT,
-      reverse: cmd.reverse,
-      pressEnter: cmd.pressEnter,
-    });
+    try {
+      const proc = await refreshProcess();
+      if (!proc) {
+        setStatus("Nie wykryto gry. Uruchom GTA / Majestic i kliknij odśwież.");
+        return;
+      }
+      const result = (await window.synvity?.cmdRun({
+        commands,
+        intervalMs: cmd.intervalMs,
+        pressT: cmd.pressT,
+        reverse: cmd.reverse,
+        pressEnter: cmd.pressEnter,
+      })) as { ok?: boolean; error?: string } | undefined;
+      if (result?.ok === false) {
+        setStatus(
+          result.error === "no-game"
+            ? "Nie wykryto gry. Uruchom GTA / Majestic i kliknij odśwież."
+            : "Nie udało się wysłać komend.",
+        );
+      }
+    } catch {
+      setStatus("Nie udało się wysłać komend.");
+    } finally {
+      setRunning(false);
+    }
   };
 
   const stop = async () => {
@@ -91,6 +120,7 @@ export function CmdPage() {
               spellCheck={false}
             />
             {lastCommand && running ? <div className="cmd-progress">Wysyłanie: {lastCommand}</div> : null}
+            {status ? <div className="cmd-status">{status}</div> : null}
           </div>
           <div className="cmd-actions">
             <button onClick={() => (running ? void stop() : void run())}>
@@ -113,7 +143,7 @@ export function CmdPage() {
         <div className="cmd-process">
           <span>Proces</span>
           <strong>{processLabel}</strong>
-          <em>{pid ? `PID: ${pid}` : "Oczekiwanie na grę"}</em>
+          <em>{pid ? `${processName ? `${processName} · ` : ""}PID: ${pid}` : "Oczekiwanie na grę"}</em>
         </div>
 
         <div className="cmd-option">

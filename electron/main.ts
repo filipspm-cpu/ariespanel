@@ -2,14 +2,14 @@ import { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, native
 import fs from "fs";
 import path from "path";
 import { loadState, saveState, AppState } from "./storage";
-import { sendTextToWindow, sendTextForeground, pressKey, findGameProcess, listWindows } from "./windows";
+import { sendTextToWindow, sendTextForeground, pressKey, findGameProcess, listWindows, publicProcess, type ProcessInfo } from "./windows";
 import { getSpotifyTrack } from "./spotify";
 import { connectDiscord } from "./discord";
 import { listDiscordAccounts, recordDiscordAccount } from "./discordAccounts";
 import { refreshAccountRoles, setAccountRank } from "./testers";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
 import { runMacroById, setOverlayRefresh, triggersFromMacros } from "./runMacro";
-import { registerUpdater } from "./updater";
+import { registerUpdater, overlayUpdateNotice } from "./updater";
 import { fetchMajesticServerStatuses } from "./majesticStatus";
 import { trustPublisherCert } from "./trustPublisher";
 import { todayCount } from "./todayStats";
@@ -66,6 +66,7 @@ function persistOverlay(patch: Partial<AppState["overlay"]>) {
           reports: { ...current.overlay.positions.reports, ...patch.positions.reports },
           spotify: { ...current.overlay.positions.spotify, ...patch.positions.spotify },
           clock: { ...current.overlay.positions.clock, ...patch.positions.clock },
+          push: { ...current.overlay.positions.push, ...patch.positions.push },
         }
       : current.overlay.positions,
   };
@@ -225,6 +226,7 @@ async function pushOverlayState() {
     ticket,
     specs,
     track,
+    notice: overlayUpdateNotice(),
     now: Date.now(),
   });
 }
@@ -321,8 +323,8 @@ function registerIpc() {
     return next;
   });
 
-  ipcMain.handle("process:find", () => findGameProcess());
-  ipcMain.handle("process:list", () => listWindows());
+  ipcMain.handle("process:find", () => publicProcess(findGameProcess()));
+  ipcMain.handle("process:list", () => listWindows().map((win) => publicProcess(win)).filter(Boolean));
   ipcMain.handle("spotify:now", () => getSpotifyTrack());
   ipcMain.handle("majestic:servers", (_e, force?: boolean) => fetchMajesticServerStatuses(Boolean(force)));
   ipcMain.handle("discord:connect", async () => {
@@ -400,33 +402,38 @@ function registerIpc() {
       if (cmdRunning) return { ok: false, error: "already-running" };
       cmdRunning = true;
       cmdAbort = false;
-      const processInfo = findGameProcess();
-      let commands = payload.commands.map((c) => c.trim()).filter(Boolean);
-      if (payload.reverse) commands = [...commands].reverse();
-      const interval = Math.max(100, payload.intervalMs || 500);
+      try {
+        let commands = payload.commands.map((c) => c.trim()).filter(Boolean);
+        if (payload.reverse) commands = [...commands].reverse();
+        const interval = Math.max(100, payload.intervalMs || 500);
+        let lastTarget: ProcessInfo | null = findGameProcess();
+        if (!lastTarget) {
+          mainWindow?.webContents.send("cmd:done", { aborted: false });
+          return { ok: false, error: "no-game", target: null };
+        }
 
-      for (const command of commands) {
-        if (cmdAbort) break;
-        if (processInfo?.hwnd) {
+        for (const command of commands) {
+          if (cmdAbort) break;
+          const processInfo: ProcessInfo = findGameProcess() ?? lastTarget;
+          lastTarget = processInfo;
+          mainWindow?.webContents.send("cmd:progress", { command });
           if (payload.pressT) {
             pressKey(processInfo.hwnd, "T");
-            await sleep(80);
+            await sleep(220);
           }
           await sendTextToWindow(processInfo.hwnd, command, payload.pressEnter);
-        } else {
-          if (payload.pressT) {
-            pressKey(null, "T");
-            await sleep(80);
-          }
-          await sendTextToWindow(null, command, payload.pressEnter);
+          await sleep(interval);
         }
-        mainWindow?.webContents.send("cmd:progress", { command });
-        await sleep(interval);
-      }
 
-      cmdRunning = false;
-      mainWindow?.webContents.send("cmd:done", { aborted: cmdAbort });
-      return { ok: true, aborted: cmdAbort, target: processInfo };
+        const aborted = cmdAbort;
+        mainWindow?.webContents.send("cmd:done", { aborted });
+        return { ok: true, aborted, target: publicProcess(lastTarget) };
+      } catch (err) {
+        mainWindow?.webContents.send("cmd:done", { aborted: true });
+        return { ok: false, error: err instanceof Error ? err.message : "cmd-failed" };
+      } finally {
+        cmdRunning = false;
+      }
     },
   );
 

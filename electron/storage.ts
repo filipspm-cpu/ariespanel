@@ -70,6 +70,7 @@ export interface OverlayHudLayout {
     reports: { x: number; y: number; scale: number };
     spotify: { x: number; y: number; scale: number };
     clock: { x: number; y: number; scale: number };
+    push: { x: number; y: number; scale: number };
   };
 }
 
@@ -174,6 +175,7 @@ const defaultState = (): AppState => ({
       reports: { x: 50, y: 8, scale: 1 },
       spotify: { x: 50, y: 91, scale: 1 },
       clock: { x: 1.4, y: 95, scale: 0.75 },
+      push: { x: 98.6, y: 4, scale: 1 },
     },
     previousLayout: null,
   },

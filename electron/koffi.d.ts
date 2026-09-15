@@ -12,6 +12,7 @@ declare module "koffi" {
     encode: (type: unknown, value: unknown) => Buffer;
     decode: (ptr: unknown, type: unknown) => unknown;
     sizeof: (type: unknown) => number;
+    address: (value: unknown) => number | bigint;
     union: (nameOrFields: string | Record<string, unknown>, fields?: Record<string, unknown>) => unknown;
   };
   export default koffi;
