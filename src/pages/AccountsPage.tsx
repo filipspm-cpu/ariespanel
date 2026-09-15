@@ -1,6 +1,6 @@
 import { Copyright } from "@/components/Copyright";
 import { RankBadge, useAccountRank } from "@/components/RankBadge";
-import { rankFromRole, type AccountRank } from "@/data/testers";
+import { rankFromRole } from "@/data/testers";
 import { useAppStore } from "@/store/useAppStore";
 import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -102,7 +102,7 @@ export function AccountsPage() {
           <div className="accounts-grid">
             {accounts.map((account, index) => {
               const letter = account.name.trim().slice(0, 1).toUpperCase() || "A";
-              const rank = rankFromRole(account.rank || "") as AccountRank | null;
+              const rank = rankFromRole(account.rank || "");
               return (
                 <div key={`${account.id || account.name}-${index}`} className="accounts-card">
                   {account.avatarUrl ? (
@@ -120,6 +120,7 @@ export function AccountsPage() {
                     >
                       <option value="">brak rangi</option>
                       <option value="developer">Developer</option>
+                      <option value="vip">VIP</option>
                       <option value="beta">Beta tester</option>
                     </select>
                   ) : null}

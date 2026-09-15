@@ -101,7 +101,7 @@ export async function setAccountRank(id: string, rank: string, name?: string): P
     ingestRolesPayload(payload);
   } else {
     const next = loadTesters().filter((row) => row.id !== id);
-    const normalized = /dev/i.test(rank) ? "developer" : /beta/i.test(rank) ? "beta" : "";
+    const normalized = /dev/i.test(rank) ? "developer" : /vip/i.test(rank) ? "vip" : /beta/i.test(rank) ? "beta" : "";
     if (normalized) {
       next.push({
         id,
