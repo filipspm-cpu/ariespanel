@@ -188,7 +188,6 @@ export interface DisplayInfo {
 }
 
 export interface ProcessInfo {
-  hwnd: unknown;
   pid: number;
   title: string;
   name: string;
