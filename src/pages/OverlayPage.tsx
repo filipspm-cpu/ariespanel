@@ -221,7 +221,7 @@ export function OverlayPage() {
                     patchOverlay({
                       positions: {
                         ...overlay.positions,
-                        push: { ...(overlay.positions.push ?? { x: 82, y: 6, scale: 1 }), scale },
+                        push: { ...(overlay.positions.push ?? { x: 98.6, y: 4, scale: 1 }), scale },
                       },
                     })
                   }

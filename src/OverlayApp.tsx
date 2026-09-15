@@ -14,7 +14,7 @@ const defaultPositions = {
   reports: { x: 50, y: 8, scale: 1 },
   spotify: { x: 50, y: 91, scale: 1 },
   clock: { x: 1.4, y: 95, scale: 0.75 },
-  push: { x: 82, y: 6, scale: 1 },
+  push: { x: 98.6, y: 4, scale: 1 },
 };
 
 const fallbackOverlay: OverlaySettings = {
@@ -194,6 +194,7 @@ export function OverlayApp() {
           x={overlay.positions.push?.x ?? defaultPositions.push.x}
           y={overlay.positions.push?.y ?? defaultPositions.push.y}
           scale={(overlay.positions.push?.scale || 1) * uiScale}
+          anchorRight
           onDragStart={() => {
             dragging.current = true;
           }}
@@ -230,7 +231,7 @@ function PushCard({
   placeholder?: boolean;
 }) {
   return (
-    <div className="w-[280px] rounded-xl bg-black px-3.5 py-2.5 text-white">
+    <div className="w-[300px] rounded-xl bg-black px-3.5 py-2.5 text-white">
       <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
         {notice?.title || "Powiadomienia"}
       </div>
@@ -238,7 +239,7 @@ function PushCard({
         {notice?.body || "Tu będą przychodzić powiadomienia"}
       </div>
       {notice?.version ? <div className="mt-1 text-[12px] tabular-nums text-zinc-400">v{notice.version}</div> : null}
-      {placeholder ? <div className="mt-1 text-[11px] text-zinc-500">Przesuń w trybie edycji</div> : null}
+      {placeholder ? <div className="mt-1 text-[11px] leading-snug text-zinc-500">Przesuń w trybie edycji</div> : null}
     </div>
   );
 }
@@ -318,6 +319,7 @@ function Draggable({
   y,
   scale,
   centerX,
+  anchorRight,
   onDragStart,
   onCommit,
 }: {
@@ -327,11 +329,14 @@ function Draggable({
   y: number;
   scale: number;
   centerX?: boolean;
+  anchorRight?: boolean;
   onDragStart?: () => void;
   onCommit?: (x: number, y: number) => void;
 }) {
   const [pos, setPos] = useState({ x, y });
   useEffect(() => setPos({ x, y }), [x, y]);
+  const origin = centerX ? "top center" : anchorRight ? "top right" : "top left";
+  const shift = centerX ? "-50%" : anchorRight ? "-100%" : "0";
 
   return (
     <div
@@ -341,8 +346,8 @@ function Draggable({
         position: "absolute",
         left: `${pos.x}%`,
         top: `${pos.y}%`,
-        transform: `translate(${centerX ? "-50%" : "0"}, 0) scale(${scale})`,
-        transformOrigin: centerX ? "top center" : "top left",
+        transform: `translate(${shift}, 0) scale(${scale})`,
+        transformOrigin: origin,
       }}
       onMouseDown={(e) => {
         if (!enabled) return;
