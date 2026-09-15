@@ -107,6 +107,7 @@ try {
 function normalize_rank($raw) {
   $r = strtolower(trim((string) $raw));
   if (strpos($r, "dev") !== false) return "developer";
+  if (strpos($r, "vip") !== false) return "vip";
   if (strpos($r, "beta") !== false) return "beta";
   return "";
 }

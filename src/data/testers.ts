@@ -17,10 +17,11 @@ export function parseTesters(raw: string): Tester[] {
   return raw.split(/\r?\n/).map(parseTesterLine).filter((row): row is Tester => Boolean(row));
 }
 
-export type AccountRank = "developer" | "beta";
+export type AccountRank = "developer" | "vip" | "beta";
 
 export function rankFromRole(role: string): AccountRank | null {
   if (/dev/i.test(role)) return "developer";
+  if (/vip/i.test(role)) return "vip";
   if (/beta/i.test(role)) return "beta";
   return null;
 }

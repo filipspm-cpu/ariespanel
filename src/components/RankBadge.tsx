@@ -14,13 +14,11 @@ export function RankBadge({
   size?: "xs" | "sm" | "md";
 }) {
   if (!rank) return null;
-  const label =
-    size === "xs"
-      ? rank === "developer"
-        ? "Dev"
-        : "Beta"
-      : rank === "developer"
-        ? "Developer"
-        : "Beta tester";
+  const labels = {
+    developer: { xs: "Dev", full: "Developer" },
+    vip: { xs: "VIP", full: "VIP" },
+    beta: { xs: "Beta", full: "Beta tester" },
+  } as const;
+  const label = size === "xs" ? labels[rank].xs : labels[rank].full;
   return <span className={`rank-badge rank-${rank} rank-${size}`}>{label}</span>;
 }
