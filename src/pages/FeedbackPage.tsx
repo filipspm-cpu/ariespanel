@@ -1,15 +1,17 @@
 import { RankBadges, useAccountRanks } from "@/components/RankBadge";
 import { useAppStore } from "@/store/useAppStore";
-import { Bug, Lightbulb, LogIn, RefreshCw, Send } from "lucide-react";
+import { Bug, Check, Lightbulb, LogIn, RefreshCw, Send, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type FeedbackKind = "bug" | "suggestion";
+type FeedbackStatus = "open" | "done" | "deleted";
 
 type FeedbackItem = {
   id: number;
   discordId: string;
   name: string;
   kind: FeedbackKind;
+  status: FeedbackStatus;
   title: string;
   body: string;
   createdAt: string;
@@ -36,24 +38,72 @@ function formatWhen(value?: string) {
   });
 }
 
-function dedupeItems(rows: FeedbackItem[]): FeedbackItem[] {
-  const seenId = new Set<number>();
-  const seenKey = new Set<string>();
-  const out: FeedbackItem[] = [];
-  for (const item of rows) {
-    if (seenId.has(item.id)) continue;
-    const key = `${item.discordId}|${item.title}|${item.body}`;
-    if (seenKey.has(key)) continue;
-    seenId.add(item.id);
-    seenKey.add(key);
-    out.push(item);
-  }
-  return out;
+function asStatus(value: unknown): FeedbackStatus {
+  const raw = String(value || "").toLowerCase();
+  if (raw === "done") return "done";
+  if (raw === "deleted") return "deleted";
+  return "open";
 }
 
-function FeedbackCard({ item }: { item: FeedbackItem }) {
+function normalizeItem(row: FeedbackItem): FeedbackItem {
+  return { ...row, status: asStatus(row.status) };
+}
+
+function statusRank(status: FeedbackStatus) {
+  if (status === "deleted") return 2;
+  if (status === "done") return 1;
+  return 0;
+}
+
+function dedupeItems(rows: FeedbackItem[]): FeedbackItem[] {
+  const seenId = new Set<number>();
+  const byKey = new Map<string, FeedbackItem>();
+  const order: string[] = [];
+  for (const raw of rows) {
+    const item = normalizeItem(raw);
+    if (seenId.has(item.id)) continue;
+    seenId.add(item.id);
+    const key = `${item.discordId}|${item.title}|${item.body}`;
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, item);
+      order.push(key);
+      continue;
+    }
+    if (statusRank(item.status) > statusRank(existing.status)) {
+      existing.status = item.status;
+    }
+  }
+  return order.map((key) => byKey.get(key)!);
+}
+
+function statusLabel(status: FeedbackStatus) {
+  if (status === "done") return "Wykonane";
+  if (status === "deleted") return "Usunięte";
+  return "Oczekuje";
+}
+
+function FeedbackCard({
+  item,
+  developer,
+  busyId,
+  onStatus,
+}: {
+  item: FeedbackItem;
+  developer?: boolean;
+  busyId?: number;
+  onStatus?: (id: number, status: FeedbackStatus) => void;
+}) {
   return (
-    <div className="rounded-xl border border-white/[0.07] bg-[#070707] p-3.5">
+    <div
+      className={`rounded-xl border bg-[#070707] p-3.5 ${
+        item.status === "deleted"
+          ? "border-white/[0.04] opacity-70"
+          : item.status === "done"
+            ? "border-emerald-500/20"
+            : "border-white/[0.07]"
+      }`}
+    >
       <div className="flex flex-wrap items-center gap-2">
         <span
           className={`rounded px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide ${
@@ -62,6 +112,17 @@ function FeedbackCard({ item }: { item: FeedbackItem }) {
         >
           {item.kind === "suggestion" ? "Sugestia" : "Błąd"}
         </span>
+        <span
+          className={`rounded px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide ${
+            item.status === "done"
+              ? "bg-emerald-500/15 text-emerald-300"
+              : item.status === "deleted"
+                ? "bg-zinc-700 text-zinc-300"
+                : "bg-amber-500/15 text-amber-300"
+          }`}
+        >
+          {statusLabel(item.status)}
+        </span>
         <span className="min-w-0 truncate text-[13px] font-medium text-white">{item.title}</span>
       </div>
       <div className="mt-1 text-[11px] text-zinc-500">
@@ -69,6 +130,36 @@ function FeedbackCard({ item }: { item: FeedbackItem }) {
         {item.createdAt ? ` · ${formatWhen(item.createdAt)}` : ""}
       </div>
       <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-zinc-300">{item.body}</p>
+      {developer && onStatus ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={busyId === item.id}
+            onClick={() => onStatus(item.id, item.status === "done" ? "open" : "done")}
+            className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-[11px] ${
+              item.status === "done"
+                ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                : "border-white/[0.08] bg-[#050505] text-zinc-400 hover:text-white"
+            }`}
+          >
+            <Check size={13} />
+            Wykonane
+          </button>
+          <button
+            type="button"
+            disabled={busyId === item.id}
+            onClick={() => onStatus(item.id, item.status === "deleted" ? "open" : "deleted")}
+            className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-[11px] ${
+              item.status === "deleted"
+                ? "border-rose-500/40 bg-rose-500/15 text-rose-300"
+                : "border-white/[0.08] bg-[#050505] text-zinc-400 hover:text-white"
+            }`}
+          >
+            <Trash2 size={13} />
+            Usuń
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -84,6 +175,7 @@ export function FeedbackPage() {
   const [items, setItems] = useState<FeedbackItem[]>([]);
   const [developer, setDeveloper] = useState(ranks.includes("developer"));
   const [busy, setBusy] = useState(false);
+  const [busyId, setBusyId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [discordBusy, setDiscordBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -170,6 +262,35 @@ export function FeedbackPage() {
       setMessage("Nie udało się wysłać zgłoszenia.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const setStatus = async (id: number, status: FeedbackStatus) => {
+    const current = items.find((item) => item.id === id);
+    setBusyId(id);
+    setMessage("");
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id === id) return { ...item, status };
+        if (
+          current &&
+          item.discordId === current.discordId &&
+          item.title === current.title &&
+          item.body === current.body
+        ) {
+          return { ...item, status };
+        }
+        return item;
+      }),
+    );
+    try {
+      const result = (await window.synvity?.feedbackUpdate?.({ id, status })) as FeedbackList | undefined;
+      if (result?.items) setItems(dedupeItems(result.items));
+      if (!result?.ok) setMessage("Nie udało się zmienić statusu zgłoszenia.");
+    } catch {
+      setMessage("Nie udało się zmienić statusu zgłoszenia.");
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -269,7 +390,9 @@ export function FeedbackPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-[14px] font-medium text-white">Twoje zgłoszenia</div>
-                <p className="mt-1 text-[12px] text-zinc-500">To, co sam tu wysłałeś.</p>
+                <p className="mt-1 text-[12px] text-zinc-500">
+                  To, co sam tu wysłałeś. Status od developera: Oczekuje, Wykonane albo Usunięte.
+                </p>
               </div>
               <button type="button" onClick={() => void load()} className="ink-btn" disabled={loading}>
                 <RefreshCw size={13} className={loading ? "animate-spin" : undefined} />
@@ -280,18 +403,36 @@ export function FeedbackPage() {
               {mine.length === 0 ? (
                 <div className="text-[13px] text-zinc-500">Nie masz jeszcze zgłoszeń.</div>
               ) : (
-                mine.map((item) => <FeedbackCard key={`mine-${item.id}`} item={item} />)
+                mine.map((item) => (
+                  <FeedbackCard
+                    key={`mine-${item.id}`}
+                    item={item}
+                    developer={developer}
+                    busyId={busyId ?? undefined}
+                    onStatus={developer ? setStatus : undefined}
+                  />
+                ))
               )}
             </div>
             {developer ? (
               <div className="mt-6 border-t border-white/[0.06] pt-5">
                 <div className="text-[14px] font-medium text-white">Wszystkie zgłoszenia</div>
-                <p className="mt-1 text-[12px] text-zinc-500">Widoczne tylko dla developerów.</p>
+                <p className="mt-1 text-[12px] text-zinc-500">
+                  Widoczne tylko dla developerów. Wykonane i Usuń widać też u osoby, która to zgłosiła.
+                </p>
                 <div className="mt-4 space-y-3">
                   {all.length === 0 ? (
                     <div className="text-[13px] text-zinc-500">Brak zgłoszeń.</div>
                   ) : (
-                    all.map((item) => <FeedbackCard key={`all-${item.id}`} item={item} />)
+                    all.map((item) => (
+                      <FeedbackCard
+                        key={`all-${item.id}`}
+                        item={item}
+                        developer
+                        busyId={busyId ?? undefined}
+                        onStatus={setStatus}
+                      />
+                    ))
                   )}
                 </div>
               </div>

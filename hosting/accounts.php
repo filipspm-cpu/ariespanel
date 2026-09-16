@@ -277,11 +277,20 @@ function ensure_feedback_table($mysqli) {
       kind VARCHAR(16) NOT NULL DEFAULT 'bug',
       title VARCHAR(191) NOT NULL,
       body TEXT NOT NULL,
+      status VARCHAR(16) NOT NULL DEFAULT 'open',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_feedback_discord (discord_id),
       INDEX idx_feedback_created (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
   );
+  $mysqli->query("ALTER TABLE feedback ADD COLUMN status VARCHAR(16) NOT NULL DEFAULT 'open'");
+}
+
+function feedback_status($raw) {
+  $k = strtolower(trim((string) $raw));
+  if ($k === "done" || $k === "wykonane") return "done";
+  if ($k === "deleted" || $k === "usun" || $k === "usuniete" || $k === "usunięte") return "deleted";
+  return "open";
 }
 
 function feedback_kind($raw) {
@@ -290,19 +299,52 @@ function feedback_kind($raw) {
   return "bug";
 }
 
+function status_rank($status) {
+  if ($status === "deleted") return 2;
+  if ($status === "done") return 1;
+  return 0;
+}
+
 function unique_feedback_items($items) {
   $seenId = array();
-  $seenKey = array();
-  $out = array();
+  $byKey = array();
+  $order = array();
   foreach ($items as $item) {
     $id = (int) $item["id"];
-    $key = $item["discordId"] . "|" . $item["title"] . "|" . $item["body"];
-    if (isset($seenId[$id]) || isset($seenKey[$key])) continue;
+    if (isset($seenId[$id])) continue;
     $seenId[$id] = true;
-    $seenKey[$key] = true;
-    $out[] = $item;
+    $key = $item["discordId"] . "|" . $item["title"] . "|" . $item["body"];
+    if (!isset($byKey[$key])) {
+      $byKey[$key] = $item;
+      $order[] = $key;
+      continue;
+    }
+    if (status_rank($item["status"]) > status_rank($byKey[$key]["status"])) {
+      $byKey[$key]["status"] = $item["status"];
+    }
   }
+  $out = array();
+  foreach ($order as $key) $out[] = $byKey[$key];
   return $out;
+}
+
+function update_feedback_status($mysqli, $itemId, $status) {
+  $stmt = $mysqli->prepare("UPDATE feedback SET status = ? WHERE id = ?");
+  if ($stmt) {
+    $stmt->bind_param("si", $status, $itemId);
+    $stmt->execute();
+  }
+  $dup = $mysqli->prepare(
+    "UPDATE feedback AS f
+     INNER JOIN feedback AS src
+       ON f.discord_id = src.discord_id AND f.title = src.title AND f.body = src.body
+     SET f.status = ?
+     WHERE src.id = ?"
+  );
+  if ($dup) {
+    $dup->bind_param("si", $status, $itemId);
+    $dup->execute();
+  }
 }
 
 function insert_feedback_once($mysqli, $discordId, $name, $kind, $title, $body) {
@@ -328,11 +370,11 @@ function list_feedback($mysqli, $discordId, $developer) {
   $out = array();
   if ($developer) {
     $result = $mysqli->query(
-      "SELECT id, discord_id, name, kind, title, body, created_at FROM feedback ORDER BY created_at DESC, id DESC LIMIT 250"
+      "SELECT id, discord_id, name, kind, title, body, status, created_at FROM feedback ORDER BY created_at DESC, id DESC LIMIT 250"
     );
   } else {
     $stmt = $mysqli->prepare(
-      "SELECT id, discord_id, name, kind, title, body, created_at FROM feedback WHERE discord_id = ? ORDER BY created_at DESC, id DESC LIMIT 80"
+      "SELECT id, discord_id, name, kind, title, body, status, created_at FROM feedback WHERE discord_id = ? ORDER BY created_at DESC, id DESC LIMIT 80"
     );
     if (!$stmt) return $out;
     $stmt->bind_param("s", $discordId);
@@ -353,6 +395,7 @@ function list_feedback($mysqli, $discordId, $developer) {
       "kind" => $row["kind"],
       "title" => $row["title"],
       "body" => $row["body"],
+      "status" => feedback_status(isset($row["status"]) ? $row["status"] : "open"),
       "createdAt" => $iso,
     );
   }
@@ -406,11 +449,25 @@ if ($method === "POST" && $action === "setRank") {
   json_out(array("ok" => true, "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)));
 }
 
-if ($method === "POST" && ($action === "feedbackList" || $action === "feedbackCreate")) {
+if ($method === "POST" && ($action === "feedbackList" || $action === "feedbackCreate" || $action === "feedbackUpdate")) {
   $discordId = preg_replace("/[^0-9]/", "", req_get($data, "discordId"));
   if ($discordId === "") $discordId = preg_replace("/[^0-9]/", "", req_get($data, "discord_id"));
   if ($discordId === "") {
     json_out(array("ok" => false, "error" => "login", "developer" => false, "items" => array()), 401);
+  }
+  if ($action === "feedbackUpdate") {
+    if (!is_developer_id($mysqli, $discordId)) {
+      json_out(array("ok" => false, "error" => "forbidden", "developer" => false, "items" => array()), 403);
+    }
+    $itemId = (int) req_get($data, "id");
+    $status = feedback_status(req_get($data, "status"));
+    if ($itemId <= 0) {
+      $payload = feedback_payload($mysqli, $discordId);
+      $payload["ok"] = false;
+      $payload["error"] = "invalid";
+      json_out($payload, 400);
+    }
+    update_feedback_status($mysqli, $itemId, $status);
   }
   if ($action === "feedbackCreate") {
     $kind = feedback_kind(req_get($data, "kind"));

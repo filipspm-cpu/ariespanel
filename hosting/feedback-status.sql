@@ -1,0 +1,2 @@
+ALTER TABLE feedback
+  ADD COLUMN status VARCHAR(16) NOT NULL DEFAULT 'open';

@@ -71,6 +71,7 @@ const api = {
   feedbackList: () => ipcRenderer.invoke("feedback:list"),
   feedbackCreate: (payload: { kind: string; title: string; body: string }) =>
     ipcRenderer.invoke("feedback:create", payload),
+  feedbackUpdate: (payload: { id: number; status: string }) => ipcRenderer.invoke("feedback:update", payload),
   appVersion: () => ipcRenderer.invoke("app:version") as Promise<string>,
   updateStatus: () => ipcRenderer.invoke("update:status"),
   updateCheck: () => ipcRenderer.invoke("update:check"),
