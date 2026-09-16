@@ -9,7 +9,7 @@ import { listDiscordAccounts, recordDiscordAccount } from "./discordAccounts";
 import { refreshAccountRoles, setAccountRank } from "./testers";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
 import { runMacroById, setCountersListener, setOverlayRefresh, triggersFromMacros } from "./runMacro";
-import { createFeedback, listFeedback } from "./feedback";
+import { createFeedback, listFeedback, updateFeedback } from "./feedback";
 import { registerUpdater, overlayUpdateNotice } from "./updater";
 import { fetchMajesticServerStatuses } from "./majesticStatus";
 import { trustPublisherCert } from "./trustPublisher";
@@ -344,14 +344,23 @@ function registerIpc() {
     const discordId = loadState().settings.discordId || "";
     return listFeedback(discordId);
   });
-  ipcMain.handle("feedback:create", (_e, payload: { kind?: string; title?: string; body?: string }) => {
+  ipcMain.handle("feedback:create", (_e, payload: { kind?: string; title?: string; body?: string; channel?: string }) => {
     const settings = loadState().settings;
     return createFeedback({
       discordId: settings.discordId || "",
       name: settings.discordGlobalName || settings.username || "",
       kind: payload?.kind || "bug",
+      channel: payload?.channel || "other",
       title: payload?.title || "",
       body: payload?.body || "",
+    });
+  });
+  ipcMain.handle("feedback:update", (_e, payload: { id?: number; status?: string }) => {
+    const settings = loadState().settings;
+    return updateFeedback({
+      discordId: settings.discordId || "",
+      id: Number(payload?.id) || 0,
+      status: payload?.status || "open",
     });
   });
   ipcMain.handle("forum:open", (_e, url: string) => shell.openExternal(assertForumUrl(url)));
