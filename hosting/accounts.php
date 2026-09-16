@@ -278,12 +278,14 @@ function ensure_feedback_table($mysqli) {
       title VARCHAR(191) NOT NULL,
       body TEXT NOT NULL,
       status VARCHAR(16) NOT NULL DEFAULT 'open',
+      channel VARCHAR(32) NOT NULL DEFAULT 'other',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_feedback_discord (discord_id),
       INDEX idx_feedback_created (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
   );
   $mysqli->query("ALTER TABLE feedback ADD COLUMN status VARCHAR(16) NOT NULL DEFAULT 'open'");
+  $mysqli->query("ALTER TABLE feedback ADD COLUMN channel VARCHAR(32) NOT NULL DEFAULT 'other'");
 }
 
 function feedback_status($raw) {
@@ -297,6 +299,38 @@ function feedback_kind($raw) {
   $k = strtolower(trim((string) $raw));
   if ($k === "suggestion" || $k === "sugestia") return "suggestion";
   return "bug";
+}
+
+function feedback_channel($raw) {
+  $k = strtolower(trim((string) $raw));
+  $map = array(
+    "home" => "home",
+    "glowna" => "home",
+    "główna" => "home",
+    "strona glowna" => "home",
+    "strona główna" => "home",
+    "cmd" => "cmd",
+    "overlay" => "overlay",
+    "nakladka" => "overlay",
+    "nakładka" => "overlay",
+    "macros" => "macros",
+    "makra" => "macros",
+    "counters" => "counters",
+    "statystyki" => "counters",
+    "forum" => "forum",
+    "craft" => "craft",
+    "settings" => "settings",
+    "ustawienia" => "settings",
+    "accounts" => "accounts",
+    "konta" => "accounts",
+    "about" => "about",
+    "o aplikacji" => "about",
+    "credits" => "credits",
+    "autorzy" => "credits",
+    "other" => "other",
+    "inne" => "other",
+  );
+  return isset($map[$k]) ? $map[$k] : "other";
 }
 
 function status_rank($status) {
@@ -313,7 +347,7 @@ function unique_feedback_items($items) {
     $id = (int) $item["id"];
     if (isset($seenId[$id])) continue;
     $seenId[$id] = true;
-    $key = $item["discordId"] . "|" . $item["title"] . "|" . $item["body"];
+    $key = $item["discordId"] . "|" . $item["channel"] . "|" . $item["title"] . "|" . $item["body"];
     if (!isset($byKey[$key])) {
       $byKey[$key] = $item;
       $order[] = $key;
@@ -337,7 +371,7 @@ function update_feedback_status($mysqli, $itemId, $status) {
   $dup = $mysqli->prepare(
     "UPDATE feedback AS f
      INNER JOIN feedback AS src
-       ON f.discord_id = src.discord_id AND f.title = src.title AND f.body = src.body
+       ON f.discord_id = src.discord_id AND f.channel = src.channel AND f.title = src.title AND f.body = src.body
      SET f.status = ?
      WHERE src.id = ?"
   );
@@ -347,21 +381,21 @@ function update_feedback_status($mysqli, $itemId, $status) {
   }
 }
 
-function insert_feedback_once($mysqli, $discordId, $name, $kind, $title, $body) {
+function insert_feedback_once($mysqli, $discordId, $name, $kind, $title, $body, $channel) {
   $stmt = $mysqli->prepare(
-    "SELECT id FROM feedback WHERE discord_id = ? AND title = ? AND body = ? AND created_at >= (NOW() - INTERVAL 5 MINUTE) ORDER BY id DESC LIMIT 1"
+    "SELECT id FROM feedback WHERE discord_id = ? AND channel = ? AND title = ? AND body = ? AND created_at >= (NOW() - INTERVAL 5 MINUTE) ORDER BY id DESC LIMIT 1"
   );
   if ($stmt) {
-    $stmt->bind_param("sss", $discordId, $title, $body);
+    $stmt->bind_param("ssss", $discordId, $channel, $title, $body);
     $stmt->execute();
     $res = $stmt->get_result();
     if ($res && $res->fetch_assoc()) return;
   }
   $ins = $mysqli->prepare(
-    "INSERT INTO feedback (discord_id, name, kind, title, body) VALUES (?, ?, ?, ?, ?)"
+    "INSERT INTO feedback (discord_id, name, kind, title, body, channel) VALUES (?, ?, ?, ?, ?, ?)"
   );
   if ($ins) {
-    $ins->bind_param("sssss", $discordId, $name, $kind, $title, $body);
+    $ins->bind_param("ssssss", $discordId, $name, $kind, $title, $body, $channel);
     $ins->execute();
   }
 }
@@ -370,11 +404,11 @@ function list_feedback($mysqli, $discordId, $developer) {
   $out = array();
   if ($developer) {
     $result = $mysqli->query(
-      "SELECT id, discord_id, name, kind, title, body, status, created_at FROM feedback ORDER BY created_at DESC, id DESC LIMIT 250"
+      "SELECT id, discord_id, name, kind, title, body, status, channel, created_at FROM feedback ORDER BY created_at DESC, id DESC LIMIT 250"
     );
   } else {
     $stmt = $mysqli->prepare(
-      "SELECT id, discord_id, name, kind, title, body, status, created_at FROM feedback WHERE discord_id = ? ORDER BY created_at DESC, id DESC LIMIT 80"
+      "SELECT id, discord_id, name, kind, title, body, status, channel, created_at FROM feedback WHERE discord_id = ? ORDER BY created_at DESC, id DESC LIMIT 80"
     );
     if (!$stmt) return $out;
     $stmt->bind_param("s", $discordId);
@@ -396,6 +430,7 @@ function list_feedback($mysqli, $discordId, $developer) {
       "title" => $row["title"],
       "body" => $row["body"],
       "status" => feedback_status(isset($row["status"]) ? $row["status"] : "open"),
+      "channel" => feedback_channel(isset($row["channel"]) ? $row["channel"] : "other"),
       "createdAt" => $iso,
     );
   }
@@ -474,6 +509,7 @@ if ($method === "POST" && ($action === "feedbackList" || $action === "feedbackCr
     $title = req_get($data, "title");
     $body = req_get($data, "body");
     $name = req_get($data, "name");
+    $channel = feedback_channel(req_get($data, "channel"));
     if (function_exists("mb_substr")) {
       $title = mb_substr($title, 0, 191);
       $name = mb_substr($name, 0, 191);
@@ -489,7 +525,7 @@ if ($method === "POST" && ($action === "feedbackList" || $action === "feedbackCr
       $payload["error"] = "invalid";
       json_out($payload, 400);
     }
-    insert_feedback_once($mysqli, $discordId, $name, $kind, $title, $body);
+    insert_feedback_once($mysqli, $discordId, $name, $kind, $title, $body, $channel);
   }
   json_out(feedback_payload($mysqli, $discordId));
 }

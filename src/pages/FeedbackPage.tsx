@@ -1,10 +1,12 @@
 import { RankBadges, useAccountRanks } from "@/components/RankBadge";
+import { FEEDBACK_CHANNELS, feedbackChannelLabel, type FeedbackChannelId } from "@/data/feedbackChannels";
 import { useAppStore } from "@/store/useAppStore";
 import { Bug, Check, Lightbulb, LogIn, RefreshCw, Send, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type FeedbackKind = "bug" | "suggestion";
 type FeedbackStatus = "open" | "done" | "deleted";
+type FeedbackChannel = FeedbackChannelId;
 
 type FeedbackItem = {
   id: number;
@@ -12,6 +14,7 @@ type FeedbackItem = {
   name: string;
   kind: FeedbackKind;
   status: FeedbackStatus;
+  channel: FeedbackChannel;
   title: string;
   body: string;
   createdAt: string;
@@ -45,8 +48,13 @@ function asStatus(value: unknown): FeedbackStatus {
   return "open";
 }
 
+function asChannel(value: unknown): FeedbackChannel {
+  const raw = String(value || "").toLowerCase();
+  return FEEDBACK_CHANNELS.some((row) => row.id === raw) ? (raw as FeedbackChannel) : "other";
+}
+
 function normalizeItem(row: FeedbackItem): FeedbackItem {
-  return { ...row, status: asStatus(row.status) };
+  return { ...row, status: asStatus(row.status), channel: asChannel(row.channel) };
 }
 
 function statusRank(status: FeedbackStatus) {
@@ -63,7 +71,7 @@ function dedupeItems(rows: FeedbackItem[]): FeedbackItem[] {
     const item = normalizeItem(raw);
     if (seenId.has(item.id)) continue;
     seenId.add(item.id);
-    const key = `${item.discordId}|${item.title}|${item.body}`;
+    const key = `${item.discordId}|${item.channel}|${item.title}|${item.body}`;
     const existing = byKey.get(key);
     if (!existing) {
       byKey.set(key, item);
@@ -123,6 +131,9 @@ function FeedbackCard({
         >
           {statusLabel(item.status)}
         </span>
+        <span className="rounded bg-white/[0.06] px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-zinc-300">
+          {feedbackChannelLabel(item.channel)}
+        </span>
         <span className="min-w-0 truncate text-[13px] font-medium text-white">{item.title}</span>
       </div>
       <div className="mt-1 text-[11px] text-zinc-500">
@@ -170,6 +181,7 @@ export function FeedbackPage() {
   const ranks = useAccountRanks(settings.discordId);
   const loggedIn = Boolean(settings.discordId);
   const [kind, setKind] = useState<FeedbackKind>("bug");
+  const [channel, setChannel] = useState<FeedbackChannel | "">("");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [items, setItems] = useState<FeedbackItem[]>([]);
@@ -179,12 +191,17 @@ export function FeedbackPage() {
   const [loading, setLoading] = useState(false);
   const [discordBusy, setDiscordBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [channelFilter, setChannelFilter] = useState<FeedbackChannel | "all">("all");
 
   const mine = useMemo(
     () => dedupeItems(items.filter((item) => !settings.discordId || item.discordId === settings.discordId)),
     [items, settings.discordId],
   );
-  const all = useMemo(() => dedupeItems(items), [items]);
+  const all = useMemo(() => {
+    const rows = dedupeItems(items);
+    if (channelFilter === "all") return rows;
+    return rows.filter((item) => item.channel === channelFilter);
+  }, [items, channelFilter]);
 
   const load = useCallback(async () => {
     if (!window.synvity?.feedbackList) return;
@@ -238,11 +255,16 @@ export function FeedbackPage() {
       setMessage("Uzupełnij tytuł i treść (minimum 3 znaki).");
       return;
     }
+    if (!channel) {
+      setMessage("Wybierz, której strony dotyczy zgłoszenie.");
+      return;
+    }
     setBusy(true);
     setMessage("");
     try {
       const result = (await window.synvity?.feedbackCreate({
         kind,
+        channel,
         title: title.trim(),
         body: body.trim(),
       })) as FeedbackList;
@@ -275,6 +297,7 @@ export function FeedbackPage() {
         if (
           current &&
           item.discordId === current.discordId &&
+          item.channel === current.channel &&
           item.title === current.title &&
           item.body === current.body
         ) {
@@ -354,6 +377,27 @@ export function FeedbackPage() {
                 Sugestia
               </button>
             </div>
+            <div className="mt-4">
+              <div className="text-[12px] text-zinc-500">
+                {kind === "bug" ? "Której strony dotyczy błąd?" : "Której strony dotyczy sugestia?"}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {FEEDBACK_CHANNELS.map((row) => (
+                  <button
+                    key={row.id}
+                    type="button"
+                    onClick={() => setChannel(row.id)}
+                    className={`inline-flex h-8 items-center rounded-md border px-2.5 text-[11px] ${
+                      channel === row.id
+                        ? "border-white/30 bg-white/[0.1] text-white"
+                        : "border-white/[0.08] bg-[#050505] text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    {row.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -420,9 +464,38 @@ export function FeedbackPage() {
                 <p className="mt-1 text-[12px] text-zinc-500">
                   Widoczne tylko dla developerów. Wykonane i Usuń widać też u osoby, która to zgłosiła.
                 </p>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setChannelFilter("all")}
+                    className={`inline-flex h-7 items-center rounded-md border px-2 text-[11px] ${
+                      channelFilter === "all"
+                        ? "border-white/30 bg-white/[0.1] text-white"
+                        : "border-white/[0.08] bg-[#050505] text-zinc-400"
+                    }`}
+                  >
+                    Wszystkie
+                  </button>
+                  {FEEDBACK_CHANNELS.map((row) => (
+                    <button
+                      key={row.id}
+                      type="button"
+                      onClick={() => setChannelFilter(row.id)}
+                      className={`inline-flex h-7 items-center rounded-md border px-2 text-[11px] ${
+                        channelFilter === row.id
+                          ? "border-white/30 bg-white/[0.1] text-white"
+                          : "border-white/[0.08] bg-[#050505] text-zinc-400"
+                      }`}
+                    >
+                      {row.label}
+                    </button>
+                  ))}
+                </div>
                 <div className="mt-4 space-y-3">
                   {all.length === 0 ? (
-                    <div className="text-[13px] text-zinc-500">Brak zgłoszeń.</div>
+                    <div className="text-[13px] text-zinc-500">
+                      {channelFilter === "all" ? "Brak zgłoszeń." : "Brak zgłoszeń w tym kanale."}
+                    </div>
                   ) : (
                     all.map((item) => (
                       <FeedbackCard

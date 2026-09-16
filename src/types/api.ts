@@ -6,6 +6,7 @@ export interface FeedbackApiItem {
   name: string;
   kind: "bug" | "suggestion";
   status: "open" | "done" | "deleted";
+  channel: string;
   title: string;
   body: string;
   createdAt: string;
@@ -60,7 +61,7 @@ export interface SynvityApi {
   onMacroFired: (cb: (data: { id: string }) => void) => () => void;
   onCountersChanged: (cb: (counters: import("./index").Counter[]) => void) => () => void;
   feedbackList: () => Promise<FeedbackApiResult>;
-  feedbackCreate: (payload: { kind: string; title: string; body: string }) => Promise<FeedbackApiResult>;
+  feedbackCreate: (payload: { kind: string; title: string; body: string; channel: string }) => Promise<FeedbackApiResult>;
   feedbackUpdate: (payload: { id: number; status: string }) => Promise<FeedbackApiResult>;
   appVersion: () => Promise<string>;
   updateStatus: () => Promise<UpdateStatus>;

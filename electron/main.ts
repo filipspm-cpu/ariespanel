@@ -344,12 +344,13 @@ function registerIpc() {
     const discordId = loadState().settings.discordId || "";
     return listFeedback(discordId);
   });
-  ipcMain.handle("feedback:create", (_e, payload: { kind?: string; title?: string; body?: string }) => {
+  ipcMain.handle("feedback:create", (_e, payload: { kind?: string; title?: string; body?: string; channel?: string }) => {
     const settings = loadState().settings;
     return createFeedback({
       discordId: settings.discordId || "",
       name: settings.discordGlobalName || settings.username || "",
       kind: payload?.kind || "bug",
+      channel: payload?.channel || "other",
       title: payload?.title || "",
       body: payload?.body || "",
     });

@@ -3,6 +3,19 @@ import { loadTesters } from "./testers";
 
 export type FeedbackKind = "bug" | "suggestion";
 export type FeedbackStatus = "open" | "done" | "deleted";
+export type FeedbackChannel =
+  | "home"
+  | "cmd"
+  | "overlay"
+  | "macros"
+  | "counters"
+  | "forum"
+  | "craft"
+  | "settings"
+  | "accounts"
+  | "about"
+  | "credits"
+  | "other";
 
 export type FeedbackItem = {
   id: number;
@@ -10,6 +23,7 @@ export type FeedbackItem = {
   name: string;
   kind: FeedbackKind;
   status: FeedbackStatus;
+  channel: FeedbackChannel;
   title: string;
   body: string;
   createdAt: string;
@@ -33,6 +47,22 @@ function normalizeStatus(raw: string): FeedbackStatus {
   return "open";
 }
 
+function normalizeChannel(raw: string): FeedbackChannel {
+  const value = raw.trim().toLowerCase();
+  if (value === "home" || value === "glowna" || value === "główna" || value.includes("strona")) return "home";
+  if (value === "cmd") return "cmd";
+  if (value === "overlay" || value === "nakladka" || value === "nakładka") return "overlay";
+  if (value === "macros" || value === "makra") return "macros";
+  if (value === "counters" || value === "statystyki") return "counters";
+  if (value === "forum") return "forum";
+  if (value === "craft") return "craft";
+  if (value === "settings" || value === "ustawienia") return "settings";
+  if (value === "accounts" || value === "konta") return "accounts";
+  if (value === "about" || value.includes("aplikacji")) return "about";
+  if (value === "credits" || value === "autorzy") return "credits";
+  return "other";
+}
+
 function parseItems(payload: unknown): FeedbackItem[] {
   const rows =
     payload && typeof payload === "object" && Array.isArray((payload as { items?: unknown }).items)
@@ -47,6 +77,7 @@ function parseItems(payload: unknown): FeedbackItem[] {
         name?: string;
         kind?: string;
         status?: string;
+        channel?: string;
         title?: string;
         body?: string;
         createdAt?: string;
@@ -62,6 +93,7 @@ function parseItems(payload: unknown): FeedbackItem[] {
         name: String(item.name || "").trim() || "Konto",
         kind: normalizeKind(String(item.kind || "bug")),
         status: normalizeStatus(String(item.status || "open")),
+        channel: normalizeChannel(String(item.channel || "other")),
         title,
         body,
         createdAt: String(item.createdAt || item.created_at || ""),
@@ -83,7 +115,7 @@ function uniqueItems(rows: FeedbackItem[]): FeedbackItem[] {
   for (const item of rows) {
     if (seenId.has(item.id)) continue;
     seenId.add(item.id);
-    const key = `${item.discordId}|${item.title}|${item.body}`;
+    const key = `${item.discordId}|${item.channel}|${item.title}|${item.body}`;
     const existing = byKey.get(key);
     if (!existing) {
       byKey.set(key, item);
@@ -121,6 +153,7 @@ export async function createFeedback(input: {
   discordId: string;
   name: string;
   kind: string;
+  channel: string;
   title: string;
   body: string;
 }): Promise<FeedbackList & { created?: boolean }> {
@@ -128,6 +161,7 @@ export async function createFeedback(input: {
   if (!discordId) return { ok: false, developer: false, items: [], error: "login" };
   const title = input.title.trim().slice(0, 191);
   const body = input.body.trim().slice(0, 4000);
+  const channel = normalizeChannel(input.channel);
   if (title.length < 3 || body.length < 3) {
     return { ok: false, developer: isDeveloperId(discordId), items: [], error: "invalid" };
   }
@@ -136,6 +170,7 @@ export async function createFeedback(input: {
     discordId,
     name: input.name.trim().slice(0, 191),
     kind: normalizeKind(input.kind),
+    channel,
     title,
     body,
   });

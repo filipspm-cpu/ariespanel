@@ -69,7 +69,7 @@ const api = {
     return () => ipcRenderer.removeListener("counters:changed", listener);
   },
   feedbackList: () => ipcRenderer.invoke("feedback:list"),
-  feedbackCreate: (payload: { kind: string; title: string; body: string }) =>
+  feedbackCreate: (payload: { kind: string; title: string; body: string; channel: string }) =>
     ipcRenderer.invoke("feedback:create", payload),
   feedbackUpdate: (payload: { id: number; status: string }) => ipcRenderer.invoke("feedback:update", payload),
   appVersion: () => ipcRenderer.invoke("app:version") as Promise<string>,
