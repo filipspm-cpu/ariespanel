@@ -1,5 +1,25 @@
 import type { OverlaySettings, UpdateNotice, UpdateStatus } from "./index";
 
+export interface FeedbackApiItem {
+  id: number;
+  discordId: string;
+  name: string;
+  kind: "bug" | "suggestion";
+  status: "open" | "done" | "deleted";
+  channel: string;
+  title: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface FeedbackApiResult {
+  ok: boolean;
+  developer: boolean;
+  items: FeedbackApiItem[];
+  error?: string;
+  created?: boolean;
+}
+
 export interface SynvityApi {
   minimize: () => Promise<unknown>;
   maximize: () => Promise<unknown>;
@@ -40,36 +60,9 @@ export interface SynvityApi {
   onOpenSettings: (cb: () => void) => () => void;
   onMacroFired: (cb: (data: { id: string }) => void) => () => void;
   onCountersChanged: (cb: (counters: import("./index").Counter[]) => void) => () => void;
-  feedbackList: () => Promise<{
-    ok: boolean;
-    developer: boolean;
-    items: {
-      id: number;
-      discordId: string;
-      name: string;
-      kind: "bug" | "suggestion";
-      title: string;
-      body: string;
-      createdAt: string;
-    }[];
-    error?: string;
-    created?: boolean;
-  }>;
-  feedbackCreate: (payload: { kind: string; title: string; body: string }) => Promise<{
-    ok: boolean;
-    developer: boolean;
-    items: {
-      id: number;
-      discordId: string;
-      name: string;
-      kind: "bug" | "suggestion";
-      title: string;
-      body: string;
-      createdAt: string;
-    }[];
-    error?: string;
-    created?: boolean;
-  }>;
+  feedbackList: () => Promise<FeedbackApiResult>;
+  feedbackCreate: (payload: { kind: string; title: string; body: string; channel: string }) => Promise<FeedbackApiResult>;
+  feedbackUpdate: (payload: { id: number; status: string }) => Promise<FeedbackApiResult>;
   appVersion: () => Promise<string>;
   updateStatus: () => Promise<UpdateStatus>;
   updateCheck: () => Promise<UpdateStatus>;
