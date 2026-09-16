@@ -1,7 +1,7 @@
-import { RankBadge, useAccountRank } from "@/components/RankBadge";
+import { RankBadges, useAccountRanks } from "@/components/RankBadge";
 import { useAppStore } from "@/store/useAppStore";
 import { Bug, Lightbulb, LogIn, RefreshCw, Send } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type FeedbackKind = "bug" | "suggestion";
 
@@ -36,28 +36,71 @@ function formatWhen(value?: string) {
   });
 }
 
+function dedupeItems(rows: FeedbackItem[]): FeedbackItem[] {
+  const seenId = new Set<number>();
+  const seenKey = new Set<string>();
+  const out: FeedbackItem[] = [];
+  for (const item of rows) {
+    if (seenId.has(item.id)) continue;
+    const key = `${item.discordId}|${item.title}|${item.body}`;
+    if (seenKey.has(key)) continue;
+    seenId.add(item.id);
+    seenKey.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
+function FeedbackCard({ item }: { item: FeedbackItem }) {
+  return (
+    <div className="rounded-xl border border-white/[0.07] bg-[#070707] p-3.5">
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={`rounded px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide ${
+            item.kind === "suggestion" ? "bg-sky-500/15 text-sky-300" : "bg-rose-500/15 text-rose-300"
+          }`}
+        >
+          {item.kind === "suggestion" ? "Sugestia" : "Błąd"}
+        </span>
+        <span className="min-w-0 truncate text-[13px] font-medium text-white">{item.title}</span>
+      </div>
+      <div className="mt-1 text-[11px] text-zinc-500">
+        {item.name || "Konto"}
+        {item.createdAt ? ` · ${formatWhen(item.createdAt)}` : ""}
+      </div>
+      <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-zinc-300">{item.body}</p>
+    </div>
+  );
+}
+
 export function FeedbackPage() {
   const settings = useAppStore((s) => s.settings);
   const patchSettings = useAppStore((s) => s.patchSettings);
-  const rank = useAccountRank(settings.discordId);
+  const ranks = useAccountRanks(settings.discordId);
   const loggedIn = Boolean(settings.discordId);
   const [kind, setKind] = useState<FeedbackKind>("bug");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [items, setItems] = useState<FeedbackItem[]>([]);
-  const [developer, setDeveloper] = useState(rank === "developer");
+  const [developer, setDeveloper] = useState(ranks.includes("developer"));
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [discordBusy, setDiscordBusy] = useState(false);
   const [message, setMessage] = useState("");
+
+  const mine = useMemo(
+    () => dedupeItems(items.filter((item) => !settings.discordId || item.discordId === settings.discordId)),
+    [items, settings.discordId],
+  );
+  const all = useMemo(() => dedupeItems(items), [items]);
 
   const load = useCallback(async () => {
     if (!window.synvity?.feedbackList) return;
     setLoading(true);
     try {
       const result = (await window.synvity.feedbackList()) as FeedbackList;
-      setItems(result?.items ?? []);
-      setDeveloper(Boolean(result?.developer) || rank === "developer");
+      setItems(dedupeItems(result?.items ?? []));
+      setDeveloper(Boolean(result?.developer) || ranks.includes("developer"));
       if (result?.error === "network" || result?.error === "server") {
         setMessage("Nie udało się pobrać zgłoszeń.");
       }
@@ -66,7 +109,7 @@ export function FeedbackPage() {
     } finally {
       setLoading(false);
     }
-  }, [rank]);
+  }, [ranks]);
 
   useEffect(() => {
     if (!loggedIn) return;
@@ -106,16 +149,20 @@ export function FeedbackPage() {
     setBusy(true);
     setMessage("");
     try {
-      const result = (await window.synvity?.feedbackCreate({ kind, title: title.trim(), body: body.trim() })) as FeedbackList;
+      const result = (await window.synvity?.feedbackCreate({
+        kind,
+        title: title.trim(),
+        body: body.trim(),
+      })) as FeedbackList;
       if (!result?.ok) {
         if (result?.error === "login") setMessage("Zaloguj się przez Discord, aby wysłać zgłoszenie.");
         else if (result?.error === "invalid") setMessage("Uzupełnij tytuł i treść (minimum 3 znaki).");
         else setMessage("Nie udało się wysłać zgłoszenia.");
-        if (result?.items) setItems(result.items);
+        if (result?.items) setItems(dedupeItems(result.items));
         return;
       }
-      setItems(result.items ?? []);
-      setDeveloper(Boolean(result.developer) || rank === "developer");
+      setItems(dedupeItems(result.items ?? []));
+      setDeveloper(Boolean(result.developer) || ranks.includes("developer"));
       setTitle("");
       setBody("");
       setMessage(kind === "bug" ? "Błąd został zgłoszony." : "Sugestia została wysłana.");
@@ -153,13 +200,12 @@ export function FeedbackPage() {
           {message ? <div className="mt-3 text-[12px] text-zinc-400">{message}</div> : null}
         </div>
       ) : (
-        <div className={`mt-6 grid gap-4 ${developer ? "xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]" : ""}`}>
+        <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
           <div className="ink-card p-5">
             <div className="text-[14px] font-medium text-white">Nowe zgłoszenie</div>
-            <p className="mt-1 text-[12px] text-zinc-500">
+            <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[12px] text-zinc-500">
               Zalogowano jako {settings.discordGlobalName || settings.username}
-              {rank ? " · " : ""}
-              {rank ? <RankBadge rank={rank} size="xs" /> : null}
+              <RankBadges ranks={ranks} size="xs" />
             </p>
             <div className="mt-4 flex gap-2">
               <button
@@ -219,78 +265,38 @@ export function FeedbackPage() {
             {message ? <div className="mt-3 text-[12px] text-zinc-400">{message}</div> : null}
           </div>
 
-          {developer ? (
-            <div className="ink-card flex min-h-0 flex-col p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <div className="text-[14px] font-medium text-white">Zgłoszenia</div>
-                  <p className="mt-1 text-[12px] text-zinc-500">Widoczne tylko dla developerów.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void load()}
-                  className="ink-btn"
-                  disabled={loading}
-                >
-                  <RefreshCw size={13} className={loading ? "animate-spin" : undefined} />
-                  Odśwież
-                </button>
-              </div>
-              <div className="mt-4 space-y-3">
-                {items.length === 0 ? (
-                  <div className="text-[13px] text-zinc-500">Brak zgłoszeń.</div>
-                ) : (
-                  items.map((item) => (
-                    <div key={item.id} className="rounded-xl border border-white/[0.07] bg-[#070707] p-3.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={`rounded px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide ${
-                            item.kind === "suggestion"
-                              ? "bg-sky-500/15 text-sky-300"
-                              : "bg-rose-500/15 text-rose-300"
-                          }`}
-                        >
-                          {item.kind === "suggestion" ? "Sugestia" : "Błąd"}
-                        </span>
-                        <span className="min-w-0 truncate text-[13px] font-medium text-white">{item.title}</span>
-                      </div>
-                      <div className="mt-1 text-[11px] text-zinc-500">
-                        {item.name || "Konto"}
-                        {item.createdAt ? ` · ${formatWhen(item.createdAt)}` : ""}
-                      </div>
-                      <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-zinc-300">{item.body}</p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          ) : (
-            items.length > 0 ? (
-              <div className="ink-card p-5 xl:col-span-1">
+          <div className="ink-card flex min-h-0 flex-col p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
                 <div className="text-[14px] font-medium text-white">Twoje zgłoszenia</div>
+                <p className="mt-1 text-[12px] text-zinc-500">To, co sam tu wysłałeś.</p>
+              </div>
+              <button type="button" onClick={() => void load()} className="ink-btn" disabled={loading}>
+                <RefreshCw size={13} className={loading ? "animate-spin" : undefined} />
+                Odśwież
+              </button>
+            </div>
+            <div className="mt-4 space-y-3">
+              {mine.length === 0 ? (
+                <div className="text-[13px] text-zinc-500">Nie masz jeszcze zgłoszeń.</div>
+              ) : (
+                mine.map((item) => <FeedbackCard key={`mine-${item.id}`} item={item} />)
+              )}
+            </div>
+            {developer ? (
+              <div className="mt-6 border-t border-white/[0.06] pt-5">
+                <div className="text-[14px] font-medium text-white">Wszystkie zgłoszenia</div>
+                <p className="mt-1 text-[12px] text-zinc-500">Widoczne tylko dla developerów.</p>
                 <div className="mt-4 space-y-3">
-                  {items.map((item) => (
-                    <div key={item.id} className="rounded-xl border border-white/[0.07] bg-[#070707] p-3.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={`rounded px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide ${
-                            item.kind === "suggestion"
-                              ? "bg-sky-500/15 text-sky-300"
-                              : "bg-rose-500/15 text-rose-300"
-                          }`}
-                        >
-                          {item.kind === "suggestion" ? "Sugestia" : "Błąd"}
-                        </span>
-                        <span className="text-[13px] font-medium text-white">{item.title}</span>
-                      </div>
-                      <div className="mt-1 text-[11px] text-zinc-500">{formatWhen(item.createdAt)}</div>
-                      <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-zinc-300">{item.body}</p>
-                    </div>
-                  ))}
+                  {all.length === 0 ? (
+                    <div className="text-[13px] text-zinc-500">Brak zgłoszeń.</div>
+                  ) : (
+                    all.map((item) => <FeedbackCard key={`all-${item.id}`} item={item} />)
+                  )}
                 </div>
               </div>
-            ) : null
-          )}
+            ) : null}
+          </div>
         </div>
       )}
     </div>

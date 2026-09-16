@@ -843,6 +843,28 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
+.accounts-rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  max-width: 148px;
+  text-align: left;
+}
+
+.accounts-rank-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #cfcfcf;
+  cursor: pointer;
+}
+
+.accounts-rank-option input {
+  accent-color: #e4e4e7;
+}
+
 .accounts-rank-select {
   width: 100%;
   max-width: 140px;
@@ -880,6 +902,13 @@ textarea {
 
 .settings-avatar-img {
   object-fit: cover;
+}
+
+.rank-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
 }
 
 .rank-badge {

@@ -1,5 +1,5 @@
 import { FORUM_RULES } from "@/data/forumRules";
-import { hasBetaAccess, type AccountRank } from "@/data/testers";
+import { hasBetaAccess, hasDeveloperAccess, type AccountRank } from "@/data/testers";
 import type { NavGroup, RouteId } from "@/types";
 
 export const navGroups: NavGroup[] = [
@@ -31,7 +31,6 @@ export const navGroups: NavGroup[] = [
         })),
       },
       { id: "craft", label: "Craft", icon: "hammer" },
-      { id: "feedback", label: "Zgłoś błąd", icon: "bug" },
     ],
   },
   {
@@ -39,6 +38,7 @@ export const navGroups: NavGroup[] = [
     label: "Ustawienia",
     items: [
       { id: "settings", label: "Ustawienia systemu", icon: "settings" },
+      { id: "feedback", label: "Zgłoś błąd", icon: "bug" },
       { id: "accounts", label: "Konta", icon: "users", devOnly: true },
       { id: "about", label: "O aplikacji", icon: "info" },
       { id: "credits", label: "Autorzy", icon: "heart" },
@@ -46,9 +46,10 @@ export const navGroups: NavGroup[] = [
   },
 ];
 
-function canSeeNavItem(item: { devOnly?: boolean; betaOnly?: boolean }, rank: AccountRank | null) {
-  if (item.devOnly && rank !== "developer") return false;
-  if (item.betaOnly && !hasBetaAccess(rank)) return false;
+function canSeeNavItem(item: { devOnly?: boolean; betaOnly?: boolean }, rank: AccountRank | AccountRank[] | null) {
+  const ranks = Array.isArray(rank) ? rank : rank ? [rank] : [];
+  if (item.devOnly && !hasDeveloperAccess(ranks)) return false;
+  if (item.betaOnly && !hasBetaAccess(ranks)) return false;
   return true;
 }
 
@@ -57,12 +58,13 @@ function withBetaBadge<T extends { betaOnly?: boolean; badge?: string }>(item: T
   return { ...item, badge: item.badge || "BETA" };
 }
 
-export function canAccessRoute(route: RouteId, rank: AccountRank | null) {
-  if (route === "accounts") return rank === "developer";
+export function canAccessRoute(route: RouteId, rank: AccountRank | AccountRank[] | null) {
+  const ranks = Array.isArray(rank) ? rank : rank ? [rank] : [];
+  if (route === "accounts") return hasDeveloperAccess(ranks);
   return true;
 }
 
-export function visibleNavGroups(rank: AccountRank | null): NavGroup[] {
+export function visibleNavGroups(rank: AccountRank | AccountRank[] | null): NavGroup[] {
   return navGroups
     .map((group) => ({
       ...group,
@@ -88,7 +90,7 @@ export const breadcrumbs: Record<RouteId, string[]> = {
   credits: ["Dashboard", "Autorzy"],
   craft: ["Dashboard", "Craft"],
   forum: ["Dashboard", "Forum"],
-  feedback: ["Dashboard", "Zgłoś błąd"],
+  feedback: ["Dashboard", "Ustawienia", "Zgłoś błąd"],
 };
 
 export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {

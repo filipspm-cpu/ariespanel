@@ -76,6 +76,22 @@ function upsertLocal(account: StoredAccount) {
   return merged;
 }
 
+function asLogin(value: unknown): string {
+  if (!value) return "";
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
+  const raw = String(value).trim();
+  if (!raw || raw === "null" || raw === "undefined") return "";
+  const time = Date.parse(raw);
+  if (Number.isNaN(time)) return "";
+  return new Date(time).toISOString();
+}
+
+function asAvatar(value: unknown): string {
+  const url = String(value || "").trim();
+  if (!url || url.includes("/embed/avatars/")) return "";
+  return url;
+}
+
 function parseAccounts(payload: unknown): StoredAccount[] {
   const rows = Array.isArray(payload)
     ? payload
@@ -100,9 +116,9 @@ function parseAccounts(payload: unknown): StoredAccount[] {
       return {
         id,
         name,
-        avatarUrl: String(item.avatarUrl || item.avatar_url || ""),
+        avatarUrl: asAvatar(item.avatarUrl || item.avatar_url),
         ip: "",
-        lastLogin: String(item.lastLogin || item.last_login || item.updated_at || "").trim(),
+        lastLogin: asLogin(item.lastLogin || item.last_login || item.updated_at),
         rank: "",
       };
     })
@@ -132,15 +148,19 @@ function mergeById(...lists: StoredAccount[][]) {
     for (const row of list) {
       const prev = map.get(row.id);
       if (!prev) {
-        map.set(row.id, row);
+        map.set(row.id, {
+          ...row,
+          avatarUrl: asAvatar(row.avatarUrl),
+          lastLogin: asLogin(row.lastLogin),
+        });
         continue;
       }
       map.set(row.id, {
         id: row.id,
         name: prev.name || row.name,
-        avatarUrl: prev.avatarUrl || row.avatarUrl,
+        avatarUrl: asAvatar(prev.avatarUrl) || asAvatar(row.avatarUrl),
         ip: "",
-        lastLogin: newerLogin(prev.lastLogin, row.lastLogin),
+        lastLogin: newerLogin(asLogin(prev.lastLogin), asLogin(row.lastLogin)),
         rank: prev.rank || row.rank || "",
       });
     }
@@ -152,9 +172,9 @@ function toCards(rows: StoredAccount[]): DiscordAccountCard[] {
   return rows.map(({ id, name, avatarUrl, ip, lastLogin, rank }) => ({
     id,
     name,
-    avatarUrl,
+    avatarUrl: asAvatar(avatarUrl) || defaultAvatarUrl(id),
     ip: ip || "",
-    lastLogin: lastLogin || "",
+    lastLogin: asLogin(lastLogin),
     rank: rank || "",
   }));
 }

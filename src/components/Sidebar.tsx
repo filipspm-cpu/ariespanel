@@ -18,7 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
-import { RankBadge, useAccountRank } from "@/components/RankBadge";
+import { RankBadges, useAccountRanks } from "@/components/RankBadge";
 import { visibleNavGroups } from "@/data/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import { clsx } from "./ui/clsx";
@@ -104,7 +104,7 @@ export function Sidebar() {
   const settings = useAppStore((s) => s.settings);
   const nick = settings.discordGlobalName || settings.username || "Konto";
   const letter = (nick || "A").trim().slice(0, 1).toUpperCase();
-  const rank = useAccountRank(settings.discordId);
+  const ranks = useAccountRanks(settings.discordId);
 
   return (
     <aside className="app-sidebar flex w-[252px] shrink-0 flex-col border-r border-white/[0.06] bg-black">
@@ -121,7 +121,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 pb-3">
-        {visibleNavGroups(rank).map((group) => (
+        {visibleNavGroups(ranks).map((group) => (
           <div key={group.id} className="mb-3">
             <div className="px-2 pb-1 pt-2 text-[10px] font-medium uppercase tracking-[0.08em] text-zinc-600">
               {group.label}
@@ -212,7 +212,7 @@ export function Sidebar() {
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1.5">
             <div className="min-w-0 truncate text-[13px] font-medium text-white">{nick}</div>
-            <RankBadge rank={rank} size="xs" />
+            <RankBadges ranks={ranks} size="xs" />
           </div>
           {settings.discordUsername ? (
             <div className="truncate text-[11px] text-zinc-500">@{settings.discordUsername}</div>

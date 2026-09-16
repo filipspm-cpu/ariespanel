@@ -29,9 +29,20 @@ function parseRoles(payload: unknown): Tester[] {
       : [];
   return rows
     .map((row) => {
-      const item = row as { id?: string; discord_id?: string; name?: string; discord?: string; rank?: string; role?: string };
+      const item = row as {
+        id?: string;
+        discord_id?: string;
+        name?: string;
+        discord?: string;
+        rank?: string;
+        role?: string;
+        ranks?: unknown;
+      };
       const id = String(item.id || item.discord_id || "").replace(/\D/g, "");
-      const rank = String(item.rank || item.role || "").trim();
+      const ranks = Array.isArray(item.ranks)
+        ? item.ranks.map((value) => String(value || "").trim()).filter(Boolean)
+        : [];
+      const rank = ranks.length ? ranks.join(",") : String(item.rank || item.role || "").trim();
       if (!id || !rank) return null;
       return {
         id,
@@ -91,23 +102,31 @@ export async function refreshAccountRoles(): Promise<Tester[]> {
 }
 
 export async function setAccountRank(id: string, rank: string, name?: string): Promise<Tester[]> {
+  const ranks = rank
+    .split(/[,|/]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
   const payload = await apiRequest("POST", {
     action: "setRank",
     id,
-    rank,
+    rank: ranks.join(","),
+    ranks,
     name: name || "",
   });
   if (payloadOk(payload)) {
     ingestRolesPayload(payload);
   } else {
     const next = loadTesters().filter((row) => row.id !== id);
-    const normalized = /dev/i.test(rank) ? "developer" : /vip/i.test(rank) ? "vip" : /beta/i.test(rank) ? "beta" : "";
-    if (normalized) {
+    const normalized = ranks
+      .map((part) => (/dev/i.test(part) ? "developer" : /vip/i.test(part) ? "vip" : /beta/i.test(part) ? "beta" : ""))
+      .filter(Boolean);
+    const unique = [...new Set(normalized)];
+    if (unique.length) {
       next.push({
         id,
         name: name || "Konto",
         discord: "",
-        role: normalized,
+        role: unique.join(","),
       });
     }
     writeCache(next);

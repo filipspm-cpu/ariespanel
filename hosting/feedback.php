@@ -1,4 +1,7 @@
 <?php
+if (function_exists("ob_start")) {
+  @ob_start();
+}
 error_reporting(0);
 ini_set("display_errors", "0");
 if (function_exists("mysqli_report")) {
@@ -53,6 +56,9 @@ function key_ok($data, $auth) {
 function json_out($payload, $code = 200) {
   global $ARIES_DONE;
   $ARIES_DONE = true;
+  while (function_exists("ob_get_level") && ob_get_level() > 0) {
+    @ob_end_clean();
+  }
   http_response_code((int) $code);
   $flags = 0;
   if (defined("JSON_UNESCAPED_UNICODE")) $flags |= JSON_UNESCAPED_UNICODE;
@@ -105,6 +111,40 @@ function feedback_kind($raw) {
   return "bug";
 }
 
+function unique_feedback_items($items) {
+  $seenId = array();
+  $seenKey = array();
+  $out = array();
+  foreach ($items as $item) {
+    $id = (int) $item["id"];
+    $key = $item["discordId"] . "|" . $item["title"] . "|" . $item["body"];
+    if (isset($seenId[$id]) || isset($seenKey[$key])) continue;
+    $seenId[$id] = true;
+    $seenKey[$key] = true;
+    $out[] = $item;
+  }
+  return $out;
+}
+
+function insert_feedback_once($mysqli, $discordId, $name, $kind, $title, $body) {
+  $stmt = $mysqli->prepare(
+    "SELECT id FROM feedback WHERE discord_id = ? AND title = ? AND body = ? AND created_at >= (NOW() - INTERVAL 5 MINUTE) ORDER BY id DESC LIMIT 1"
+  );
+  if ($stmt) {
+    $stmt->bind_param("sss", $discordId, $title, $body);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res && $res->fetch_assoc()) return;
+  }
+  $ins = $mysqli->prepare(
+    "INSERT INTO feedback (discord_id, name, kind, title, body) VALUES (?, ?, ?, ?, ?)"
+  );
+  if ($ins) {
+    $ins->bind_param("sssss", $discordId, $name, $kind, $title, $body);
+    $ins->execute();
+  }
+}
+
 function list_feedback($mysqli, $discordId, $developer) {
   $out = array();
   if ($developer) {
@@ -137,7 +177,7 @@ function list_feedback($mysqli, $discordId, $developer) {
       "createdAt" => $iso,
     );
   }
-  return $out;
+  return unique_feedback_items($out);
 }
 
 function feedback_payload($mysqli, $discordId) {
@@ -177,14 +217,7 @@ if ($action === "feedbackCreate" || $action === "create") {
     $payload["error"] = "invalid";
     json_out($payload, 400);
   }
-  $stmt = $mysqli->prepare(
-    "INSERT INTO feedback (discord_id, name, kind, title, body) VALUES (?, ?, ?, ?, ?)"
-  );
-  if (!$stmt) {
-    json_out(array("ok" => false, "error" => "db", "developer" => false, "items" => array()), 200);
-  }
-  $stmt->bind_param("sssss", $discordId, $name, $kind, $title, $body);
-  $stmt->execute();
+  insert_feedback_once($mysqli, $discordId, $name, $kind, $title, $body);
 }
 
 json_out(feedback_payload($mysqli, $discordId));

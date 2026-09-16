@@ -27,35 +27,51 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   }
 }
 
+function parseJsonLoose(text: string): unknown {
+  const trimmed = text.trim();
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const start = trimmed.indexOf("{");
+    const end = trimmed.lastIndexOf("}");
+    if (start >= 0 && end > start) return JSON.parse(trimmed.slice(start, end + 1));
+    throw new Error("invalid json");
+  }
+}
+
+async function requestOne(url: string, method: "GET" | "POST", body?: unknown): Promise<unknown> {
+  const res = await withTimeout(
+    fetch(withKey(url), {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "X-Aries-Key": API_KEY,
+        Authorization: `Bearer ${API_KEY}`,
+        Accept: "application/json",
+      },
+      body: method === "POST" ? JSON.stringify({ ...(body as object), key: API_KEY }) : undefined,
+    }),
+    12000,
+  );
+  if (!res.ok) throw new Error(String(res.status));
+  const text = (await res.text()).trim();
+  if (!text) throw new Error("empty");
+  return parseJsonLoose(text);
+}
+
 export async function apiRequestUrls(
   urls: string[],
   method: "GET" | "POST",
   body?: unknown,
 ): Promise<unknown | null> {
-  const attempts = urls.map(async (base) => {
-    const res = await withTimeout(
-      fetch(withKey(base), {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          "X-Aries-Key": API_KEY,
-          Authorization: `Bearer ${API_KEY}`,
-          Accept: "application/json",
-        },
-        body: method === "POST" ? JSON.stringify({ ...(body as object), key: API_KEY }) : undefined,
-      }),
-      12000,
-    );
-    if (!res.ok) throw new Error(String(res.status));
-    const text = (await res.text()).trim();
-    if (!text) throw new Error("empty");
-    return JSON.parse(text) as unknown;
-  });
-  try {
-    return await Promise.any(attempts);
-  } catch {
-    return null;
+  for (const base of urls) {
+    try {
+      return await requestOne(base, method, body);
+    } catch {
+      /* try next host */
+    }
   }
+  return null;
 }
 
 export async function apiRequest(method: "GET" | "POST", body?: unknown): Promise<unknown | null> {
@@ -63,8 +79,13 @@ export async function apiRequest(method: "GET" | "POST", body?: unknown): Promis
 }
 
 export async function feedbackRequest(body: unknown): Promise<unknown | null> {
+  const action =
+    body && typeof body === "object" ? String((body as { action?: string }).action || "") : "";
   const dedicated = await apiRequestUrls(FEEDBACK_URLS, "POST", body);
   if (dedicated && typeof dedicated === "object" && (dedicated as { ok?: unknown }).ok === true) {
+    return dedicated;
+  }
+  if (action === "feedbackCreate" && dedicated && typeof dedicated === "object") {
     return dedicated;
   }
   return apiRequest("POST", body);

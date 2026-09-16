@@ -1,6 +1,6 @@
 import { Copyright } from "@/components/Copyright";
-import { RankBadge, useAccountRank } from "@/components/RankBadge";
-import { rankFromRole } from "@/data/testers";
+import { RankBadges, useAccountRanks } from "@/components/RankBadge";
+import { RANK_ORDER, encodeRanks, hasDeveloperAccess, ranksFromRole, type AccountRank } from "@/data/testers";
 import { useAppStore } from "@/store/useAppStore";
 import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -26,13 +26,32 @@ function formatLogin(value?: string) {
   });
 }
 
+function AccountAvatar({ name, url }: { name: string; url?: string }) {
+  const letter = name.trim().slice(0, 1).toUpperCase() || "A";
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+  }, [url]);
+  if (!url || failed) {
+    return <div className="accounts-avatar accounts-avatar-fallback">{letter}</div>;
+  }
+  return <img src={url} alt="" className="accounts-avatar" draggable={false} onError={() => setFailed(true)} />;
+}
+
+const RANK_LABELS: Record<AccountRank, string> = {
+  developer: "Developer",
+  vip: "VIP",
+  beta: "Beta tester",
+};
+
 export function AccountsPage() {
   const [accounts, setAccounts] = useState<AccountCard[]>([]);
   const [ready, setReady] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const setTesters = useAppStore((s) => s.setTesters);
   const myId = useAppStore((s) => s.settings.discordId);
-  const myRank = useAccountRank(myId);
+  const myRanks = useAccountRanks(myId);
+  const canEdit = hasDeveloperAccess(myRanks);
 
   const load = useCallback(async (manual = false) => {
     const list = window.synvity?.accountsList;
@@ -55,13 +74,13 @@ export function AccountsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const run = async (manual = false) => {
+    const run = async () => {
       if (cancelled) return;
-      await load(manual);
+      await load(false);
     };
-    void run(false);
-    const tick = window.setInterval(() => void run(false), 15000);
-    const onFocus = () => void run(false);
+    void run();
+    const tick = window.setInterval(() => void run(), 15000);
+    const onFocus = () => void run();
     window.addEventListener("focus", onFocus);
     return () => {
       cancelled = true;
@@ -70,11 +89,12 @@ export function AccountsPage() {
     };
   }, [load]);
 
-  const changeRank = async (account: AccountCard, rank: string) => {
+  const changeRanks = async (account: AccountCard, next: AccountRank[]) => {
     if (!account.id || !window.synvity?.ranksSet) return;
-    const testers = await window.synvity.ranksSet({ id: account.id, rank, name: account.name });
+    const encoded = encodeRanks(next);
+    const testers = await window.synvity.ranksSet({ id: account.id, rank: encoded, name: account.name });
     if (testers) setTesters(testers);
-    setAccounts((rows) => rows.map((row) => (row.id === account.id ? { ...row, rank } : row)));
+    setAccounts((rows) => rows.map((row) => (row.id === account.id ? { ...row, rank: encoded } : row)));
   };
 
   return (
@@ -101,28 +121,31 @@ export function AccountsPage() {
         ) : (
           <div className="accounts-grid">
             {accounts.map((account, index) => {
-              const letter = account.name.trim().slice(0, 1).toUpperCase() || "A";
-              const rank = rankFromRole(account.rank || "");
+              const ranks = ranksFromRole(account.rank || "");
               return (
                 <div key={`${account.id || account.name}-${index}`} className="accounts-card">
-                  {account.avatarUrl ? (
-                    <img src={account.avatarUrl} alt="" className="accounts-avatar" draggable={false} />
-                  ) : (
-                    <div className="accounts-avatar accounts-avatar-fallback">{letter}</div>
-                  )}
+                  <AccountAvatar name={account.name} url={account.avatarUrl} />
                   <div className="accounts-name">{account.name}</div>
-                  <RankBadge rank={rank} size="xs" />
-                  {myRank === "developer" && account.id ? (
-                    <select
-                      className="accounts-rank-select"
-                      value={rank || ""}
-                      onChange={(e) => void changeRank(account, e.target.value)}
-                    >
-                      <option value="">brak rangi</option>
-                      <option value="developer">Developer</option>
-                      <option value="vip">VIP</option>
-                      <option value="beta">Beta tester</option>
-                    </select>
+                  <RankBadges ranks={ranks} size="xs" />
+                  {canEdit && account.id ? (
+                    <div className="accounts-rank-list">
+                      {RANK_ORDER.map((rank) => {
+                        const checked = ranks.includes(rank);
+                        return (
+                          <label key={rank} className="accounts-rank-option">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                const next = checked ? ranks.filter((item) => item !== rank) : [...ranks, rank];
+                                void changeRanks(account, next);
+                              }}
+                            />
+                            {RANK_LABELS[rank]}
+                          </label>
+                        );
+                      })}
+                    </div>
                   ) : null}
                   <div className="accounts-meta">{formatLogin(account.lastLogin)}</div>
                 </div>

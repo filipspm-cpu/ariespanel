@@ -1,4 +1,7 @@
 <?php
+if (function_exists("ob_start")) {
+  @ob_start();
+}
 error_reporting(0);
 ini_set("display_errors", "0");
 if (function_exists("mysqli_report")) {
@@ -57,6 +60,9 @@ function key_ok($data, $auth) {
 function json_out($payload, $code = 200) {
   global $ARIES_DONE;
   $ARIES_DONE = true;
+  while (function_exists("ob_get_level") && ob_get_level() > 0) {
+    @ob_end_clean();
+  }
   http_response_code((int) $code);
   $flags = 0;
   if (defined("JSON_UNESCAPED_UNICODE")) $flags |= JSON_UNESCAPED_UNICODE;
@@ -97,9 +103,10 @@ try {
       discord_id VARCHAR(32) NOT NULL PRIMARY KEY,
       name VARCHAR(191) NOT NULL DEFAULT '',
       discord VARCHAR(191) NOT NULL DEFAULT '',
-      rank VARCHAR(32) NOT NULL
+      rank VARCHAR(64) NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
   );
+  $mysqli->query("ALTER TABLE account_roles MODIFY rank VARCHAR(64) NOT NULL");
 } catch (Exception $e) {
   /* kolumny mogły już istnieć */
 }
@@ -130,16 +137,64 @@ function seed_roles($mysqli) {
   }
 }
 
+function ranks_from_stored($raw) {
+  $found = array();
+  $parts = preg_split("/[,|\\/]+/", strtolower(trim((string) $raw)));
+  if (!is_array($parts)) $parts = array();
+  foreach ($parts as $p) {
+    $n = normalize_rank($p);
+    if ($n !== "" && !in_array($n, $found, true)) $found[] = $n;
+  }
+  if (!$found) {
+    $n = normalize_rank($raw);
+    if ($n !== "") $found[] = $n;
+  }
+  $order = array("developer" => 0, "vip" => 1, "beta" => 2);
+  usort($found, function ($a, $b) use ($order) {
+    $aa = isset($order[$a]) ? $order[$a] : 9;
+    $bb = isset($order[$b]) ? $order[$b] : 9;
+    return $aa - $bb;
+  });
+  return $found;
+}
+
+function collect_ranks($data) {
+  $raw = array();
+  if (isset($data["ranks"]) && is_array($data["ranks"])) {
+    foreach ($data["ranks"] as $item) $raw[] = (string) $item;
+  }
+  $s = req_get($data, "rank");
+  if ($s !== "") {
+    foreach (preg_split("/[,|\\/\\s]+/", $s) as $item) {
+      if (trim($item) !== "") $raw[] = $item;
+    }
+  }
+  $found = array();
+  foreach ($raw as $item) {
+    $n = normalize_rank($item);
+    if ($n !== "" && !in_array($n, $found, true)) $found[] = $n;
+  }
+  $order = array("developer" => 0, "vip" => 1, "beta" => 2);
+  usort($found, function ($a, $b) use ($order) {
+    $aa = isset($order[$a]) ? $order[$a] : 9;
+    $bb = isset($order[$b]) ? $order[$b] : 9;
+    return $aa - $bb;
+  });
+  return $found;
+}
+
 function list_roles($mysqli) {
   $out = array();
   $result = $mysqli->query("SELECT discord_id, name, discord, rank FROM account_roles ORDER BY rank ASC, name ASC");
   if (!$result) return $out;
   while ($row = $result->fetch_assoc()) {
+    $ranks = ranks_from_stored($row["rank"]);
     $out[] = array(
       "id" => $row["discord_id"],
       "name" => $row["name"],
       "discord" => $row["discord"],
-      "rank" => $row["rank"],
+      "rank" => implode(",", $ranks),
+      "ranks" => $ranks,
     );
   }
   return $out;
@@ -235,6 +290,40 @@ function feedback_kind($raw) {
   return "bug";
 }
 
+function unique_feedback_items($items) {
+  $seenId = array();
+  $seenKey = array();
+  $out = array();
+  foreach ($items as $item) {
+    $id = (int) $item["id"];
+    $key = $item["discordId"] . "|" . $item["title"] . "|" . $item["body"];
+    if (isset($seenId[$id]) || isset($seenKey[$key])) continue;
+    $seenId[$id] = true;
+    $seenKey[$key] = true;
+    $out[] = $item;
+  }
+  return $out;
+}
+
+function insert_feedback_once($mysqli, $discordId, $name, $kind, $title, $body) {
+  $stmt = $mysqli->prepare(
+    "SELECT id FROM feedback WHERE discord_id = ? AND title = ? AND body = ? AND created_at >= (NOW() - INTERVAL 5 MINUTE) ORDER BY id DESC LIMIT 1"
+  );
+  if ($stmt) {
+    $stmt->bind_param("sss", $discordId, $title, $body);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res && $res->fetch_assoc()) return;
+  }
+  $ins = $mysqli->prepare(
+    "INSERT INTO feedback (discord_id, name, kind, title, body) VALUES (?, ?, ?, ?, ?)"
+  );
+  if ($ins) {
+    $ins->bind_param("sssss", $discordId, $name, $kind, $title, $body);
+    $ins->execute();
+  }
+}
+
 function list_feedback($mysqli, $discordId, $developer) {
   $out = array();
   if ($developer) {
@@ -267,7 +356,7 @@ function list_feedback($mysqli, $discordId, $developer) {
       "createdAt" => $iso,
     );
   }
-  return $out;
+  return unique_feedback_items($out);
 }
 
 function feedback_payload($mysqli, $discordId) {
@@ -292,7 +381,8 @@ try {
 $action = req_get($data, "action");
 if ($method === "POST" && $action === "setRank") {
   $id = preg_replace("/[^0-9]/", "", req_get($data, "id"));
-  $rank = normalize_rank(req_get($data, "rank"));
+  $ranks = collect_ranks($data);
+  $rank = implode(",", $ranks);
   $name = req_get($data, "name");
   if ($id === "") {
     json_out(array("error" => "invalid", "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)), 400);
@@ -342,14 +432,7 @@ if ($method === "POST" && ($action === "feedbackList" || $action === "feedbackCr
       $payload["error"] = "invalid";
       json_out($payload, 400);
     }
-    $stmt = $mysqli->prepare(
-      "INSERT INTO feedback (discord_id, name, kind, title, body) VALUES (?, ?, ?, ?, ?)"
-    );
-    if (!$stmt) {
-      json_out(array("ok" => false, "error" => "db", "developer" => false, "items" => array()), 200);
-    }
-    $stmt->bind_param("sssss", $discordId, $name, $kind, $title, $body);
-    $stmt->execute();
+    insert_feedback_once($mysqli, $discordId, $name, $kind, $title, $body);
   }
   json_out(feedback_payload($mysqli, $discordId));
 }

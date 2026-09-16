@@ -59,6 +59,21 @@ function parseItems(payload: unknown): FeedbackItem[] {
     .filter((row): row is FeedbackItem => Boolean(row));
 }
 
+function uniqueItems(rows: FeedbackItem[]): FeedbackItem[] {
+  const seenId = new Set<number>();
+  const seenKey = new Set<string>();
+  const out: FeedbackItem[] = [];
+  for (const item of rows) {
+    if (seenId.has(item.id)) continue;
+    const key = `${item.discordId}|${item.title}|${item.body}`;
+    if (seenKey.has(key)) continue;
+    seenId.add(item.id);
+    seenKey.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
 function isDeveloperId(discordId: string) {
   return loadTesters().some((row) => row.id === discordId && /dev/i.test(row.role));
 }
@@ -74,7 +89,7 @@ export async function listFeedback(discordId: string): Promise<FeedbackList> {
   return {
     ok: data.ok === true,
     developer: Boolean(data.developer) || isDeveloperId(id),
-    items: parseItems(payload),
+    items: uniqueItems(parseItems(payload)),
     error: typeof data.error === "string" ? data.error : data.ok === true ? undefined : "server",
   };
 }

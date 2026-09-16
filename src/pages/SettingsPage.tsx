@@ -1,5 +1,5 @@
 import { Copyright } from "@/components/Copyright";
-import { RankBadge, useAccountRank } from "@/components/RankBadge";
+import { RankBadges, useAccountRanks } from "@/components/RankBadge";
 import { APP_VERSION } from "@/data/appVersion";
 import { useAppStore } from "@/store/useAppStore";
 import { mergeImportedMacros, parseMacroFile } from "@/services/macroPack";
@@ -37,7 +37,7 @@ export function SettingsPage() {
   };
 
   const available = update?.status === "available" || update?.status === "downloaded";
-  const rank = useAccountRank(settings.discordId);
+  const ranks = useAccountRanks(settings.discordId);
   const letter = (settings.username || "A").trim().slice(0, 1).toUpperCase();
   const discordConnected = Boolean(settings.discordId);
   const displayName = settings.discordGlobalName || settings.username || "Bez nazwy";
@@ -127,7 +127,7 @@ export function SettingsPage() {
           <div className="mt-4 text-[11px] uppercase tracking-[0.22em] text-zinc-500">Konto</div>
           <div className="mt-2 text-center text-[22px] font-semibold text-white">{displayName}</div>
           {discordConnected ? <div className="mt-1 text-[12px] text-zinc-500">@{settings.discordUsername}</div> : null}
-          <RankBadge rank={rank} size="md" />
+          <RankBadges ranks={ranks} size="md" />
           {!discordConnected ? (
             <input
               value={settings.username}

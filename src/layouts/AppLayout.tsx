@@ -16,7 +16,7 @@ import { CraftPage } from "@/pages/CraftPage";
 import { ForumPage } from "@/pages/ForumPage";
 import { FeedbackPage } from "@/pages/FeedbackPage";
 import { UpdateBanner } from "@/components/UpdateBanner";
-import { useAccountRank } from "@/components/RankBadge";
+import { useAccountRanks } from "@/components/RankBadge";
 import { canAccessRoute } from "@/data/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import type { RouteId } from "@/types";
@@ -40,12 +40,12 @@ export function AppLayout() {
   const route = useAppStore((s) => s.route);
   const setRoute = useAppStore((s) => s.setRoute);
   const discordId = useAppStore((s) => s.settings.discordId);
-  const rank = useAccountRank(discordId);
-  const allowed = canAccessRoute(route, rank);
+  const ranks = useAccountRanks(discordId);
+  const allowed = canAccessRoute(route, ranks);
 
   useEffect(() => {
-    if (!canAccessRoute(route, rank)) setRoute("home");
-  }, [route, rank, setRoute]);
+    if (!canAccessRoute(route, ranks)) setRoute("home");
+  }, [route, ranks, setRoute]);
 
   const Page = allowed ? pages[route] : HomePage;
   return (
