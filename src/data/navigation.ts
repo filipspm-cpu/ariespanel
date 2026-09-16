@@ -31,6 +31,7 @@ export const navGroups: NavGroup[] = [
         })),
       },
       { id: "craft", label: "Craft", icon: "hammer" },
+      { id: "feedback", label: "Zgłoś błąd", icon: "bug" },
     ],
   },
   {
@@ -87,6 +88,7 @@ export const breadcrumbs: Record<RouteId, string[]> = {
   credits: ["Dashboard", "Autorzy"],
   craft: ["Dashboard", "Craft"],
   forum: ["Dashboard", "Forum"],
+  feedback: ["Dashboard", "Zgłoś błąd"],
 };
 
 export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
@@ -101,4 +103,5 @@ export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
   credits: { title: "Autorzy" },
   craft: { title: "Craft", subtitle: "Tabela krafta frakcji — Majestic Wiki" },
   forum: { title: "Forum", subtitle: "Regulamin serwera w panelu" },
+  feedback: { title: "Zgłoś błąd", subtitle: "Zgłoś błąd albo nową sugestię — developerzy to zobaczą" },
 };

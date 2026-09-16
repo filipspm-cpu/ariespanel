@@ -63,6 +63,14 @@ const api = {
     ipcRenderer.on("macro:fired", listener);
     return () => ipcRenderer.removeListener("macro:fired", listener);
   },
+  onCountersChanged: (cb: (counters: unknown) => void) => {
+    const listener = (_: unknown, counters: unknown) => cb(counters);
+    ipcRenderer.on("counters:changed", listener);
+    return () => ipcRenderer.removeListener("counters:changed", listener);
+  },
+  feedbackList: () => ipcRenderer.invoke("feedback:list"),
+  feedbackCreate: (payload: { kind: string; title: string; body: string }) =>
+    ipcRenderer.invoke("feedback:create", payload),
   appVersion: () => ipcRenderer.invoke("app:version") as Promise<string>,
   updateStatus: () => ipcRenderer.invoke("update:status"),
   updateCheck: () => ipcRenderer.invoke("update:check"),

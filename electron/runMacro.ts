@@ -1,8 +1,43 @@
-import { loadState, saveState, type Macro, type MacroStep } from "./storage";
+import { loadState, saveState, type Counter, type Macro, type MacroStep } from "./storage";
 import { pressBackspace, pressKeyForeground, sendTextForeground, setMacroInjecting } from "./windows";
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+let refreshOverlay = () => {};
+let notifyCounters = (_counters: Counter[]) => {};
+
+export function setOverlayRefresh(fn: () => void) {
+  refreshOverlay = fn;
+}
+
+export function setCountersListener(fn: (counters: Counter[]) => void) {
+  notifyCounters = fn;
+}
+
+function bumpCounter(id: string) {
+  const counters = loadState().counters.map((c) => {
+    if (c.id !== id) return c;
+    const value = Math.max(0, c.value + 1);
+    return {
+      ...c,
+      value,
+      history: [...(c.history ?? []), { timestamp: Date.now(), delta: 1 }].slice(-2000),
+    };
+  });
+  saveState({ counters });
+  notifyCounters(counters);
+  refreshOverlay();
+}
+
+async function withInjecting(fn: () => Promise<void> | void) {
+  setMacroInjecting(true);
+  try {
+    await fn();
+  } finally {
+    setMacroInjecting(false);
+  }
 }
 
 async function runStep(step: MacroStep, macros: Macro[], ctx: { inChat: boolean }): Promise<void> {
@@ -21,40 +56,34 @@ async function runStep(step: MacroStep, macros: Macro[], ctx: { inChat: boolean 
     return;
   }
   if (step.type === "counter") {
-    const id = step.counterId || "ticket";
-    const counters = loadState().counters.map((c) => {
-      if (c.id !== id) return c;
-      const value = Math.max(0, c.value + 1);
-      return {
-        ...c,
-        value,
-        history: [...(c.history ?? []), { timestamp: Date.now(), delta: 1 }].slice(-500),
-      };
-    });
-    saveState({ counters });
-    refreshOverlay();
+    bumpCounter(step.counterId || "ticket");
     return;
   }
   if (step.type === "call-function") {
     const target = macros.find((m) => m.name === step.text || m.id === step.text);
-    if (target && target.enabled) await runMacroById(target.id, 0);
+    if (target && target.enabled) await executeMacro(target.id, 0);
     return;
   }
   if (step.type === "key-press") {
-    pressKeyForeground(step.key || step.text || "Enter");
-    await sleep(12);
+    await withInjecting(async () => {
+      pressKeyForeground(step.key || step.text || "Enter");
+      await sleep(12);
+    });
     return;
   }
   if (step.text) {
     const chat = step.type === "multiline-text" || Boolean(step.pressT || step.enterEachLine);
-    await sendTextForeground(step.text, {
-      pressEnter: Boolean(step.pressEnter) || chat,
-      enterEachLine: chat,
-      pressT: chat,
-      skipFirstT: true,
+    await withInjecting(async () => {
+      await sendTextForeground(step.text, {
+        pressEnter: Boolean(step.pressEnter) || chat,
+        enterEachLine: chat,
+        pressT: chat,
+        skipFirstT: true,
+        fastPaste: true,
+      });
     });
     if (chat) ctx.inChat = false;
-    await sleep(15);
+    await sleep(8);
   }
 }
 
@@ -81,30 +110,44 @@ export function triggersFromMacros(macros: Macro[]): { id: string; sequence: str
     });
 }
 
-let running = false;
-let refreshOverlay = () => {};
+let draining = false;
+const queue: Array<{ id: string; eraseCount: number }> = [];
 
-export function setOverlayRefresh(fn: () => void) {
-  refreshOverlay = fn;
-}
-
-export async function runMacroById(macroId: string, eraseCount: number): Promise<void> {
-  if (running) return;
+async function executeMacro(macroId: string, eraseCount: number) {
   const macros = loadState().macros;
   const macro = macros.find((m) => m.id === macroId);
   if (!macro || !macro.enabled) return;
-  running = true;
-  setMacroInjecting(true);
-  try {
-    if (eraseCount > 0) {
-      await sleep(15);
+  if (eraseCount > 0) {
+    await withInjecting(async () => {
+      await sleep(12);
       await pressBackspace(eraseCount);
-      await sleep(35);
-    }
-    await runSteps(macro.steps, macros, { inChat: true });
-  } finally {
-    await sleep(30);
-    setMacroInjecting(false);
-    running = false;
+      await sleep(20);
+    });
   }
+  await runSteps(macro.steps, macros, { inChat: true });
+}
+
+async function drainMacroQueue() {
+  if (draining) return;
+  draining = true;
+  try {
+    while (queue.length) {
+      const job = queue.shift();
+      if (!job) break;
+      try {
+        await executeMacro(job.id, job.eraseCount);
+      } catch (err) {
+        console.warn("Macro failed", err);
+      }
+    }
+  } finally {
+    setMacroInjecting(false);
+    draining = false;
+    if (queue.length) void drainMacroQueue();
+  }
+}
+
+export async function runMacroById(macroId: string, eraseCount: number): Promise<void> {
+  queue.push({ id: macroId, eraseCount });
+  await drainMacroQueue();
 }

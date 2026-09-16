@@ -72,6 +72,14 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    const off = window.synvity?.onCountersChanged((next) => {
+      if (!Array.isArray(next)) return;
+      useAppStore.setState({ counters: next });
+    });
+    return () => off?.();
+  }, []);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;

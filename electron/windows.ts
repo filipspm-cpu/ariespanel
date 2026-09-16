@@ -385,23 +385,24 @@ async function tapVk(vk: number) {
   sendEvents([keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
 }
 
-function pasteWaitMs(text: string) {
+function pasteWaitMs(text: string, fast?: boolean) {
+  if (fast) return Math.max(50, Math.min(260, 28 + text.length * 3));
   return Math.max(220, Math.min(1500, 120 + text.length * 10));
 }
 
-async function pasteText(text: string) {
+async function pasteText(text: string, fast?: boolean) {
   ensureNative();
   if (!text) return;
   clipboard.writeText(text);
-  await sleep(50);
+  await sleep(fast ? 18 : 50);
   const ctrlScan = MapVirtualKeyW(VK_CONTROL, 0);
   const vScan = MapVirtualKeyW(VK_V, 0);
   sendEvents([keyboardEvent(VK_CONTROL, ctrlScan, 0)]);
-  await sleep(25);
+  await sleep(fast ? 12 : 25);
   sendEvents([keyboardEvent(VK_V, vScan, 0)]);
-  await sleep(30);
+  await sleep(fast ? 16 : 30);
   sendEvents([keyboardEvent(VK_V, vScan, KEYEVENTF_KEYUP), keyboardEvent(VK_CONTROL, ctrlScan, KEYEVENTF_KEYUP)]);
-  await sleep(pasteWaitMs(text));
+  await sleep(pasteWaitMs(text, fast));
 }
 
 function unicodeEvents(text: string): unknown[] {
@@ -430,15 +431,15 @@ async function typeChars(text: string) {
   }
 }
 
-async function typeLine(text: string) {
+async function typeLine(text: string, fast?: boolean) {
   const parts = text.split(/\{tab\}/gi);
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
     if (part) {
       clipboard.writeText(part);
-      await sleep(20);
+      await sleep(fast ? 8 : 20);
       if (clipboard.readText() === part) {
-        await pasteText(part);
+        await pasteText(part, fast);
       } else {
         await typeChars(part);
       }
@@ -461,6 +462,7 @@ export type TypeTextOptions = {
   enterEachLine?: boolean;
   pressT?: boolean;
   skipFirstT?: boolean;
+  fastPaste?: boolean;
 };
 
 function asTypeOptions(value: boolean | TypeTextOptions | undefined): TypeTextOptions {
@@ -470,6 +472,7 @@ function asTypeOptions(value: boolean | TypeTextOptions | undefined): TypeTextOp
 
 async function typeText(text: string, options: TypeTextOptions) {
   const previous = clipboard.readText();
+  const fast = Boolean(options.fastPaste);
   try {
     const chatLines = Boolean(options.pressT || options.enterEachLine);
     const reopenChat = Boolean(options.pressT) || chatLines;
@@ -480,17 +483,17 @@ async function typeText(text: string, options: TypeTextOptions) {
       const last = i === toSend.length - 1;
       if (reopenChat && i > 0) {
         await tapVk(0x54);
-        await sleep(220);
+        await sleep(fast ? 90 : 220);
       }
-      await typeLine(toSend[i]);
-      await sleep(40);
+      await typeLine(toSend[i], fast);
+      await sleep(fast ? 12 : 40);
       if (chatLines || (options.pressEnter && last)) {
         await tapVk(VK_RETURN);
-        if (!last) await sleep(220);
+        if (!last) await sleep(fast ? 90 : 220);
       }
     }
   } finally {
-    await sleep(60);
+    await sleep(fast ? 25 : 60);
     try {
       clipboard.writeText(previous);
     } catch {

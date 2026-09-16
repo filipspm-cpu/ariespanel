@@ -3,6 +3,10 @@ const API_URLS = [
   "https://filipekweb.pl/aries/accounts.php",
   "https://www.filipekweb.pl/aries/accounts.php",
 ];
+const FEEDBACK_URLS = [
+  "https://filipekweb.pl/aries/feedback.php",
+  "https://www.filipekweb.pl/aries/feedback.php",
+];
 
 function withKey(url: string) {
   const sep = url.includes("?") ? "&" : "?";
@@ -23,8 +27,12 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   }
 }
 
-export async function apiRequest(method: "GET" | "POST", body?: unknown): Promise<unknown | null> {
-  const attempts = API_URLS.map(async (base) => {
+export async function apiRequestUrls(
+  urls: string[],
+  method: "GET" | "POST",
+  body?: unknown,
+): Promise<unknown | null> {
+  const attempts = urls.map(async (base) => {
     const res = await withTimeout(
       fetch(withKey(base), {
         method,
@@ -48,4 +56,16 @@ export async function apiRequest(method: "GET" | "POST", body?: unknown): Promis
   } catch {
     return null;
   }
+}
+
+export async function apiRequest(method: "GET" | "POST", body?: unknown): Promise<unknown | null> {
+  return apiRequestUrls(API_URLS, method, body);
+}
+
+export async function feedbackRequest(body: unknown): Promise<unknown | null> {
+  const dedicated = await apiRequestUrls(FEEDBACK_URLS, "POST", body);
+  if (dedicated && typeof dedicated === "object" && (dedicated as { ok?: unknown }).ok === true) {
+    return dedicated;
+  }
+  return apiRequest("POST", body);
 }

@@ -7,12 +7,21 @@ body,
   width: 100%;
   margin: 0;
   padding: 0;
-  overflow: visible;
+  overflow: hidden !important;
+  overscroll-behavior: none;
   background: transparent !important;
   background-color: transparent !important;
   pointer-events: none;
   user-select: none;
   font-family: Inter, "Segoe UI", system-ui, sans-serif;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 [data-hud] {

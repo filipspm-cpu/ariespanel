@@ -9,7 +9,8 @@ export type RouteId =
   | "credits"
   | "craft"
   | "forum"
-  | "accounts";
+  | "accounts"
+  | "feedback";
 
 export interface NavItem {
   id: RouteId;

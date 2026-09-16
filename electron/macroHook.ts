@@ -72,8 +72,7 @@ function recordCharacter(character: string) {
   buffer = (buffer + character).slice(-48);
   const hit = triggers.find((trigger) => buffer.endsWith(`${trigger.sequence} `));
   if (!hit) return;
-  if (now - lastFireAt < 350) {
-    buffer = "";
+  if (now - lastFireAt < 70) {
     return;
   }
   lastFireAt = now;
@@ -100,7 +99,7 @@ export function startMacroHook(handler: (id: string, eraseCount: number) => void
   if (timer) return;
   keyDown.clear();
   buffer = "";
-  timer = setInterval(pollKeyboard, 20);
+  timer = setInterval(pollKeyboard, 12);
 }
 
 export function stopMacroHook() {

@@ -150,7 +150,10 @@ export function OverlayApp() {
   };
 
   return (
-    <div className="relative h-screen w-screen overflow-visible" style={{ background: "transparent" }}>
+    <div
+      className="relative h-screen w-screen overflow-hidden"
+      style={{ background: "transparent", contain: "paint" }}
+    >
       {overlay.showReports && pills.length ? (
         <Draggable
           enabled={overlay.editMode}
@@ -360,8 +363,8 @@ function Draggable({
           const dx = ((ev.clientX - startX) / window.innerWidth) * 100;
           const dy = ((ev.clientY - startY) / window.innerHeight) * 100;
           next = {
-            x: Math.min(100, Math.max(-2, orig.x + dx)),
-            y: Math.min(100, Math.max(-2, orig.y + dy)),
+            x: Math.min(140, Math.max(-40, orig.x + dx)),
+            y: Math.min(140, Math.max(-40, orig.y + dy)),
           };
           setPos(next);
         };

@@ -14,6 +14,7 @@ import {
   Terminal,
   Users,
   Zap,
+  Bug,
   type LucideIcon,
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
@@ -36,6 +37,7 @@ const icons: Record<string, LucideIcon> = {
   messages: MessagesSquare,
   scroll: ScrollText,
   hammer: Hammer,
+  bug: Bug,
 };
 
 function NavButton({

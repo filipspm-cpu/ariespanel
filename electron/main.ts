@@ -8,7 +8,8 @@ import { connectDiscord } from "./discord";
 import { listDiscordAccounts, recordDiscordAccount } from "./discordAccounts";
 import { refreshAccountRoles, setAccountRank } from "./testers";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
-import { runMacroById, setOverlayRefresh, triggersFromMacros } from "./runMacro";
+import { runMacroById, setCountersListener, setOverlayRefresh, triggersFromMacros } from "./runMacro";
+import { createFeedback, listFeedback } from "./feedback";
 import { registerUpdater, overlayUpdateNotice } from "./updater";
 import { fetchMajesticServerStatuses } from "./majesticStatus";
 import { trustPublisherCert } from "./trustPublisher";
@@ -172,6 +173,8 @@ export function createOverlayWindow(displayId?: number) {
     fullscreenable: false,
     alwaysOnTop: true,
     autoHideMenuBar: true,
+    roundedCorners: false,
+    thickFrame: false,
     webPreferences: {
       preload: path.join(__dirname, "overlayPreload.js"),
       contextIsolation: true,
@@ -191,7 +194,7 @@ export function createOverlayWindow(displayId?: number) {
   overlayWindow.webContents.setFrameRate(12);
   overlayWindow.webContents.on("did-finish-load", () => {
     void overlayWindow?.webContents.insertCSS(
-      "html,body,#root{background:transparent!important;background-color:transparent!important;}",
+      "html,body,#root{background:transparent!important;background-color:transparent!important;overflow:hidden!important;overscroll-behavior:none;}::-webkit-scrollbar{display:none!important;width:0!important;height:0!important;}",
     );
     void pushOverlayState();
   });
@@ -337,6 +340,20 @@ function registerIpc() {
   ipcMain.handle("ranks:set", (_e, payload: { id?: string; rank?: string; name?: string }) =>
     setAccountRank(String(payload?.id || ""), String(payload?.rank || ""), payload?.name),
   );
+  ipcMain.handle("feedback:list", () => {
+    const discordId = loadState().settings.discordId || "";
+    return listFeedback(discordId);
+  });
+  ipcMain.handle("feedback:create", (_e, payload: { kind?: string; title?: string; body?: string }) => {
+    const settings = loadState().settings;
+    return createFeedback({
+      discordId: settings.discordId || "",
+      name: settings.discordGlobalName || settings.username || "",
+      kind: payload?.kind || "bug",
+      title: payload?.title || "",
+      body: payload?.body || "",
+    });
+  });
   ipcMain.handle("forum:open", (_e, url: string) => shell.openExternal(assertForumUrl(url)));
 
   ipcMain.handle("displays:list", () =>
@@ -516,6 +533,9 @@ app.whenReady().then(async () => {
   registerIpc();
   setOverlayRefresh(() => {
     void pushOverlayState();
+  });
+  setCountersListener((counters) => {
+    mainWindow?.webContents.send("counters:changed", counters);
   });
   createMainWindow();
   createTray();
