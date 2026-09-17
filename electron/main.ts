@@ -12,6 +12,8 @@ import { runMacroById, setCountersListener, setOverlayRefresh, triggersFromMacro
 import { createFeedback, listFeedback, updateFeedback } from "./feedback";
 import {
   claimMoneyTier,
+  createCustomAchievement,
+  deleteCustomAchievement,
   generatePromoCode,
   getRewardsState,
   listAccountRewards,
@@ -393,6 +395,18 @@ function registerIpc() {
   ipcMain.handle("rewards:claim", (_e, kind: string) => claimMoneyTier(String(kind || "")));
   ipcMain.handle("rewards:accounts", () => listAccountRewards());
   ipcMain.handle("rewards:paid", (_e, targetId: string) => markRewardsPaid(String(targetId || "")));
+  ipcMain.handle("rewards:define", (_e, payload: Record<string, unknown>) =>
+    createCustomAchievement({
+      label: String(payload?.label || ""),
+      hint: String(payload?.hint || ""),
+      category: String(payload?.category || "wlasne"),
+      stat: String(payload?.stat || "reports"),
+      need: Number(payload?.need) || 1,
+      points: Number(payload?.points) || 1,
+      rarity: String(payload?.rarity || "brown"),
+    }),
+  );
+  ipcMain.handle("rewards:undefine", (_e, id: string) => deleteCustomAchievement(String(id || "")));
 
   ipcMain.handle("displays:list", () =>
     screen.getAllDisplays().map((d, i) => ({

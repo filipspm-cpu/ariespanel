@@ -55,6 +55,7 @@ export function rewardsErrorText(code?: string) {
   if (code === "invalid") return "Niepoprawny kod.";
   if (code === "points") return "Za mało punktów, żeby to odebrać.";
   if (code === "claimed") return "Ta nagroda jest już odebrana.";
+  if (code === "forbidden") return "Tylko developer może to zrobić.";
   if (code === "network") return "Nie udało się połączyć z serwerem nagród.";
   if (code) return "Nie udało się zapisać.";
   return "";

@@ -843,7 +843,7 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-width: 920px;
+  max-width: 980px;
   margin: 0 auto;
 }
 
@@ -912,53 +912,146 @@ textarea {
   color: #a1a1aa;
 }
 
-.achieve-tiers {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+.achieve-track {
+  position: relative;
+  margin: 28px 18px 8px;
+  height: 86px;
 }
 
-.achieve-tier {
-  padding: 16px;
+.achieve-track-line,
+.achieve-track-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 22px;
+  height: 3px;
+  background: #7a1f2a;
 }
 
-.achieve-tier-pts {
+.achieve-track-fill {
+  right: auto;
+  background: #e11d48;
+}
+
+.achieve-node {
+  position: absolute;
+  bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, 3px);
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  cursor: default;
+}
+
+.achieve-node:not(:disabled) {
+  cursor: pointer;
+}
+
+.achieve-node-box {
+  min-width: 58px;
+  height: 26px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #7a1f2a;
+  border-radius: 10px;
+  background: #12080a;
+  color: #f4d5da;
   font-size: 11px;
-  color: #8a8a8a;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.achieve-tier-cash {
-  margin: 6px 0 12px;
-  font-size: 18px;
-  font-weight: 650;
+.achieve-node.on .achieve-node-box {
+  background: #7a1f2a;
   color: #fff;
 }
 
-.achieve-tier button {
-  width: 100%;
-  height: 34px;
-  border: 0;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #d4d4d4;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.achieve-tier.ready button {
+.achieve-node.done .achieve-node-box {
   background: #fff;
-  color: #000;
+  color: #7a1f2a;
 }
 
-.achieve-tier.done button {
-  background: rgba(255, 255, 255, 0.04);
-  color: #737373;
+.achieve-node-stem {
+  width: 2px;
+  height: 18px;
+  background: #7a1f2a;
 }
 
-.achieve-tier button:disabled {
-  cursor: default;
+.achieve-node-pts {
+  position: absolute;
+  top: 48px;
+  font-size: 10px;
+  color: #8a8a8a;
+  white-space: nowrap;
+}
+
+.achieve-rank-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.achieve-rank-list li {
+  display: grid;
+  grid-template-columns: 28px 28px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.achieve-rank-list li.me {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.achieve-rank-pos {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+}
+
+.achieve-rank-list img,
+.achieve-rank-fallback {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #27272a;
+}
+
+.achieve-rank-name {
+  color: #ececec;
+  font-size: 13px;
+}
+
+.achieve-dev-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.achieve-dev-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  color: #a1a1aa;
+}
+
+.achieve-dev-grid .settings-input {
+  margin-top: 0;
 }
 
 .achieve-cat {
@@ -977,58 +1070,98 @@ textarea {
   color: #8a8a8a;
 }
 
-.achieve-tasks {
+.achieve-badges {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 12px;
 }
 
-.achieve-task {
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.28);
-}
-
-.achieve-task.on {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.achieve-task-top {
+.achieve-badge {
+  position: relative;
+  aspect-ratio: 1;
   display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 13px;
-  color: #ececec;
-}
-
-.achieve-task-top strong {
-  color: #fff;
-  font-size: 11px;
-}
-
-.achieve-mini {
-  margin: 8px 0 6px;
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-}
-
-.achieve-mini div {
-  height: 100%;
-  background: #fb7185;
-}
-
-.achieve-task.on .achieve-mini div {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 18px 12px 12px;
+  border: 3px solid #111;
+  border-radius: 28px;
   background: #fff;
+  color: #111;
+  opacity: 0.55;
 }
 
-.achieve-task-foot {
+.achieve-badge.on {
+  opacity: 1;
+}
+
+.achieve-badge-mark {
+  width: 72px;
+  height: 72px;
+  margin-top: 4px;
+  background: #8b5a2b;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.achieve-badge.brown .achieve-badge-mark {
+  background: linear-gradient(180deg, #c48a4a 0%, #6b3e16 100%);
+}
+
+.achieve-badge.silver .achieve-badge-mark {
+  background: linear-gradient(180deg, #f3f6f8 0%, #8e9aa6 100%);
+}
+
+.achieve-badge.gold .achieve-badge-mark {
+  background: linear-gradient(180deg, #ffe27a 0%, #c08a14 100%);
+}
+
+.achieve-badge.rainbow .achieve-badge-mark {
+  background: linear-gradient(135deg, #3b82f6, #22d3ee, #22c55e, #eab308, #f97316, #a855f7);
+}
+
+.achieve-badge-name {
+  margin-top: 10px;
+  max-width: 86%;
+  padding-bottom: 4px;
+  border-bottom: 2px solid #111;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.achieve-badge-meta {
+  margin-top: 6px;
+  font-size: 10px;
+  color: #52525b;
+}
+
+.achieve-badge-xp {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
   font-size: 11px;
-  line-height: 1.4;
-  color: #737373;
+  font-weight: 700;
+}
+
+.achieve-badge-del {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  height: 20px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: #111;
+  color: #fff;
+  font-size: 9px;
+  text-transform: uppercase;
+  cursor: pointer;
 }
 
 .settings-copyright {

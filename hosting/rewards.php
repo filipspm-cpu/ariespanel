@@ -114,6 +114,18 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS reward_claims (
   UNIQUE KEY uniq_reward_claim (discord_id, kind),
   INDEX idx_reward_user (discord_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$mysqli->query("CREATE TABLE IF NOT EXISTS achievement_defs (
+  id VARCHAR(48) NOT NULL PRIMARY KEY,
+  label VARCHAR(191) NOT NULL,
+  hint VARCHAR(255) NOT NULL DEFAULT '',
+  category VARCHAR(32) NOT NULL DEFAULT 'wlasne',
+  stat VARCHAR(32) NOT NULL,
+  need INT NOT NULL,
+  points INT NOT NULL,
+  rarity VARCHAR(16) NOT NULL DEFAULT 'brown',
+  created_by VARCHAR(32) NOT NULL DEFAULT '',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
 function is_developer_id($mysqli, $id) {
   if ($id === "") return false;
@@ -138,7 +150,39 @@ function normalize_code($raw) {
   return strtoupper(preg_replace("/\s+/", "", trim((string) $raw)));
 }
 
-function task_points($stats) {
+function extra_tasks($mysqli) {
+  $out = array();
+  $result = $mysqli->query("SELECT stat, need, points FROM achievement_defs");
+  if ($result) {
+    while ($row = $result->fetch_assoc()) {
+      $out[] = array($row["stat"], (int) $row["need"], (int) $row["points"]);
+    }
+  }
+  return $out;
+}
+
+function custom_tasks($mysqli) {
+  $out = array();
+  $result = $mysqli->query("SELECT * FROM achievement_defs ORDER BY created_at ASC");
+  if ($result) {
+    while ($row = $result->fetch_assoc()) {
+      $out[] = array(
+        "id" => $row["id"],
+        "category" => $row["category"],
+        "label" => $row["label"],
+        "hint" => $row["hint"],
+        "stat" => $row["stat"],
+        "need" => (int) $row["need"],
+        "points" => (int) $row["points"],
+        "rarity" => $row["rarity"],
+        "custom" => true,
+      );
+    }
+  }
+  return $out;
+}
+
+function task_points($mysqli, $stats) {
   $tasks = array(
     array("reports", 100, 30), array("reports", 200, 50), array("reports", 500, 90),
     array("reports", 1000, 150), array("reports", 2000, 260), array("reports", 3500, 420), array("reports", 5000, 200),
@@ -149,6 +193,7 @@ function task_points($stats) {
     array("activeDays", 14, 25), array("activeDays", 30, 50), array("activeDays", 60, 90), array("activeDays", 120, 160),
     array("nightReports", 30, 70), array("nightReports", 80, 140), array("nightReports", 180, 250), array("nightReports", 300, 160),
   );
+  foreach (extra_tasks($mysqli) as $task) $tasks[] = $task;
   $sum = 0;
   foreach ($tasks as $task) {
     $key = $task[0];
@@ -248,12 +293,13 @@ function read_state($mysqli, $discordId) {
     "redeemed" => $redeemedCode !== "",
     "redeemedCode" => $redeemedCode,
     "referrals" => $referrals,
-    "points" => task_points($stats),
+    "points" => task_points($mysqli, $stats),
     "stats" => $stats,
     "pendingCash" => $pending,
     "paidCash" => $paid,
     "payouts" => $payouts,
     "claimedKinds" => $claimed,
+    "customTasks" => custom_tasks($mysqli),
   );
 }
 
@@ -399,6 +445,44 @@ if ($action === "rewardsPaid") {
     $upd = $mysqli->prepare("UPDATE reward_claims SET status = 'paid' WHERE discord_id = ? AND status = 'pending'");
     $upd->bind_param("s", $target);
     $upd->execute();
+  }
+}
+
+if ($action === "rewardsDefine") {
+  if (!is_developer_id($mysqli, $discordId)) {
+    json_out(array("ok" => false, "error" => "forbidden"), 403);
+  }
+  $label = substr(trim(req_get($data, "label")), 0, 80);
+  if (strlen($label) < 2) {
+    $state = read_state($mysqli, $discordId);
+    $state["ok"] = false;
+    $state["error"] = "invalid";
+    json_out($state, 400);
+  }
+  $id = "custom-" . uniqid();
+  $hint = substr(trim(req_get($data, "hint")), 0, 255);
+  $category = req_get($data, "category");
+  if ($category === "") $category = "wlasne";
+  $stat = req_get($data, "stat");
+  if ($stat === "") $stat = "reports";
+  $need = max(1, (int) req_get($data, "need"));
+  $points = max(1, min(5000, (int) req_get($data, "points")));
+  $rarity = req_get($data, "rarity");
+  if ($rarity === "") $rarity = "brown";
+  $ins = $mysqli->prepare("INSERT INTO achievement_defs (id, label, hint, category, stat, need, points, rarity, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+  $ins->bind_param("sssssiiss", $id, $label, $hint, $category, $stat, $need, $points, $rarity, $discordId);
+  $ins->execute();
+}
+
+if ($action === "rewardsUndefine") {
+  if (!is_developer_id($mysqli, $discordId)) {
+    json_out(array("ok" => false, "error" => "forbidden"), 403);
+  }
+  $id = req_get($data, "id");
+  if (strpos($id, "custom-") === 0) {
+    $del = $mysqli->prepare("DELETE FROM achievement_defs WHERE id = ?");
+    $del->bind_param("s", $id);
+    $del->execute();
   }
 }
 

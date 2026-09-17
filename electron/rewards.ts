@@ -2,7 +2,13 @@ import mysql from "mysql2/promise";
 import { apiRequestUrls } from "./accountsApi";
 import { loadState } from "./storage";
 import { loadTesters } from "./testers";
-import { MONEY_TIERS, PROMO_CASH, totalAchievementPoints, type AchievementStats } from "./achievementCatalog";
+import {
+  MONEY_TIERS,
+  PROMO_CASH,
+  totalAchievementPoints,
+  type AchievementStat,
+  type AchievementStats,
+} from "./achievementCatalog";
 
 const DB = {
   host: "host425499.lh.pl",
@@ -24,6 +30,18 @@ export type Payout = {
   createdAt: string;
 };
 
+export type CustomAchievement = {
+  id: string;
+  category: string;
+  label: string;
+  hint: string;
+  stat: AchievementStat;
+  need: number;
+  points: number;
+  rarity: string;
+  custom: true;
+};
+
 export type RewardsState = {
   ok: boolean;
   error?: string;
@@ -37,16 +55,30 @@ export type RewardsState = {
   paidCash: number;
   payouts: Payout[];
   claimedKinds: string[];
+  customTasks: CustomAchievement[];
+  leaderboard: AccountRewards[];
 };
 
 export type AccountRewards = {
   id: string;
+  name: string;
+  avatarUrl: string;
   code: string;
   referrals: number;
   redeemed: boolean;
   pendingCash: number;
   paidCash: number;
   points: number;
+};
+
+export type CustomAchievementInput = {
+  label: string;
+  hint?: string;
+  category?: string;
+  stat: string;
+  need: number;
+  points: number;
+  rarity?: string;
 };
 
 const emptyStats = (): AchievementStats => ({
@@ -72,6 +104,8 @@ function emptyState(error?: string): RewardsState {
     paidCash: 0,
     payouts: [],
     claimedKinds: [],
+    customTasks: [],
+    leaderboard: [],
   };
 }
 
@@ -170,6 +204,20 @@ async function ensure(db: mysql.Connection) {
       INDEX idx_reward_user (discord_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS achievement_defs (
+      id VARCHAR(48) NOT NULL PRIMARY KEY,
+      label VARCHAR(191) NOT NULL,
+      hint VARCHAR(255) NOT NULL DEFAULT '',
+      category VARCHAR(32) NOT NULL DEFAULT 'wlasne',
+      stat VARCHAR(32) NOT NULL,
+      need INT NOT NULL,
+      points INT NOT NULL,
+      rarity VARCHAR(16) NOT NULL DEFAULT 'brown',
+      created_by VARCHAR(32) NOT NULL DEFAULT '',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
 }
 
 type SqlRow = Record<string, unknown>;
@@ -178,11 +226,50 @@ async function php(action: string, extra: Record<string, unknown>) {
   return apiRequestUrls(REWARD_URLS, "POST", { action, ...extra });
 }
 
-function pointsFrom(stats: AchievementStats) {
-  return totalAchievementPoints(stats);
+const STATS: AchievementStat[] = ["reports", "events", "onlineHours", "nightReports", "activeDays", "referrals"];
+const RARITIES = ["brown", "silver", "gold", "rainbow"];
+const CATEGORIES = ["reporty", "dyzur", "eventy", "rekrutacja", "staz", "noc", "wlasne"];
+
+function asStat(value: unknown): AchievementStat {
+  const key = String(value || "");
+  return STATS.includes(key as AchievementStat) ? (key as AchievementStat) : "reports";
+}
+
+function asRarity(value: unknown) {
+  const key = String(value || "").toLowerCase();
+  return RARITIES.includes(key) ? key : "brown";
+}
+
+function asCategory(value: unknown) {
+  const key = String(value || "").toLowerCase();
+  return CATEGORIES.includes(key) ? key : "wlasne";
+}
+
+function mapCustom(row: SqlRow): CustomAchievement {
+  return {
+    id: String(row.id || ""),
+    category: asCategory(row.category),
+    label: String(row.label || "Osiągnięcie"),
+    hint: String(row.hint || ""),
+    stat: asStat(row.stat),
+    need: Math.max(1, Number(row.need) || 1),
+    points: Math.max(1, Number(row.points) || 1),
+    rarity: asRarity(row.rarity),
+    custom: true,
+  };
+}
+
+async function loadCustom(db: mysql.Connection): Promise<CustomAchievement[]> {
+  const [rows] = (await db.query("SELECT * FROM achievement_defs ORDER BY created_at ASC")) as [SqlRow[], unknown];
+  return (rows || []).map(mapCustom).filter((row) => row.id);
+}
+
+function pointsFrom(stats: AchievementStats, extra: CustomAchievement[] = []) {
+  return totalAchievementPoints(stats, extra);
 }
 
 async function readState(db: mysql.Connection, discordId: string, name: string): Promise<RewardsState> {
+  const customTasks = await loadCustom(db);
   const [[codeRow]] = (await db.query("SELECT code FROM promo_codes WHERE discord_id = ? LIMIT 1", [discordId])) as [
     SqlRow[],
     unknown,
@@ -232,12 +319,14 @@ async function readState(db: mysql.Connection, discordId: string, name: string):
     redeemed: Boolean(redeemRow?.code),
     redeemedCode: String(redeemRow?.code || ""),
     referrals,
-    points: pointsFrom(stats),
+    points: pointsFrom(stats, customTasks),
     stats,
     pendingCash,
     paidCash,
     payouts,
     claimedKinds: payouts.map((p) => p.kind),
+    customTasks,
+    leaderboard: [],
   };
 }
 
@@ -266,19 +355,25 @@ function parseState(payload: unknown): RewardsState | null {
     redeemed: Boolean(data.redeemed),
     redeemedCode: String(data.redeemedCode || ""),
     referrals: Number(data.referrals || 0),
-    points: Number(data.points || pointsFrom(stats)),
+    points: Number(data.points || pointsFrom(stats, Array.isArray(data.customTasks) ? data.customTasks : [])),
     stats,
     pendingCash: Number(data.pendingCash || 0),
     paidCash: Number(data.paidCash || 0),
     payouts: Array.isArray(data.payouts) ? data.payouts : [],
     claimedKinds: Array.isArray(data.claimedKinds) ? data.claimedKinds : [],
+    customTasks: Array.isArray(data.customTasks) ? data.customTasks : [],
+    leaderboard: Array.isArray(data.leaderboard) ? data.leaderboard : [],
   };
 }
 
 export async function getRewardsState(): Promise<RewardsState> {
   const { discordId, name } = caller();
-  if (!discordId) return emptyState("login");
-  const sql = await withDb((db) => readState(db, discordId, name));
+  const sql = await withDb(async (db) => {
+    const state = discordId ? await readState(db, discordId, name) : emptyState("login");
+    if (!discordId) state.customTasks = await loadCustom(db);
+    state.leaderboard = await boardFrom(db);
+    return state;
+  });
   if (sql) return sql;
   const remote = parseState(await php("rewardsState", { discordId, name }));
   return remote || emptyState("network");
@@ -440,30 +535,34 @@ export async function markRewardsPaid(targetId: string): Promise<AccountRewards[
   return listAccountRewards();
 }
 
-export async function listAccountRewards(): Promise<AccountRewards[]> {
-  const sql = await withDb(async (db) => {
-    const [rows] = (await db.query(
-      `SELECT a.discord_id AS id,
-              COALESCE(p.code, '') AS code,
-              (SELECT COUNT(*) FROM promo_redemptions r WHERE r.owner_id = a.discord_id) AS referrals,
-              (SELECT COUNT(*) FROM promo_redemptions r2 WHERE r2.discord_id = a.discord_id) AS redeemed,
-              COALESCE((SELECT SUM(amount) FROM reward_claims c WHERE c.discord_id = a.discord_id AND c.status = 'pending'), 0) AS pendingCash,
-              COALESCE((SELECT SUM(amount) FROM reward_claims c2 WHERE c2.discord_id = a.discord_id AND c2.status = 'paid'), 0) AS paidCash,
-              COALESCE(s.reports, 0) AS reports,
-              COALESCE(s.events, 0) AS events,
-              COALESCE(s.online_ms, 0) AS online_ms,
-              COALESCE(s.night_reports, 0) AS night_reports,
-              COALESCE(s.active_days, 0) AS active_days
-       FROM (
-         SELECT discord_id FROM discord_accounts
-         UNION SELECT discord_id FROM promo_codes
-         UNION SELECT discord_id FROM reward_stats
-         UNION SELECT discord_id FROM reward_claims
-       ) a
-       LEFT JOIN promo_codes p ON p.discord_id = a.discord_id
-       LEFT JOIN reward_stats s ON s.discord_id = a.discord_id`,
-    )) as [SqlRow[], unknown];
-    return (rows || []).map((row) => {
+async function boardFrom(db: mysql.Connection): Promise<AccountRewards[]> {
+  const extra = await loadCustom(db);
+  const [rows] = (await db.query(
+    `SELECT a.discord_id AS id,
+            COALESCE(NULLIF(d.name, ''), NULLIF(s.name, ''), NULLIF(p.name, ''), a.discord_id) AS name,
+            COALESCE(d.avatar_url, '') AS avatarUrl,
+            COALESCE(p.code, '') AS code,
+            (SELECT COUNT(*) FROM promo_redemptions r WHERE r.owner_id = a.discord_id) AS referrals,
+            (SELECT COUNT(*) FROM promo_redemptions r2 WHERE r2.discord_id = a.discord_id) AS redeemed,
+            COALESCE((SELECT SUM(amount) FROM reward_claims c WHERE c.discord_id = a.discord_id AND c.status = 'pending'), 0) AS pendingCash,
+            COALESCE((SELECT SUM(amount) FROM reward_claims c2 WHERE c2.discord_id = a.discord_id AND c2.status = 'paid'), 0) AS paidCash,
+            COALESCE(s.reports, 0) AS reports,
+            COALESCE(s.events, 0) AS events,
+            COALESCE(s.online_ms, 0) AS online_ms,
+            COALESCE(s.night_reports, 0) AS night_reports,
+            COALESCE(s.active_days, 0) AS active_days
+     FROM (
+       SELECT discord_id FROM discord_accounts
+       UNION SELECT discord_id FROM promo_codes
+       UNION SELECT discord_id FROM reward_stats
+       UNION SELECT discord_id FROM reward_claims
+     ) a
+     LEFT JOIN promo_codes p ON p.discord_id = a.discord_id
+     LEFT JOIN reward_stats s ON s.discord_id = a.discord_id
+     LEFT JOIN discord_accounts d ON d.discord_id = a.discord_id`,
+  )) as [SqlRow[], unknown];
+  return (rows || [])
+    .map((row) => {
       const stats: AchievementStats = {
         reports: Number(row.reports || 0),
         events: Number(row.events || 0),
@@ -474,19 +573,84 @@ export async function listAccountRewards(): Promise<AccountRewards[]> {
       };
       return {
         id: String(row.id || ""),
+        name: String(row.name || row.id || "Konto"),
+        avatarUrl: String(row.avatarUrl || ""),
         code: String(row.code || ""),
         referrals: Number(row.referrals || 0),
         redeemed: Number(row.redeemed || 0) > 0,
         pendingCash: Number(row.pendingCash || 0),
         paidCash: Number(row.paidCash || 0),
-        points: pointsFrom(stats),
+        points: pointsFrom(stats, extra),
       };
-    });
-  });
+    })
+    .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, "pl"));
+}
+
+export async function listAccountRewards(): Promise<AccountRewards[]> {
+  const sql = await withDb((db) => boardFrom(db));
   if (sql) return sql;
   const payload = await php("rewardsAccounts", { discordId: caller().discordId });
   if (payload && typeof payload === "object" && Array.isArray((payload as { accounts?: unknown }).accounts)) {
     return (payload as { accounts: AccountRewards[] }).accounts;
   }
   return [];
+}
+
+export async function createCustomAchievement(input: CustomAchievementInput): Promise<RewardsState> {
+  const { discordId, name } = caller();
+  if (!discordId) return emptyState("login");
+  if (!isDeveloper(discordId)) {
+    const state = await getRewardsState();
+    return { ...state, ok: false, error: "forbidden" };
+  }
+  const label = String(input.label || "").trim().slice(0, 80);
+  if (label.length < 2) {
+    const state = await getRewardsState();
+    return { ...state, ok: false, error: "invalid" };
+  }
+  const sql = await withDb(async (db) => {
+    const id = `custom-${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
+    await db.execute(
+      `INSERT INTO achievement_defs (id, label, hint, category, stat, need, points, rarity, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        label,
+        String(input.hint || "").trim().slice(0, 255),
+        asCategory(input.category),
+        asStat(input.stat),
+        Math.max(1, Math.floor(Number(input.need) || 1)),
+        Math.max(1, Math.min(5000, Math.floor(Number(input.points) || 1))),
+        asRarity(input.rarity),
+        discordId,
+      ],
+    );
+    const state = await readState(db, discordId, name);
+    state.leaderboard = await boardFrom(db);
+    return { ...state, ok: true };
+  });
+  if (sql) return sql;
+  return parseState(await php("rewardsDefine", { discordId, name, ...input })) || emptyState("network");
+}
+
+export async function deleteCustomAchievement(id: string): Promise<RewardsState> {
+  const { discordId, name } = caller();
+  if (!discordId) return emptyState("login");
+  if (!isDeveloper(discordId)) {
+    const state = await getRewardsState();
+    return { ...state, ok: false, error: "forbidden" };
+  }
+  const key = String(id || "");
+  if (!key.startsWith("custom-")) {
+    const state = await getRewardsState();
+    return { ...state, ok: false, error: "invalid" };
+  }
+  const sql = await withDb(async (db) => {
+    await db.execute("DELETE FROM achievement_defs WHERE id = ?", [key]);
+    const state = await readState(db, discordId, name);
+    state.leaderboard = await boardFrom(db);
+    return { ...state, ok: true };
+  });
+  if (sql) return sql;
+  return parseState(await php("rewardsUndefine", { discordId, name, id: key })) || emptyState("network");
 }

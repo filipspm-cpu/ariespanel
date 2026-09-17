@@ -44,6 +44,8 @@ export const MONEY_TIERS = [
   { id: "cash-4300", points: 4300, amount: 50_000 },
 ];
 
-export function totalAchievementPoints(stats: AchievementStats) {
-  return TASKS.filter((task) => (stats[task.stat] || 0) >= task.need).reduce((sum, task) => sum + task.points, 0);
+export function totalAchievementPoints(stats: AchievementStats, extra: Task[] = []) {
+  return [...TASKS, ...extra]
+    .filter((task) => (stats[task.stat] || 0) >= task.need)
+    .reduce((sum, task) => sum + task.points, 0);
 }
