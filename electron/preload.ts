@@ -108,6 +108,16 @@ const api = {
   rewardsClaim: (kind: string) => ipcRenderer.invoke("rewards:claim", kind),
   rewardsAccounts: () => ipcRenderer.invoke("rewards:accounts"),
   rewardsPaid: (targetId: string) => ipcRenderer.invoke("rewards:paid", targetId),
+  rewardsDefine: (payload: {
+    label: string;
+    hint?: string;
+    category?: string;
+    stat: string;
+    need: number;
+    points: number;
+    rarity?: string;
+  }) => ipcRenderer.invoke("rewards:define", payload),
+  rewardsUndefine: (id: string) => ipcRenderer.invoke("rewards:undefine", id),
 };
 
 contextBridge.exposeInMainWorld("synvity", api);

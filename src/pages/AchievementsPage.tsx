@@ -1,11 +1,19 @@
+import { AchievementBadge } from "@/components/AchievementBadge";
+import { useAccountRanks } from "@/components/RankBadge";
 import {
   ACHIEVEMENT_CATEGORIES,
-  ACHIEVEMENT_TASKS,
-  MONEY_TIERS,
+  ACHIEVEMENT_RARITIES,
+  ACHIEVEMENT_STATS,
+  allAchievementTasks,
   emptyAchievementStats,
   formatCash,
+  MONEY_TIERS,
   taskUnlocked,
+  type AchievementCategory,
+  type AchievementRarity,
+  type AchievementStat,
 } from "@/data/achievements";
+import { hasDeveloperAccess } from "@/data/testers";
 import { pushRewardStats, rewardsErrorText } from "@/services/rewardStats";
 import { useAppStore } from "@/store/useAppStore";
 import type { RewardsState } from "@/types/rewards";
@@ -24,13 +32,37 @@ const emptyRewards = (): RewardsState => ({
   paidCash: 0,
   payouts: [],
   claimedKinds: [],
+  customTasks: [],
+  leaderboard: [],
 });
+
+const TRACK = [{ id: "start", points: 0, amount: 0 }, ...MONEY_TIERS];
 
 export function AchievementsPage() {
   const discordId = useAppStore((s) => s.settings.discordId);
+  const ranks = useAccountRanks(discordId);
+  const isDev = hasDeveloperAccess(ranks);
   const [rewards, setRewards] = useState<RewardsState>(emptyRewards);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    label: "",
+    hint: "",
+    category: "wlasne" as AchievementCategory,
+    stat: "reports" as AchievementStat,
+    need: 100,
+    points: 50,
+    rarity: "brown" as AchievementRarity,
+  });
+
+  const apply = (next: RewardsState | undefined) => {
+    if (!next) return;
+    setRewards((prev) => ({
+      ...next,
+      customTasks: next.customTasks ?? prev.customTasks,
+      leaderboard: next.leaderboard?.length ? next.leaderboard : prev.leaderboard,
+    }));
+  };
 
   const load = useCallback(async () => {
     if (!window.synvity?.rewardsState) return;
@@ -45,21 +77,36 @@ export function AchievementsPage() {
     return () => window.clearInterval(tick);
   }, [load, discordId]);
 
+  const tasks = useMemo(() => {
+    const extra = (rewards.customTasks ?? []).map((task) => ({
+      ...task,
+      category: (task.category || "wlasne") as AchievementCategory,
+      rarity: (task.rarity || "brown") as AchievementRarity,
+      custom: true,
+    }));
+    return allAchievementTasks(extra);
+  }, [rewards.customTasks]);
   const nextTier = useMemo(
     () => MONEY_TIERS.find((tier) => !rewards.claimedKinds.includes(tier.id)) ?? MONEY_TIERS[MONEY_TIERS.length - 1],
     [rewards.claimedKinds],
   );
-  const progress = nextTier ? Math.min(100, Math.round((rewards.points / nextTier.points) * 100)) : 100;
+  const lastReached = [...TRACK].reverse().find((tier) => rewards.points >= tier.points) ?? TRACK[0];
+  const lastIdx = TRACK.findIndex((tier) => tier.id === lastReached.id);
+  const nextTrack = TRACK[Math.min(TRACK.length - 1, lastIdx + 1)];
+  const span = Math.max(1, nextTrack.points - lastReached.points);
+  const trackPct = Math.min(
+    100,
+    ((lastIdx + (rewards.points - lastReached.points) / span) / (TRACK.length - 1)) * 100,
+  );
 
   const claim = async (id: string) => {
     setBusy(id);
     setMsg("");
     try {
       const next = await window.synvity?.rewardsClaim(id);
-      if (!next) {
-        setMsg(rewardsErrorText("network"));
-      } else {
-        setRewards(next);
+      if (!next) setMsg(rewardsErrorText("network"));
+      else {
+        apply(next);
         if (next.ok === false) setMsg(rewardsErrorText(next.error));
         else setMsg("Nagroda zapisana. Developer wypłaci ją w grze.");
       }
@@ -69,6 +116,39 @@ export function AchievementsPage() {
       setBusy(null);
     }
   };
+
+  const addCustom = async () => {
+    setBusy("define");
+    setMsg("");
+    try {
+      const next = await window.synvity?.rewardsDefine(form);
+      if (!next) setMsg(rewardsErrorText("network"));
+      else {
+        apply(next);
+        if (next.ok === false) setMsg(rewardsErrorText(next.error));
+        else {
+          setForm((f) => ({ ...f, label: "", hint: "" }));
+          setMsg("Osiągnięcie dodane.");
+        }
+      }
+    } catch {
+      setMsg(rewardsErrorText("network"));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const removeCustom = async (id: string) => {
+    setBusy(id);
+    try {
+      const next = await window.synvity?.rewardsUndefine(id);
+      if (next) apply(next);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const board = rewards.leaderboard ?? [];
 
   return (
     <div className="studio-page">
@@ -83,27 +163,51 @@ export function AchievementsPage() {
             Połącz Discord w ustawieniach, żeby zbierać punkty i odbierać dolary do gry.
           </div>
         ) : null}
+
         <div className="studio-card achieve-hero">
           <div className="achieve-hero-top">
             <Trophy size={18} />
             <div>
               <div className="achieve-kicker">Postęp</div>
-              <div className="achieve-points">
-                {rewards.points.toLocaleString("pl-PL")} pkt
-              </div>
+              <div className="achieve-points">{rewards.points.toLocaleString("pl-PL")} pkt</div>
             </div>
             <div className="achieve-cash">
               <div>Do wypłaty w grze</div>
               <strong>{formatCash(rewards.pendingCash)}</strong>
             </div>
           </div>
-          <div className="achieve-bar">
-            <div className="achieve-bar-fill" style={{ width: `${progress}%` }} />
+
+          <div className="achieve-track">
+            <div className="achieve-track-line" />
+            <div className="achieve-track-fill" style={{ width: `${trackPct}%` }} />
+            {TRACK.map((tier, index) => {
+              const reached = rewards.points >= tier.points;
+              const claimed = tier.id === "start" || rewards.claimedKinds.includes(tier.id);
+              const ready = discordId && reached && !claimed && tier.id !== "start";
+              return (
+                <button
+                  key={tier.id}
+                  type="button"
+                  className={`achieve-node ${reached ? "on" : ""} ${claimed && tier.id !== "start" ? "done" : ""}`}
+                  disabled={!ready || busy === tier.id}
+                  onClick={() => (ready ? void claim(tier.id) : undefined)}
+                  style={{ left: `${(index / (TRACK.length - 1)) * 100}%` }}
+                >
+                  <span className="achieve-node-box">
+                    {tier.id === "start" ? "Start" : formatCash(tier.amount)}
+                  </span>
+                  <span className="achieve-node-stem" />
+                  <span className="achieve-node-pts">
+                    {tier.points ? `${tier.points.toLocaleString("pl-PL")} pkt` : "0"}
+                  </span>
+                </button>
+              );
+            })}
           </div>
           <div className="achieve-bar-meta">
             Następna wypłata: {formatCash(nextTier.amount)} za {nextTier.points.toLocaleString("pl-PL")} pkt
             {rewards.points >= nextTier.points && !rewards.claimedKinds.includes(nextTier.id)
-              ? " — gotowe do odbioru"
+              ? " — kliknij próg, żeby odebrać"
               : ` · brakuje ${Math.max(0, nextTier.points - rewards.points).toLocaleString("pl-PL")}`}
           </div>
           {rewards.paidCash > 0 ? (
@@ -111,57 +215,150 @@ export function AchievementsPage() {
           ) : null}
         </div>
 
-        <div className="achieve-tiers">
-          {MONEY_TIERS.map((tier) => {
-            const claimed = rewards.claimedKinds.includes(tier.id);
-            const ready = rewards.points >= tier.points && !claimed;
-            return (
-              <div key={tier.id} className={`studio-card achieve-tier ${claimed ? "done" : ready ? "ready" : ""}`}>
-                <div className="achieve-tier-pts">{tier.points.toLocaleString("pl-PL")} pkt</div>
-                <div className="achieve-tier-cash">{formatCash(tier.amount)}</div>
-                <button
-                  type="button"
-                  disabled={!discordId || !ready || busy === tier.id}
-                  onClick={() => void claim(tier.id)}
-                >
-                  {claimed ? "Odebrane" : ready ? "Odbierz" : "Zablokowane"}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-
         {msg ? <div className="achieve-msg">{msg}</div> : null}
 
-        {ACHIEVEMENT_CATEGORIES.map((cat) => (
-          <section key={cat.id} className="studio-card achieve-cat">
+        {board.length > 0 ? (
+          <section className="studio-card achieve-rank">
             <div className="achieve-cat-head">
-              <h2>{cat.title}</h2>
-              <p>{cat.blurb}</p>
+              <h2>Ranking</h2>
+              <p>Kto ma najwięcej punktów za osiągnięcia.</p>
             </div>
-            <div className="achieve-tasks">
-              {ACHIEVEMENT_TASKS.filter((task) => task.category === cat.id).map((task) => {
-                const on = taskUnlocked(task, rewards.stats);
-                const have = rewards.stats[task.stat] || 0;
-                const pct = Math.min(100, Math.round((have / task.need) * 100));
-                return (
-                  <div key={task.id} className={`achieve-task ${on ? "on" : ""}`}>
-                    <div className="achieve-task-top">
-                      <span>{task.label}</span>
-                      <strong>+{task.points} pkt</strong>
-                    </div>
-                    <div className="achieve-mini">
-                      <div style={{ width: `${pct}%` }} />
-                    </div>
-                    <div className="achieve-task-foot">
-                      {have.toLocaleString("pl-PL")} / {task.need.toLocaleString("pl-PL")} · {task.hint}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <ol className="achieve-rank-list">
+              {board.slice(0, 12).map((row, index) => (
+                <li key={row.id || row.name} className={row.id === discordId ? "me" : ""}>
+                  <span className="achieve-rank-pos">{index + 1}</span>
+                  {row.avatarUrl ? <img src={row.avatarUrl} alt="" /> : <span className="achieve-rank-fallback" />}
+                  <span className="achieve-rank-name">{row.name || row.id}</span>
+                  <strong>{row.points.toLocaleString("pl-PL")} pkt</strong>
+                </li>
+              ))}
+            </ol>
           </section>
-        ))}
+        ) : null}
+
+        {isDev ? (
+          <section className="studio-card achieve-dev">
+            <div className="achieve-cat-head">
+              <h2>Wersja developera</h2>
+              <p>Dodaj własne osiągnięcie — kafel, trudność i punkty od razu wchodzą wszystkim.</p>
+            </div>
+            <div className="achieve-dev-grid">
+              <label>
+                Nazwa
+                <input
+                  className="settings-input"
+                  value={form.label}
+                  onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
+                  placeholder="Nazwa osiągnięcia"
+                />
+              </label>
+              <label>
+                Opis
+                <input
+                  className="settings-input"
+                  value={form.hint}
+                  onChange={(e) => setForm((f) => ({ ...f, hint: e.target.value }))}
+                  placeholder="Krótki opis"
+                />
+              </label>
+              <label>
+                Kategoria
+                <select
+                  className="settings-input"
+                  value={form.category}
+                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as AchievementCategory }))}
+                >
+                  {ACHIEVEMENT_CATEGORIES.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Statystyka
+                <select
+                  className="settings-input"
+                  value={form.stat}
+                  onChange={(e) => setForm((f) => ({ ...f, stat: e.target.value as AchievementStat }))}
+                >
+                  {ACHIEVEMENT_STATS.map((stat) => (
+                    <option key={stat.id} value={stat.id}>
+                      {stat.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Wymagane
+                <input
+                  className="settings-input"
+                  type="number"
+                  min={1}
+                  value={form.need}
+                  onChange={(e) => setForm((f) => ({ ...f, need: Number(e.target.value) || 1 }))}
+                />
+              </label>
+              <label>
+                Punkty
+                <input
+                  className="settings-input"
+                  type="number"
+                  min={1}
+                  value={form.points}
+                  onChange={(e) => setForm((f) => ({ ...f, points: Number(e.target.value) || 1 }))}
+                />
+              </label>
+              <label>
+                Trudność
+                <select
+                  className="settings-input"
+                  value={form.rarity}
+                  onChange={(e) => setForm((f) => ({ ...f, rarity: e.target.value as AchievementRarity }))}
+                >
+                  {ACHIEVEMENT_RARITIES.map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {row.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <button
+              type="button"
+              className="settings-btn primary"
+              disabled={busy === "define" || form.label.trim().length < 2}
+              onClick={() => void addCustom()}
+            >
+              Dodaj osiągnięcie
+            </button>
+          </section>
+        ) : null}
+
+        {ACHIEVEMENT_CATEGORIES.map((cat) => {
+          const rows = tasks.filter((task) => task.category === cat.id);
+          if (!rows.length) return null;
+          return (
+            <section key={cat.id} className="studio-card achieve-cat">
+              <div className="achieve-cat-head">
+                <h2>{cat.title}</h2>
+                <p>{cat.blurb}</p>
+              </div>
+              <div className="achieve-badges">
+                {rows.map((task) => (
+                  <AchievementBadge
+                    key={task.id}
+                    task={task}
+                    unlocked={taskUnlocked(task, rewards.stats)}
+                    have={rewards.stats[task.stat] || 0}
+                    canDelete={isDev && Boolean(task.custom)}
+                    onDelete={() => void removeCustom(task.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          );
+        })}
       </div>
     </div>
   );

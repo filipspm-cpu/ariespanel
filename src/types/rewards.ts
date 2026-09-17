@@ -1,4 +1,4 @@
-import type { AchievementStats } from "@/data/achievements";
+import type { AchievementStats, AchievementTask } from "@/data/achievements";
 
 export type RewardPayout = {
   id: number;
@@ -6,6 +6,18 @@ export type RewardPayout = {
   amount: number;
   status: "pending" | "paid";
   createdAt: string;
+};
+
+export type AccountRewards = {
+  id: string;
+  name?: string;
+  avatarUrl?: string;
+  code: string;
+  referrals: number;
+  redeemed: boolean;
+  pendingCash: number;
+  paidCash: number;
+  points: number;
 };
 
 export type RewardsState = {
@@ -21,14 +33,16 @@ export type RewardsState = {
   paidCash: number;
   payouts: RewardPayout[];
   claimedKinds: string[];
+  customTasks?: AchievementTask[];
+  leaderboard?: AccountRewards[];
 };
 
-export type AccountRewards = {
-  id: string;
-  code: string;
-  referrals: number;
-  redeemed: boolean;
-  pendingCash: number;
-  paidCash: number;
+export type CustomAchievementInput = {
+  label: string;
+  hint?: string;
+  category?: string;
+  stat: string;
+  need: number;
   points: number;
+  rarity?: string;
 };
