@@ -839,12 +839,39 @@ textarea {
   cursor: pointer;
 }
 
+.achieve-page {
+  position: relative;
+}
+
 .achieve-body {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-width: 980px;
-  margin: 0 auto;
+}
+
+.achieve-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 16px;
+}
+
+.achieve-filters button {
+  display: inline-flex;
+  height: 28px;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: #080808;
+  padding: 0 12px;
+  color: #9a9a9a;
+  font-size: 11px;
+}
+
+.achieve-filters button.is-on {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
 }
 
 .achieve-empty {
@@ -1072,12 +1099,13 @@ textarea {
 
 .achieve-badges {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
 }
 
 .achieve-badge {
   position: relative;
+  width: 100%;
   aspect-ratio: 1;
   display: flex;
   flex-direction: column;
@@ -1096,9 +1124,9 @@ textarea {
 }
 
 .achieve-badge-mark {
-  width: 72px;
-  height: 72px;
-  margin-top: 4px;
+  width: 42%;
+  height: 42%;
+  margin-top: 8px;
   background: #8b5a2b;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
