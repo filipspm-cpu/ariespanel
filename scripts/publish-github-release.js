@@ -45,8 +45,10 @@ if (!files.length) {
   throw new Error(`No release files in ${dist}`);
 }
 
-retry("release upload", () => {
-  gh(["release", "upload", tag, ...files, "--clobber"]);
-});
+for (const file of files) {
+  retry(`upload ${path.basename(file)}`, () => {
+    gh(["release", "upload", tag, file, "--clobber"]);
+  });
+}
 
 console.log(`uploaded ${files.map((file) => path.basename(file)).join(", ")} -> ${tag}`);

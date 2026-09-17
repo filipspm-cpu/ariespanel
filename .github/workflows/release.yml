@@ -20,7 +20,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
       - name: Align GitHub publish target
@@ -36,6 +36,16 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npm run electron:build
+      - name: Keep installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            release/ARIES-Setup-*.exe
+            release/ARIES-Setup-*.exe.blockmap
+            release/*.yml
+          if-no-files-found: error
+          retention-days: 5
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
