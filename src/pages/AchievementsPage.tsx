@@ -45,6 +45,7 @@ export function AchievementsPage() {
   const [rewards, setRewards] = useState<RewardsState>(emptyRewards);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"all" | AchievementCategory>("all");
   const [form, setForm] = useState({
     label: "",
     hint: "",
@@ -149,9 +150,14 @@ export function AchievementsPage() {
   };
 
   const board = rewards.leaderboard ?? [];
+  const visible = useMemo(
+    () => (filter === "all" ? tasks : tasks.filter((task) => task.category === filter)),
+    [filter, tasks],
+  );
+  const filterCats = ACHIEVEMENT_CATEGORIES.filter((cat) => tasks.some((task) => task.category === cat.id));
 
   return (
-    <div className="studio-page">
+    <div className="studio-page achieve-page">
       <div className="studio-header">
         <div className="credits-kicker">OSIĄGNIĘCIA</div>
         <h1>Osiągnięcia</h1>
@@ -335,30 +341,43 @@ export function AchievementsPage() {
           </section>
         ) : null}
 
-        {ACHIEVEMENT_CATEGORIES.map((cat) => {
-          const rows = tasks.filter((task) => task.category === cat.id);
-          if (!rows.length) return null;
-          return (
-            <section key={cat.id} className="studio-card achieve-cat">
-              <div className="achieve-cat-head">
-                <h2>{cat.title}</h2>
-                <p>{cat.blurb}</p>
-              </div>
-              <div className="achieve-badges">
-                {rows.map((task) => (
-                  <AchievementBadge
-                    key={task.id}
-                    task={task}
-                    unlocked={taskUnlocked(task, rewards.stats)}
-                    have={rewards.stats[task.stat] || 0}
-                    canDelete={isDev && Boolean(task.custom)}
-                    onDelete={() => void removeCustom(task.id)}
-                  />
-                ))}
-              </div>
-            </section>
-          );
-        })}
+        <section className="studio-card achieve-cat">
+          <div className="achieve-cat-head">
+            <h2>Zadania</h2>
+            <p>
+              {filter === "all"
+                ? "Wszystkie osiągnięcia w jednym miejscu."
+                : ACHIEVEMENT_CATEGORIES.find((cat) => cat.id === filter)?.blurb}
+            </p>
+          </div>
+          <div className="achieve-filters">
+            <button type="button" className={filter === "all" ? "is-on" : ""} onClick={() => setFilter("all")}>
+              Wszystkie
+            </button>
+            {filterCats.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                className={filter === cat.id ? "is-on" : ""}
+                onClick={() => setFilter(cat.id)}
+              >
+                {cat.title}
+              </button>
+            ))}
+          </div>
+          <div className="achieve-badges">
+            {visible.map((task) => (
+              <AchievementBadge
+                key={task.id}
+                task={task}
+                unlocked={taskUnlocked(task, rewards.stats)}
+                have={rewards.stats[task.stat] || 0}
+                canDelete={isDev && Boolean(task.custom)}
+                onDelete={() => void removeCustom(task.id)}
+              />
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );
