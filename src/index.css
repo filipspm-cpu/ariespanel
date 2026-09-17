@@ -1206,25 +1206,6 @@ textarea {
   font-size: 13px;
 }
 
-.achieve-dev-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.achieve-dev-grid label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 11px;
-  color: #a1a1aa;
-}
-
-.achieve-dev-grid .settings-input {
-  margin-top: 0;
-}
-
 .achieve-cat {
   padding: 18px 20px 16px;
 }

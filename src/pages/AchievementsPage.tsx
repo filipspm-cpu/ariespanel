@@ -2,8 +2,6 @@ import { AchievementBadge } from "@/components/AchievementBadge";
 import { useAccountRanks } from "@/components/RankBadge";
 import {
   ACHIEVEMENT_CATEGORIES,
-  ACHIEVEMENT_RARITIES,
-  ACHIEVEMENT_STATS,
   allAchievementTasks,
   emptyAchievementStats,
   formatCash,
@@ -12,7 +10,6 @@ import {
   taskUnlocked,
   type AchievementCategory,
   type AchievementRarity,
-  type AchievementStat,
 } from "@/data/achievements";
 import { hasDeveloperAccess } from "@/data/testers";
 import { pushRewardStats, rewardsErrorText } from "@/services/rewardStats";
@@ -48,15 +45,6 @@ export function AchievementsPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | AchievementCategory>("all");
   const [rankOpen, setRankOpen] = useState(false);
-  const [form, setForm] = useState({
-    label: "",
-    hint: "",
-    category: "wlasne" as AchievementCategory,
-    stat: "reports" as AchievementStat,
-    need: 100,
-    points: 50,
-    rarity: "brown" as AchievementRarity,
-  });
 
   const apply = (next: RewardsState | undefined) => {
     if (!next) return;
@@ -130,27 +118,6 @@ export function AchievementsPage() {
           setMsg(id === "rank-500" ? "Ranga VIP przyznana." : "Nagroda zapisana. Developer wypłaci ją w grze.");
           const testers = await window.synvity?.ranksList?.();
           if (testers) useAppStore.getState().setTesters(testers);
-        }
-      }
-    } catch {
-      setMsg(rewardsErrorText("network"));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const addCustom = async () => {
-    setBusy("define");
-    setMsg("");
-    try {
-      const next = await window.synvity?.rewardsDefine(form);
-      if (!next) setMsg(rewardsErrorText("network"));
-      else {
-        apply(next);
-        if (next.ok === false) setMsg(rewardsErrorText(next.error));
-        else {
-          setForm((f) => ({ ...f, label: "", hint: "" }));
-          setMsg("Osiągnięcie dodane.");
         }
       }
     } catch {
@@ -271,105 +238,6 @@ export function AchievementsPage() {
         </div>
 
         {msg ? <div className="achieve-msg">{msg}</div> : null}
-
-        {isDev ? (
-          <section className="studio-card achieve-dev">
-            <div className="achieve-cat-head">
-              <h2>Wersja developera</h2>
-              <p>Tylko ty widzisz to pole. Przyznaj sobie wykonane zadania na kafelkach albo dodaj nowe osiągnięcie dla wszystkich.</p>
-            </div>
-            <div className="achieve-dev-grid">
-              <label>
-                Nazwa
-                <input
-                  className="settings-input"
-                  value={form.label}
-                  onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
-                  placeholder="Nazwa osiągnięcia"
-                />
-              </label>
-              <label>
-                Opis
-                <input
-                  className="settings-input"
-                  value={form.hint}
-                  onChange={(e) => setForm((f) => ({ ...f, hint: e.target.value }))}
-                  placeholder="Krótki opis"
-                />
-              </label>
-              <label>
-                Kategoria
-                <select
-                  className="settings-input"
-                  value={form.category}
-                  onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as AchievementCategory }))}
-                >
-                  {ACHIEVEMENT_CATEGORIES.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Statystyka
-                <select
-                  className="settings-input"
-                  value={form.stat}
-                  onChange={(e) => setForm((f) => ({ ...f, stat: e.target.value as AchievementStat }))}
-                >
-                  {ACHIEVEMENT_STATS.map((stat) => (
-                    <option key={stat.id} value={stat.id}>
-                      {stat.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Wymagane
-                <input
-                  className="settings-input"
-                  type="number"
-                  min={1}
-                  value={form.need}
-                  onChange={(e) => setForm((f) => ({ ...f, need: Number(e.target.value) || 1 }))}
-                />
-              </label>
-              <label>
-                Punkty
-                <input
-                  className="settings-input"
-                  type="number"
-                  min={1}
-                  value={form.points}
-                  onChange={(e) => setForm((f) => ({ ...f, points: Number(e.target.value) || 1 }))}
-                />
-              </label>
-              <label>
-                Trudność
-                <select
-                  className="settings-input"
-                  value={form.rarity}
-                  onChange={(e) => setForm((f) => ({ ...f, rarity: e.target.value as AchievementRarity }))}
-                >
-                  {ACHIEVEMENT_RARITIES.map((row) => (
-                    <option key={row.id} value={row.id}>
-                      {row.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <button
-              type="button"
-              className="settings-btn primary"
-              disabled={busy === "define" || form.label.trim().length < 2}
-              onClick={() => void addCustom()}
-            >
-              Dodaj osiągnięcie
-            </button>
-          </section>
-        ) : null}
 
         <section className="studio-card achieve-cat">
           <div className="achieve-cat-head">
