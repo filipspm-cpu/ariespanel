@@ -350,9 +350,12 @@ function sendEvents(events: unknown[]) {
 }
 
 let injecting = false;
+let injectDepth = 0;
 
 export function setMacroInjecting(value: boolean) {
-  injecting = value;
+  if (value) injectDepth += 1;
+  else injectDepth = Math.max(0, injectDepth - 1);
+  injecting = injectDepth > 0;
 }
 
 export function isMacroInjecting() {
@@ -476,20 +479,33 @@ async function typeText(text: string, options: TypeTextOptions) {
   try {
     const chatLines = Boolean(options.pressT || options.enterEachLine);
     const reopenChat = Boolean(options.pressT) || chatLines;
-    const toSend = chatLines
+    const rawLines = chatLines
       ? splitChatLines(text)
       : text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-    for (let i = 0; i < toSend.length; i++) {
-      const last = i === toSend.length - 1;
-      if (reopenChat && i > 0) {
-        await tapVk(0x54);
-        await sleep(fast ? 90 : 220);
+    const toSend: string[] = [];
+    let previousLine = "";
+    for (const line of rawLines) {
+      if (chatLines) {
+        const key = line.trim().toLowerCase();
+        if (key && key === previousLine) continue;
+        previousLine = key;
       }
-      await typeLine(toSend[i], fast);
-      await sleep(fast ? 12 : 40);
+      toSend.push(line);
+    }
+    const skipFirstT = options.skipFirstT !== false;
+    for (let i = 0; i < toSend.length; i++) {
+      const line = toSend[i];
+      const last = i === toSend.length - 1;
+      const openChat = reopenChat && (i > 0 || !skipFirstT);
+      if (openChat) {
+        await tapVk(0x54);
+        await sleep(fast ? 160 : 320);
+      }
+      await typeLine(line, fast && !chatLines);
+      await sleep(chatLines ? (fast ? 80 : 140) : fast ? 12 : 40);
       if (chatLines || (options.pressEnter && last)) {
         await tapVk(VK_RETURN);
-        if (!last) await sleep(fast ? 90 : 220);
+        if (!last) await sleep(chatLines ? (fast ? 220 : 380) : fast ? 90 : 220);
       }
     }
   } finally {

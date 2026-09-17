@@ -72,14 +72,16 @@ async function runStep(step: MacroStep, macros: Macro[], ctx: { inChat: boolean 
     return;
   }
   if (step.text) {
-    const chat = step.type === "multiline-text" || Boolean(step.pressT || step.enterEachLine);
+    const chat =
+      Boolean(step.pressT || step.enterEachLine) ||
+      (step.type === "multiline-text" && step.pressT == null && step.enterEachLine == null);
     await withInjecting(async () => {
       await sendTextForeground(step.text, {
         pressEnter: Boolean(step.pressEnter) || chat,
         enterEachLine: chat,
         pressT: chat,
         skipFirstT: true,
-        fastPaste: true,
+        fastPaste: !chat,
       });
     });
     if (chat) ctx.inChat = false;
@@ -113,18 +115,25 @@ export function triggersFromMacros(macros: Macro[]): { id: string; sequence: str
 let draining = false;
 const queue: Array<{ id: string; eraseCount: number }> = [];
 
+let runningId: string | null = null;
+
 async function executeMacro(macroId: string, eraseCount: number) {
   const macros = loadState().macros;
   const macro = macros.find((m) => m.id === macroId);
   if (!macro || !macro.enabled) return;
-  if (eraseCount > 0) {
-    await withInjecting(async () => {
+  runningId = macroId;
+  setMacroInjecting(true);
+  try {
+    if (eraseCount > 0) {
       await sleep(12);
       await pressBackspace(eraseCount);
-      await sleep(20);
-    });
+      await sleep(40);
+    }
+    await runSteps(macro.steps, macros, { inChat: true });
+  } finally {
+    runningId = null;
+    setMacroInjecting(false);
   }
-  await runSteps(macro.steps, macros, { inChat: true });
 }
 
 async function drainMacroQueue() {
@@ -148,6 +157,7 @@ async function drainMacroQueue() {
 }
 
 export async function runMacroById(macroId: string, eraseCount: number): Promise<void> {
+  if (runningId === macroId || queue.some((job) => job.id === macroId)) return;
   queue.push({ id: macroId, eraseCount });
   await drainMacroQueue();
 }

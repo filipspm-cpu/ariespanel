@@ -50,7 +50,7 @@ export interface SynvityApi {
   macroSend: (
     text: string,
     pressEnter: boolean,
-    extra?: { pressT?: boolean; enterEachLine?: boolean },
+    extra?: { pressT?: boolean; enterEachLine?: boolean; skipFirstT?: boolean },
   ) => Promise<unknown>;
   macroPress: (key: string) => Promise<unknown>;
   registerTriggers: (triggers: { id: string; sequence: string }[]) => Promise<unknown>;

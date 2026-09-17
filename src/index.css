@@ -2252,6 +2252,13 @@ textarea {
 }
 
 .forum-active {
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 4px;
+  color: #fff;
+  background: rgba(244, 63, 94, 0.18);
+  border-radius: 3px;
+  text-decoration: underline;
+  text-decoration-color: #fb7185;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }

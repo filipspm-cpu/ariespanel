@@ -33,7 +33,7 @@ const api = {
   macroSend: (
     text: string,
     pressEnter: boolean,
-    extra?: { pressT?: boolean; enterEachLine?: boolean },
+    extra?: { pressT?: boolean; enterEachLine?: boolean; skipFirstT?: boolean },
   ) => ipcRenderer.invoke("macro:send", text, pressEnter, extra),
   macroPress: (key: string) => ipcRenderer.invoke("macro:press", key),
   registerTriggers: (triggers: { id: string; sequence: string }[]) =>
