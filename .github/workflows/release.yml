@@ -20,6 +20,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - name: Align GitHub publish target
@@ -31,11 +32,14 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
-      - name: Build and publish installer
+      - name: Build installer
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npm run electron:build
+      - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: npm run release
+        run: node scripts/publish-github-release.js
       - name: Label GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
