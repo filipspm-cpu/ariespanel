@@ -15,6 +15,7 @@ import { AboutPage } from "@/pages/AboutPage";
 import { CraftPage } from "@/pages/CraftPage";
 import { ForumPage } from "@/pages/ForumPage";
 import { FeedbackPage } from "@/pages/FeedbackPage";
+import { AchievementsPage } from "@/pages/AchievementsPage";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { useAccountRanks } from "@/components/RankBadge";
 import { canAccessRoute } from "@/data/navigation";
@@ -34,6 +35,7 @@ const pages: Record<RouteId, ComponentType> = {
   craft: CraftPage,
   forum: ForumPage,
   feedback: FeedbackPage,
+  achievements: AchievementsPage,
 };
 
 export function AppLayout() {

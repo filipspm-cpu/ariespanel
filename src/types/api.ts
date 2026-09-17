@@ -84,7 +84,20 @@ export interface SynvityApi {
   accountsList: () => Promise<{ id?: string; name: string; avatarUrl: string; ip?: string; lastLogin?: string; rank?: string }[]>;
   ranksList: () => Promise<{ name: string; discord: string; id: string; role: string }[]>;
   ranksSet: (payload: { id: string; rank: string; name?: string }) => Promise<{ name: string; discord: string; id: string; role: string }[]>;
-}
+  rewardsState: () => Promise<import("./rewards").RewardsState>;
+  rewardsGenerate: () => Promise<import("./rewards").RewardsState>;
+  rewardsRedeem: (code: string) => Promise<import("./rewards").RewardsState>;
+  rewardsSync: (payload: {
+    reports: number;
+    events: number;
+    onlineMs: number;
+    nightReports: number;
+    activeDays: number;
+  }) => Promise<import("./rewards").RewardsState>;
+  rewardsClaim: (kind: string) => Promise<import("./rewards").RewardsState>;
+  rewardsAccounts: () => Promise<import("./rewards").AccountRewards[]>;
+  rewardsPaid: (targetId: string) => Promise<import("./rewards").AccountRewards[]>;
+};
 
 export {};
 

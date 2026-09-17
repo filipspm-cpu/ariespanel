@@ -15,6 +15,7 @@ export type FeedbackChannel =
   | "accounts"
   | "about"
   | "credits"
+  | "achievements"
   | "other";
 
 export type FeedbackItem = {
@@ -60,6 +61,7 @@ function normalizeChannel(raw: string): FeedbackChannel {
   if (value === "accounts" || value === "konta") return "accounts";
   if (value === "about" || value.includes("aplikacji")) return "about";
   if (value === "credits" || value === "autorzy") return "credits";
+  if (value === "achievements" || value === "osiagniecia" || value === "osiągnięcia") return "achievements";
   return "other";
 }
 

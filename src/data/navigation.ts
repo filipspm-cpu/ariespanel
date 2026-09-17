@@ -31,6 +31,7 @@ export const navGroups: NavGroup[] = [
         })),
       },
       { id: "craft", label: "Craft", icon: "hammer" },
+      { id: "achievements", label: "Osiągnięcia", icon: "trophy" },
     ],
   },
   {
@@ -91,6 +92,7 @@ export const breadcrumbs: Record<RouteId, string[]> = {
   craft: ["Dashboard", "Craft"],
   forum: ["Dashboard", "Forum"],
   feedback: ["Dashboard", "Ustawienia", "Zgłoś błąd"],
+  achievements: ["Dashboard", "Osiągnięcia"],
 };
 
 export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
@@ -106,4 +108,5 @@ export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
   craft: { title: "Craft", subtitle: "Tabela krafta frakcji — Majestic Wiki" },
   forum: { title: "Forum", subtitle: "Regulamin serwera w panelu" },
   feedback: { title: "Zgłoś błąd", subtitle: "Zgłoś błąd albo nową sugestię — developerzy to zobaczą" },
+  achievements: { title: "Osiągnięcia", subtitle: "Trudne zadania, punkty i dolary do gry" },
 };

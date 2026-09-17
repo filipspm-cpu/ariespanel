@@ -10,6 +10,7 @@ import type {
   RouteId,
 } from "@/types";
 import { persist } from "@/services/storageClient";
+import { pushRewardStats } from "@/services/rewardStats";
 import { calendarDayKey } from "@/services/todayStats";
 import { migrateMacro } from "@/data/defaultMacros";
 import type { Tester } from "@/data/testers";
@@ -257,6 +258,7 @@ export const useAppStore = create<State>((set, get) => ({
     });
     set({ counters });
     void persist({ counters });
+    void pushRewardStats(get());
   },
   removeCounterEntry: (id, timestamp, delta) => {
     const counters = get().counters.map((c) => {

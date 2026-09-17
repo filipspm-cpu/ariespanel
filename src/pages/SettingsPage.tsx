@@ -1,11 +1,14 @@
 import { Copyright } from "@/components/Copyright";
 import { RankBadges, useAccountRanks } from "@/components/RankBadge";
 import { APP_VERSION } from "@/data/appVersion";
+import { formatCash, PROMO_CASH } from "@/data/achievements";
+import { rewardsErrorText } from "@/services/rewardStats";
 import { useAppStore } from "@/store/useAppStore";
 import { mergeImportedMacros, parseMacroFile } from "@/services/macroPack";
 import type { UpdateStatus } from "@/types";
+import type { RewardsState } from "@/types/rewards";
 import { Toggle } from "@/components/ui/Toggle";
-import { Download, FileUp, RefreshCw, Unplug } from "lucide-react";
+import { Copy, Download, FileUp, RefreshCw, Unplug } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 export function SettingsPage() {
@@ -18,6 +21,10 @@ export function SettingsPage() {
   const [packMsg, setPackMsg] = useState("");
   const [discordBusy, setDiscordBusy] = useState(false);
   const [discordMsg, setDiscordMsg] = useState("");
+  const [promo, setPromo] = useState<RewardsState | null>(null);
+  const [promoInput, setPromoInput] = useState("");
+  const [promoMsg, setPromoMsg] = useState("");
+  const [promoBusy, setPromoBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -25,6 +32,13 @@ export function SettingsPage() {
     const off = window.synvity?.onUpdateStatus((s) => setUpdate(s));
     return () => off?.();
   }, []);
+
+  useEffect(() => {
+    if (!settings.discordId || !window.synvity?.rewardsState) return;
+    void window.synvity.rewardsState().then((s) => {
+      if (s) setPromo(s);
+    });
+  }, [settings.discordId]);
 
   const wantsUpdates = settings.autoUpdate !== false;
 
@@ -73,6 +87,57 @@ export function SettingsPage() {
       discordAvatarUrl: "",
     });
     setDiscordMsg("Rozłączono Discord.");
+  };
+
+  const generatePromo = async () => {
+    setPromoBusy(true);
+    setPromoMsg("");
+    try {
+      const next = await window.synvity?.rewardsGenerate();
+      if (!next) {
+        setPromoMsg(rewardsErrorText("network"));
+      } else {
+        setPromo(next);
+        if (next.ok === false) setPromoMsg(rewardsErrorText(next.error));
+        else setPromoMsg("Kod gotowy. Daj go innemu adminowi — za wpisanie dostanie 30 000 $ w grze.");
+      }
+    } catch {
+      setPromoMsg(rewardsErrorText("network"));
+    } finally {
+      setPromoBusy(false);
+    }
+  };
+
+  const copyPromo = async () => {
+    if (!promo?.code) return;
+    try {
+      await navigator.clipboard.writeText(promo.code);
+      setPromoMsg("Skopiowano kod.");
+    } catch {
+      setPromoMsg(promo.code);
+    }
+  };
+
+  const redeemPromo = async () => {
+    setPromoBusy(true);
+    setPromoMsg("");
+    try {
+      const next = await window.synvity?.rewardsRedeem(promoInput);
+      if (!next) {
+        setPromoMsg(rewardsErrorText("network"));
+      } else {
+        setPromo(next);
+        if (next.ok === false) setPromoMsg(rewardsErrorText(next.error));
+        else {
+          setPromoInput("");
+          setPromoMsg(`Kod przyjęty. Do wypłaty w grze: ${formatCash(PROMO_CASH)}.`);
+        }
+      }
+    } catch {
+      setPromoMsg(rewardsErrorText("network"));
+    } finally {
+      setPromoBusy(false);
+    }
   };
 
   const onPickMacros = async (file: File | undefined) => {
@@ -252,6 +317,70 @@ export function SettingsPage() {
             Wczytaj plik makr
           </button>
           {packMsg ? <div className="mt-3 text-[12px] text-zinc-300">{packMsg}</div> : null}
+        </div>
+
+        <div className="studio-card settings-promo">
+          <div className="text-[11px] uppercase tracking-[0.22em] text-zinc-500">Promokod</div>
+          <div className="mt-2 text-[18px] font-medium text-white">Twój kod i wpisanie kodu</div>
+          <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-zinc-500">
+            Każdy użytkownik może wygenerować jeden kod i wpisać cudzy kod tylko raz. Za wpisanie jest{" "}
+            {formatCash(PROMO_CASH)} do wypłaty w grze.
+          </p>
+          {!discordConnected ? (
+            <div className="mt-4 text-[13px] text-zinc-400">Najpierw połącz Discord.</div>
+          ) : (
+            <>
+              <div className="settings-promo-row">
+                <div className="settings-promo-code">{promo?.code || "Brak kodu"}</div>
+                {promo?.code ? (
+                  <button type="button" className="settings-btn" onClick={() => void copyPromo()}>
+                    <Copy size={14} />
+                    Kopiuj
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="settings-btn primary"
+                    disabled={promoBusy}
+                    onClick={() => void generatePromo()}
+                  >
+                    Wygeneruj kod
+                  </button>
+                )}
+              </div>
+              {promo?.referrals ? (
+                <div className="mt-2 text-[12px] text-zinc-500">
+                  Twój kod wpisało {promo.referrals} {promo.referrals === 1 ? "osoba" : "osób"}.
+                </div>
+              ) : null}
+              <div className="settings-promo-row mt-4">
+                <input
+                  value={promoInput}
+                  onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                  className="settings-input"
+                  placeholder="ARIES-XXXXXX"
+                  disabled={Boolean(promo?.redeemed)}
+                />
+                <button
+                  type="button"
+                  className="settings-btn primary"
+                  disabled={promoBusy || Boolean(promo?.redeemed) || promoInput.trim().length < 8}
+                  onClick={() => void redeemPromo()}
+                >
+                  {promo?.redeemed ? "Kod wpisany" : "Wpisz kod"}
+                </button>
+              </div>
+              {promo?.redeemedCode ? (
+                <div className="mt-2 text-[12px] text-zinc-500">Wpisany kod: {promo.redeemedCode}</div>
+              ) : null}
+              {promo && promo.pendingCash > 0 ? (
+                <div className="mt-2 text-[12px] text-emerald-300">
+                  Do wypłaty w grze: {formatCash(promo.pendingCash)}
+                </div>
+              ) : null}
+            </>
+          )}
+          {promoMsg ? <div className="mt-3 text-[12px] text-zinc-300">{promoMsg}</div> : null}
         </div>
 
         <Copyright className="settings-copyright" />

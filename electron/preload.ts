@@ -95,6 +95,19 @@ const api = {
   ranksList: () => ipcRenderer.invoke("ranks:list"),
   ranksSet: (payload: { id: string; rank: string; name?: string }) => ipcRenderer.invoke("ranks:set", payload),
   forumOpen: (url: string) => ipcRenderer.invoke("forum:open", url),
+  rewardsState: () => ipcRenderer.invoke("rewards:state"),
+  rewardsGenerate: () => ipcRenderer.invoke("rewards:generate"),
+  rewardsRedeem: (code: string) => ipcRenderer.invoke("rewards:redeem", code),
+  rewardsSync: (payload: {
+    reports: number;
+    events: number;
+    onlineMs: number;
+    nightReports: number;
+    activeDays: number;
+  }) => ipcRenderer.invoke("rewards:sync", payload),
+  rewardsClaim: (kind: string) => ipcRenderer.invoke("rewards:claim", kind),
+  rewardsAccounts: () => ipcRenderer.invoke("rewards:accounts"),
+  rewardsPaid: (targetId: string) => ipcRenderer.invoke("rewards:paid", targetId),
 };
 
 contextBridge.exposeInMainWorld("synvity", api);

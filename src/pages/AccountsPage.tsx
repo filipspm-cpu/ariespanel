@@ -1,7 +1,9 @@
 import { Copyright } from "@/components/Copyright";
 import { RankBadges, useAccountRanks } from "@/components/RankBadge";
+import { formatCash } from "@/data/achievements";
 import { RANK_ORDER, encodeRanks, hasDeveloperAccess, ranksFromRole, type AccountRank } from "@/data/testers";
 import { useAppStore } from "@/store/useAppStore";
+import type { AccountRewards } from "@/types/rewards";
 import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -46,6 +48,7 @@ const RANK_LABELS: Record<AccountRank, string> = {
 
 export function AccountsPage() {
   const [accounts, setAccounts] = useState<AccountCard[]>([]);
+  const [rewards, setRewards] = useState<AccountRewards[]>([]);
   const [ready, setReady] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const setTesters = useAppStore((s) => s.setTesters);
@@ -61,8 +64,13 @@ export function AccountsPage() {
     }
     if (manual) setRefreshing(true);
     try {
-      const [rows, testers] = await Promise.all([list(), window.synvity?.ranksList?.() ?? Promise.resolve(undefined)]);
+      const [rows, testers, rewardRows] = await Promise.all([
+        list(),
+        window.synvity?.ranksList?.() ?? Promise.resolve(undefined),
+        window.synvity?.rewardsAccounts?.() ?? Promise.resolve([]),
+      ]);
       setAccounts(rows ?? []);
+      setRewards(rewardRows ?? []);
       if (testers) setTesters(testers);
     } catch {
       if (!manual) setAccounts([]);
@@ -88,6 +96,12 @@ export function AccountsPage() {
       window.removeEventListener("focus", onFocus);
     };
   }, [load]);
+
+  const markPaid = async (id?: string) => {
+    if (!id || !window.synvity?.rewardsPaid) return;
+    const next = await window.synvity.rewardsPaid(id);
+    if (next) setRewards(next);
+  };
 
   const changeRanks = async (account: AccountCard, next: AccountRank[]) => {
     if (!account.id || !window.synvity?.ranksSet) return;
@@ -122,6 +136,7 @@ export function AccountsPage() {
           <div className="accounts-grid">
             {accounts.map((account, index) => {
               const ranks = ranksFromRole(account.rank || "");
+              const reward = rewards.find((row) => row.id === account.id);
               return (
                 <div key={`${account.id || account.name}-${index}`} className="accounts-card">
                   <AccountAvatar name={account.name} url={account.avatarUrl} />
@@ -148,6 +163,18 @@ export function AccountsPage() {
                     </div>
                   ) : null}
                   <div className="accounts-meta">{formatLogin(account.lastLogin)}</div>
+                  <div className="accounts-promo">
+                    <div>Użycia kodu: {reward?.referrals ?? 0}</div>
+                    <div>Wpisany kod: {reward?.redeemed ? "tak" : "nie"}</div>
+                    {reward && reward.pendingCash > 0 ? <div>Do wypłaty: {formatCash(reward.pendingCash)}</div> : null}
+                    {reward && reward.paidCash > 0 ? <div>Wypłacone: {formatCash(reward.paidCash)}</div> : null}
+                    {reward?.code ? <div className="accounts-code">{reward.code}</div> : null}
+                  </div>
+                  {canEdit && account.id && reward && reward.pendingCash > 0 ? (
+                    <button type="button" className="accounts-pay" onClick={() => void markPaid(account.id)}>
+                      Wypłacono w grze
+                    </button>
+                  ) : null}
                 </div>
               );
             })}

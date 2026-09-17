@@ -327,6 +327,9 @@ function feedback_channel($raw) {
     "o aplikacji" => "about",
     "credits" => "credits",
     "autorzy" => "credits",
+    "achievements" => "achievements",
+    "osiagniecia" => "achievements",
+    "osiągnięcia" => "achievements",
     "other" => "other",
     "inne" => "other",
   );
