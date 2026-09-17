@@ -70,21 +70,6 @@ export function AchievementsPage() {
     }
   };
 
-  if (!discordId) {
-    return (
-      <div className="studio-page">
-        <div className="studio-header">
-          <div className="credits-kicker">OSIĄGNIĘCIA</div>
-          <h1>Osiągnięcia</h1>
-          <div className="credits-rule" />
-        </div>
-        <div className="studio-body">
-          <div className="studio-card achieve-empty">Połącz Discord w ustawieniach, żeby zbierać punkty i odbierać dolary do gry.</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="studio-page">
       <div className="studio-header">
@@ -93,6 +78,11 @@ export function AchievementsPage() {
         <div className="credits-rule" />
       </div>
       <div className="studio-body achieve-body">
+        {!discordId ? (
+          <div className="studio-card achieve-empty">
+            Połącz Discord w ustawieniach, żeby zbierać punkty i odbierać dolary do gry.
+          </div>
+        ) : null}
         <div className="studio-card achieve-hero">
           <div className="achieve-hero-top">
             <Trophy size={18} />
@@ -131,7 +121,7 @@ export function AchievementsPage() {
                 <div className="achieve-tier-cash">{formatCash(tier.amount)}</div>
                 <button
                   type="button"
-                  disabled={!ready || busy === tier.id}
+                  disabled={!discordId || !ready || busy === tier.id}
                   onClick={() => void claim(tier.id)}
                 >
                   {claimed ? "Odebrane" : ready ? "Odbierz" : "Zablokowane"}
