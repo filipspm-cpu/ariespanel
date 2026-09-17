@@ -15,6 +15,7 @@ import {
   Users,
   Zap,
   Bug,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
@@ -38,6 +39,7 @@ const icons: Record<string, LucideIcon> = {
   scroll: ScrollText,
   hammer: Hammer,
   bug: Bug,
+  trophy: Trophy,
 };
 
 function NavButton({

@@ -10,6 +10,15 @@ import { refreshAccountRoles, setAccountRank } from "./testers";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
 import { runMacroById, setCountersListener, setOverlayRefresh, triggersFromMacros } from "./runMacro";
 import { createFeedback, listFeedback, updateFeedback } from "./feedback";
+import {
+  claimMoneyTier,
+  generatePromoCode,
+  getRewardsState,
+  listAccountRewards,
+  markRewardsPaid,
+  redeemPromoCode,
+  syncRewardStats,
+} from "./rewards";
 import { registerUpdater, overlayUpdateNotice } from "./updater";
 import { fetchMajesticServerStatuses } from "./majesticStatus";
 import { trustPublisherCert } from "./trustPublisher";
@@ -364,6 +373,26 @@ function registerIpc() {
     });
   });
   ipcMain.handle("forum:open", (_e, url: string) => shell.openExternal(assertForumUrl(url)));
+  ipcMain.handle("rewards:state", () => getRewardsState());
+  ipcMain.handle("rewards:generate", () => generatePromoCode());
+  ipcMain.handle("rewards:redeem", (_e, code: string) => redeemPromoCode(String(code || "")));
+  ipcMain.handle(
+    "rewards:sync",
+    (
+      _e,
+      payload: { reports?: number; events?: number; onlineMs?: number; nightReports?: number; activeDays?: number },
+    ) =>
+      syncRewardStats({
+        reports: Number(payload?.reports) || 0,
+        events: Number(payload?.events) || 0,
+        onlineMs: Number(payload?.onlineMs) || 0,
+        nightReports: Number(payload?.nightReports) || 0,
+        activeDays: Number(payload?.activeDays) || 0,
+      }),
+  );
+  ipcMain.handle("rewards:claim", (_e, kind: string) => claimMoneyTier(String(kind || "")));
+  ipcMain.handle("rewards:accounts", () => listAccountRewards());
+  ipcMain.handle("rewards:paid", (_e, targetId: string) => markRewardsPaid(String(targetId || "")));
 
   ipcMain.handle("displays:list", () =>
     screen.getAllDisplays().map((d, i) => ({

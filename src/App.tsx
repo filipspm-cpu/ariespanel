@@ -3,6 +3,7 @@ import { AppLayout } from "@/layouts/AppLayout";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { hydrate } from "@/services/storageClient";
 import { overlayCounterItems } from "@/services/overlayCounters";
+import { pushRewardStats } from "@/services/rewardStats";
 import { calendarDayKey, msUntilNextMidnight } from "@/services/todayStats";
 import { useAppStore } from "@/store/useAppStore";
 
@@ -75,6 +76,7 @@ export function App() {
     const off = window.synvity?.onCountersChanged((next) => {
       if (!Array.isArray(next)) return;
       useAppStore.setState({ counters: next });
+      void pushRewardStats({ ...useAppStore.getState(), counters: next });
     });
     return () => off?.();
   }, []);
@@ -141,13 +143,22 @@ export function App() {
     };
 
     const tick = setInterval(() => flushOnline(false), 30000);
+    const rewards = window.setInterval(() => {
+      const state = useAppStore.getState();
+      if (state.settings.discordId) void pushRewardStats(state);
+    }, 60000);
     let midnight = window.setTimeout(function arm() {
       onMidnight();
       midnight = window.setTimeout(arm, msUntilNextMidnight());
     }, msUntilNextMidnight());
 
+    if (useAppStore.getState().settings.discordId) {
+      void pushRewardStats(useAppStore.getState());
+    }
+
     return () => {
       clearInterval(tick);
+      window.clearInterval(rewards);
       window.clearTimeout(midnight);
     };
   }, [hydrated]);
