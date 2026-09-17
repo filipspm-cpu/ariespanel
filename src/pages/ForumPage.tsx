@@ -97,7 +97,8 @@ function HitCard({
 
 export function ForumPage() {
   const forumRuleId = useAppStore((s) => s.forumRuleId);
-  const setForumRule = useAppStore((s) => s.setForumRule);
+  const setForumFocus = useAppStore((s) => s.setForumFocus);
+  const forumFocus = useAppStore((s) => s.forumFocus);
   const rule = forumRuleById(forumRuleId);
   const lines = useMemo(
     () => rule.body.replace(/\u200B/g, "").replace(/\r\n/g, "\n").split("\n"),
@@ -106,7 +107,6 @@ export function ForumPage() {
   const [search, setSearch] = useState("");
   const [ask, setAsk] = useState("");
   const [asked, setAsked] = useState("");
-  const [activeLine, setActiveLine] = useState<number | null>(null);
   const lineRefs = useRef<Record<number, HTMLElement | null>>({});
 
   const searchHits = useMemo(() => searchForum(search, 12), [search]);
@@ -114,15 +114,28 @@ export function ForumPage() {
   const needle = asked || search;
   const showAsk = asked.length >= 2;
   const showSearch = !showAsk && search.trim().length >= 2;
+  const titleLine = useMemo(() => {
+    const index = lines.findIndex((line) => line.trim().length > 0);
+    return index < 0 ? 0 : index;
+  }, [lines]);
+  const activeStart =
+    forumFocus?.ruleId === rule.id && forumFocus.start >= 0 ? forumFocus.start : titleLine;
+  const activeEnd =
+    forumFocus?.ruleId === rule.id && forumFocus.end >= 0 ? forumFocus.end : activeStart;
 
   useEffect(() => {
-    if (activeLine == null) return;
-    lineRefs.current[activeLine]?.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, [activeLine, rule.id]);
+    const frame = window.requestAnimationFrame(() => {
+      lineRefs.current[activeStart]?.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeStart, rule.id]);
 
   function openHit(hit: ForumHit) {
-    setForumRule(hit.ruleId);
-    setActiveLine(hit.lineIndex);
+    setForumFocus({
+      ruleId: hit.ruleId,
+      start: hit.lineIndex,
+      end: hit.lineEnd ?? hit.lineIndex,
+    });
   }
 
   function runAsk() {
@@ -178,7 +191,7 @@ export function ForumPage() {
                 <HitCard
                   key={`${hit.ruleId}-${hit.lineIndex}`}
                   hit={hit}
-                  active={hit.ruleId === rule.id && hit.lineIndex === activeLine}
+                  active={hit.ruleId === rule.id && hit.lineIndex === activeStart}
                   onOpen={openHit}
                 />
               ))
@@ -196,7 +209,7 @@ export function ForumPage() {
                 <HitCard
                   key={`${hit.ruleId}-${hit.lineIndex}`}
                   hit={hit}
-                  active={hit.ruleId === rule.id && hit.lineIndex === activeLine}
+                  active={hit.ruleId === rule.id && hit.lineIndex === activeStart}
                   onOpen={openHit}
                 />
               ))
@@ -211,7 +224,11 @@ export function ForumPage() {
             {lines.map((line, i) => {
               const nl = i < lines.length - 1 ? "\n" : "";
               const heading = isSectionTitle(line);
-              const active = activeLine === i;
+              const active =
+                activeStart != null &&
+                i >= activeStart &&
+                i <= (activeEnd ?? activeStart) &&
+                line.trim().length > 0;
               return (
                 <span
                   key={i}

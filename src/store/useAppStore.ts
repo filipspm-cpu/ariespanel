@@ -19,6 +19,7 @@ export interface AppSnapshot {
   gameOpen: boolean;
   forumOpen: boolean;
   forumRuleId: string;
+  forumFocus: { ruleId: string; start: number; end: number } | null;
   searchOpen: boolean;
   searchQuery: string;
   onlineCount: number;
@@ -37,6 +38,7 @@ const defaultSnapshot = (): Omit<AppSnapshot, "route" | "searchOpen" | "searchQu
   gameOpen: true,
   forumOpen: false,
   forumRuleId: "ogolne",
+  forumFocus: null,
   macros: [],
   folders: [],
   counters: [],
@@ -102,6 +104,7 @@ type State = AppSnapshot & {
   setGameOpen: (open: boolean) => void;
   setForumOpen: (open: boolean) => void;
   setForumRule: (id: string) => void;
+  setForumFocus: (focus: { ruleId: string; start: number; end: number }) => void;
   setSearchOpen: (open: boolean) => void;
   setSearchQuery: (q: string) => void;
   hydrateFromDisk: (data: Partial<AppSnapshot>) => void;
@@ -142,7 +145,20 @@ export const useAppStore = create<State>((set, get) => ({
   },
   setGameOpen: (gameOpen) => set({ gameOpen }),
   setForumOpen: (forumOpen) => set({ forumOpen }),
-  setForumRule: (forumRuleId) => set({ route: "forum", forumOpen: true, forumRuleId }),
+  setForumRule: (forumRuleId) =>
+    set({
+      route: "forum",
+      forumOpen: true,
+      forumRuleId,
+      forumFocus: { ruleId: forumRuleId, start: -1, end: -1 },
+    }),
+  setForumFocus: (forumFocus) =>
+    set({
+      route: "forum",
+      forumOpen: true,
+      forumRuleId: forumFocus.ruleId,
+      forumFocus,
+    }),
   setSearchOpen: (searchOpen) => set({ searchOpen }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   hydrateFromDisk: (data) => {

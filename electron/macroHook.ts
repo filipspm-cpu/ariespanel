@@ -72,7 +72,7 @@ function recordCharacter(character: string) {
   buffer = (buffer + character).slice(-48);
   const hit = triggers.find((trigger) => buffer.endsWith(`${trigger.sequence} `));
   if (!hit) return;
-  if (now - lastFireAt < 70) {
+  if (now - lastFireAt < 900) {
     return;
   }
   lastFireAt = now;

@@ -6,6 +6,7 @@ export type ForumHit = {
   point: string | null;
   section: string | null;
   lineIndex: number;
+  lineEnd: number;
   text: string;
   penalty: string | null;
   score: number;
@@ -13,7 +14,6 @@ export type ForumHit = {
 
 const POINT_RE = /^(\d+(?:\.\d+)*)(?:[.)]\s*|\s+)/;
 const ACRONYM_DEF_RE = /^(RDM|VDM|NRP|NLR|PG|CK|SK|MG|GBS)\b/i;
-const NOTE_RE = /^(wyjaśnienie|uwaga|wyjątek|przykład)\b/i;
 const HEADING_RE =
   /^(zasady\b|postanowienia\b|obowiązki lidera\b|warunki dotyczące\b|organizacje kryminalne\b|rodziny i klany\b|dyplomacja\b|dyplomacje\b|działalność\b|liderom zabrania\b|awanse\s*\/\s*zwolnienia\b|wspólne zasady\b|zadania i obowiązki\b)/i;
 
@@ -84,6 +84,7 @@ type Chunk = {
   point: string | null;
   section: string | null;
   lineIndex: number;
+  lineEnd: number;
   lead: string;
   penalty: string | null;
   hay: string;
@@ -99,7 +100,10 @@ function buildChunks(): Chunk[] {
     let section = rule.title;
     let current: Chunk | null = null;
     const push = () => {
-      if (current) chunks.push(current);
+      if (current) {
+        current.lineEnd = Math.max(current.lineEnd, current.lineIndex);
+        chunks.push(current);
+      }
       current = null;
     };
     for (let i = 0; i < lines.length; i++) {
@@ -116,7 +120,6 @@ function buildChunks(): Chunk[] {
       }
       const numbered = trimmed.match(POINT_RE);
       const def = trimmed.match(ACRONYM_DEF_RE);
-      const note = NOTE_RE.test(trimmed);
       if (numbered || def) {
         push();
         const { text, penalty } = splitPenalty(trimmed);
@@ -127,6 +130,7 @@ function buildChunks(): Chunk[] {
           point,
           section,
           lineIndex: i,
+          lineEnd: i,
           lead: text,
           penalty,
           body: fold(trimmed),
@@ -136,13 +140,13 @@ function buildChunks(): Chunk[] {
         };
         continue;
       }
-      if (current && note) {
+      if (current) {
         current.body += ` ${fold(trimmed)}`;
         current.hay += ` ${fold(trimmed)}`;
+        current.lineEnd = i;
         if (!current.penalty) current.penalty = splitPenalty(trimmed).penalty;
         continue;
       }
-      push();
       const { text, penalty } = splitPenalty(trimmed);
       current = {
         ruleId: rule.id,
@@ -150,6 +154,7 @@ function buildChunks(): Chunk[] {
         point: null,
         section,
         lineIndex: i,
+        lineEnd: i,
         lead: text,
         penalty,
         body: fold(trimmed),
@@ -230,6 +235,7 @@ function toHit(chunk: Chunk, score: number): ForumHit & { isDef: boolean } {
     point: chunk.point,
     section: chunk.section,
     lineIndex: chunk.lineIndex,
+    lineEnd: chunk.lineEnd,
     text: chunk.lead,
     penalty: chunk.penalty,
     score,
