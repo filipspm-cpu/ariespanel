@@ -841,6 +841,7 @@ textarea {
 
 .achieve-page {
   position: relative;
+  overflow: hidden;
 }
 
 .achieve-body {
@@ -1050,6 +1051,112 @@ textarea {
   color: #fff;
 }
 
+.achieve-rank-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 24;
+  border: 0;
+  background: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
+.achieve-rank-drawer {
+  position: absolute;
+  top: 78px;
+  right: 0;
+  bottom: 12px;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  width: min(360px, calc(100% - 48px));
+  padding: 18px 16px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 0;
+  border-radius: 18px 0 0 18px;
+  background: #050505;
+  box-shadow: -18px 0 40px rgba(0, 0, 0, 0.55);
+  transform: translateX(100%);
+  transition: transform 0.28s ease;
+  pointer-events: none;
+}
+
+.achieve-rank-drawer.open {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.achieve-rank-tab {
+  position: absolute;
+  top: 148px;
+  right: 0;
+  z-index: 23;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 108px;
+  width: 32px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-right: 0;
+  border-radius: 10px 0 0 10px;
+  background: #0a0a0a;
+  color: #fff;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  cursor: pointer;
+}
+
+.achieve-rank-tab.is-open,
+.achieve-rank-tab:hover {
+  background: #161616;
+}
+
+.achieve-rank-drawer-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.achieve-rank-drawer-head h2 {
+  margin: 0;
+  font-size: 16px;
+  color: #fff;
+}
+
+.achieve-rank-drawer-head p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #8a8a8a;
+}
+
+.achieve-rank-close {
+  margin-left: auto;
+  display: inline-flex;
+  height: 28px;
+  width: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  cursor: pointer;
+}
+
+.achieve-rank-drawer .achieve-rank-list {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+}
+
+.achieve-rank-drawer .achieve-empty {
+  padding: 18px 8px;
+}
+
 .achieve-rank-list {
   list-style: none;
   margin: 0;
@@ -1067,6 +1174,11 @@ textarea {
   padding: 8px 10px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
+}
+
+.achieve-rank-list li strong {
+  color: #fff;
+  font-size: 13px;
 }
 
 .achieve-rank-list li.me {
@@ -1144,15 +1256,16 @@ textarea {
   align-items: center;
   justify-content: flex-start;
   padding: 28px 16px 16px;
-  border: 4px solid #111;
+  border: 4px solid #1a1a1a;
   border-radius: 32px;
-  background: #fff;
-  color: #111;
+  background: #050505;
+  color: #f4f4f5;
   opacity: 0.55;
 }
 
 .achieve-badge.on {
   opacity: 1;
+  border-color: #2a2a2a;
 }
 
 .achieve-badge-mark {
@@ -1188,17 +1301,18 @@ textarea {
   margin-top: 16px;
   max-width: 86%;
   padding-bottom: 6px;
-  border-bottom: 2px solid #111;
+  border-bottom: 2px solid #3f3f46;
   text-align: center;
   font-size: 16px;
   font-weight: 700;
   line-height: 1.2;
+  color: #fff;
 }
 
 .achieve-badge-meta {
   margin-top: 8px;
   font-size: 12px;
-  color: #52525b;
+  color: #a1a1aa;
 }
 
 .achieve-badge-xp {
@@ -1217,8 +1331,8 @@ textarea {
   padding: 0 6px;
   border: 0;
   border-radius: 6px;
-  background: #111;
-  color: #fff;
+  background: #fff;
+  color: #111;
   font-size: 9px;
   text-transform: uppercase;
   cursor: pointer;

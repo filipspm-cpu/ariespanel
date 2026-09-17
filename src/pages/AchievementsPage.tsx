@@ -18,7 +18,7 @@ import { hasDeveloperAccess } from "@/data/testers";
 import { pushRewardStats, rewardsErrorText } from "@/services/rewardStats";
 import { useAppStore } from "@/store/useAppStore";
 import type { RewardsState } from "@/types/rewards";
-import { Trophy } from "lucide-react";
+import { Trophy, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const emptyRewards = (): RewardsState => ({
@@ -47,6 +47,7 @@ export function AchievementsPage() {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | AchievementCategory>("all");
+  const [rankOpen, setRankOpen] = useState(false);
   const [form, setForm] = useState({
     label: "",
     hint: "",
@@ -253,27 +254,6 @@ export function AchievementsPage() {
 
         {msg ? <div className="achieve-msg">{msg}</div> : null}
 
-        <section className="studio-card achieve-rank">
-          <div className="achieve-cat-head">
-            <h2>Ranking</h2>
-            <p>Kto ma najwięcej punktów za osiągnięcia.</p>
-          </div>
-          {board.length ? (
-            <ol className="achieve-rank-list">
-              {board.slice(0, 12).map((row, index) => (
-                <li key={row.id || row.name} className={row.id === discordId ? "me" : ""}>
-                  <span className="achieve-rank-pos">{index + 1}</span>
-                  {row.avatarUrl ? <img src={row.avatarUrl} alt="" /> : <span className="achieve-rank-fallback" />}
-                  <span className="achieve-rank-name">{row.name || row.id}</span>
-                  <strong>{row.points.toLocaleString("pl-PL")} xp</strong>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <div className="achieve-empty">Ranking pojawi się, gdy ktoś zbierze punkty.</div>
-          )}
-        </section>
-
         {isDev ? (
           <section className="studio-card achieve-dev">
             <div className="achieve-cat-head">
@@ -411,6 +391,41 @@ export function AchievementsPage() {
           </div>
         </section>
       </div>
+
+      <button
+        type="button"
+        className={`achieve-rank-tab ${rankOpen ? "is-open" : ""}`}
+        onClick={() => setRankOpen((open) => !open)}
+        aria-expanded={rankOpen}
+      >
+        Ranking
+      </button>
+      <aside className={`achieve-rank-drawer ${rankOpen ? "open" : ""}`}>
+        <div className="achieve-rank-drawer-head">
+          <div>
+            <h2>Ranking</h2>
+            <p>Kto ma najwięcej punktów za osiągnięcia.</p>
+          </div>
+          <button type="button" className="achieve-rank-close" onClick={() => setRankOpen(false)} aria-label="Zamknij ranking">
+            <X size={16} />
+          </button>
+        </div>
+        {board.length ? (
+          <ol className="achieve-rank-list">
+            {board.slice(0, 20).map((row, index) => (
+              <li key={row.id || row.name} className={row.id === discordId ? "me" : ""}>
+                <span className="achieve-rank-pos">{index + 1}</span>
+                {row.avatarUrl ? <img src={row.avatarUrl} alt="" /> : <span className="achieve-rank-fallback" />}
+                <span className="achieve-rank-name">{row.name || row.id}</span>
+                <strong>{row.points.toLocaleString("pl-PL")} xp</strong>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <div className="achieve-empty">Ranking pojawi się, gdy ktoś zbierze punkty.</div>
+        )}
+      </aside>
+      {rankOpen ? <button type="button" className="achieve-rank-mask" onClick={() => setRankOpen(false)} aria-label="Zamknij ranking" /> : null}
     </div>
   );
 }
