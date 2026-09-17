@@ -45,11 +45,14 @@ const STEP_STYLE: Record<MacroStepType, { badge: string; border: string; glow: s
 };
 
 function emptyStep(type: MacroStepType): MacroStep {
+  const chat = type === "multiline-text";
   return {
     id: macroUid("step"),
     type,
     text: "",
-    pressEnter: false,
+    pressEnter: chat,
+    pressT: chat || undefined,
+    enterEachLine: chat || undefined,
     waitMs: type === "wait" ? 500 : undefined,
     key: type === "key-press" ? "Enter" : undefined,
     children: type === "random" || type === "if" || type === "if-else" ? [] : undefined,

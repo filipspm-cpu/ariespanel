@@ -2135,6 +2135,32 @@ textarea {
   padding: 16px;
 }
 
+.forum-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.forum-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #8a8a8a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.forum-tabs button.on {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+}
+
 .forum-field {
   display: flex;
   align-items: center;
@@ -2200,7 +2226,8 @@ textarea {
 
 .forum-hit.on,
 .forum-hit:hover {
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: rgba(251, 113, 133, 0.55);
+  background: linear-gradient(180deg, rgba(40, 14, 22, 0.96), rgba(18, 8, 12, 0.92));
 }
 
 .forum-hit-meta {
@@ -2253,12 +2280,14 @@ textarea {
 
 .forum-active {
   color: #fff;
-  background: rgba(244, 63, 94, 0.18);
-  border-radius: 3px;
+  background: rgba(244, 63, 94, 0.22);
+  border-radius: 4px;
+  box-shadow: inset 3px 0 0 #fb7185;
   text-decoration: underline;
   text-decoration-color: #fb7185;
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
+  padding: 1px 6px 1px 8px;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }

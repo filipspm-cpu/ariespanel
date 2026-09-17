@@ -36,7 +36,7 @@ async function runStep(step: MacroStep, macros: Macro[]): Promise<void> {
   if (step.text) {
     const chat =
       Boolean(step.pressT || step.enterEachLine) ||
-      (step.type === "multiline-text" && step.pressT == null && step.enterEachLine == null);
+      (step.type === "multiline-text" && step.pressT !== false && step.enterEachLine !== false);
     await window.synvity?.macroSend(step.text, Boolean(step.pressEnter) || chat, {
       pressT: chat,
       enterEachLine: chat,

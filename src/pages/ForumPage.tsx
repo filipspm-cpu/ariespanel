@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Sparkles } from "lucide-react";
 import { forumRuleById } from "@/data/forumRules";
-import { askForum, searchForum, type ForumHit } from "@/data/forumIndex";
+import { askForum, resolveHitRange, searchForum, splitRuleLines, type ForumHit } from "@/data/forumIndex";
 import { useAppStore } from "@/store/useAppStore";
 
 const SECTION_TITLES = new Set([
@@ -100,10 +100,8 @@ export function ForumPage() {
   const setForumFocus = useAppStore((s) => s.setForumFocus);
   const forumFocus = useAppStore((s) => s.forumFocus);
   const rule = forumRuleById(forumRuleId);
-  const lines = useMemo(
-    () => rule.body.replace(/\u200B/g, "").replace(/\r\n/g, "\n").split("\n"),
-    [rule.body],
-  );
+  const lines = useMemo(() => splitRuleLines(rule.body), [rule.body]);
+  const [tab, setTab] = useState<"search" | "ask">("search");
   const [search, setSearch] = useState("");
   const [ask, setAsk] = useState("");
   const [asked, setAsked] = useState("");
@@ -111,31 +109,37 @@ export function ForumPage() {
 
   const searchHits = useMemo(() => searchForum(search, 12), [search]);
   const askHits = useMemo(() => (asked ? askForum(asked, 3) : []), [asked]);
-  const needle = asked || search;
-  const showAsk = asked.length >= 2;
-  const showSearch = !showAsk && search.trim().length >= 2;
-  const titleLine = useMemo(() => {
-    const index = lines.findIndex((line) => line.trim().length > 0);
-    return index < 0 ? 0 : index;
-  }, [lines]);
-  const activeStart =
-    forumFocus?.ruleId === rule.id && forumFocus.start >= 0 ? forumFocus.start : titleLine;
-  const activeEnd =
-    forumFocus?.ruleId === rule.id && forumFocus.end >= 0 ? forumFocus.end : activeStart;
+  const needle = tab === "ask" ? asked : search;
+  const showAsk = tab === "ask" && asked.length >= 2;
+  const showSearch = tab === "search" && search.trim().length >= 2;
+  const highlight =
+    forumFocus?.ruleId === rule.id && forumFocus.start >= 0
+      ? { start: forumFocus.start, end: Math.max(forumFocus.start, forumFocus.end) }
+      : null;
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      lineRefs.current[activeStart]?.scrollIntoView({ block: "center", behavior: "smooth" });
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [activeStart, rule.id]);
+    if (!highlight) return;
+    let inner = 0;
+    const outer = window.setTimeout(() => {
+      inner = window.requestAnimationFrame(() => {
+        lineRefs.current[highlight.start]?.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+    }, 40);
+    return () => {
+      window.clearTimeout(outer);
+      if (inner) window.cancelAnimationFrame(inner);
+    };
+  }, [highlight?.start, highlight?.end, rule.id]);
 
   function openHit(hit: ForumHit) {
-    setForumFocus({
-      ruleId: hit.ruleId,
-      start: hit.lineIndex,
-      end: hit.lineEnd ?? hit.lineIndex,
-    });
+    const doc = forumRuleById(hit.ruleId);
+    const range = resolveHitRange(splitRuleLines(doc.body), hit);
+    setForumFocus({ ruleId: hit.ruleId, start: range.start, end: range.end });
+  }
+
+  function hitActive(hit: ForumHit) {
+    if (!highlight || hit.ruleId !== rule.id) return false;
+    return resolveHitRange(lines, hit).start === highlight.start;
   }
 
   function runAsk() {
@@ -155,32 +159,54 @@ export function ForumPage() {
       </div>
       <div className="studio-body">
         <div className="studio-card forum-tools">
-          <label className="forum-field">
-            <Search size={14} />
-            <input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setAsked("");
+          <div className="forum-tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "search"}
+              className={tab === "search" ? "on" : undefined}
+              onClick={() => setTab("search")}
+            >
+              <Search size={14} />
+              Wyszukiwanie
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "ask"}
+              className={tab === "ask" ? "on" : undefined}
+              onClick={() => setTab("ask")}
+            >
+              <Sparkles size={14} />
+              Wyszukiwanie AI
+            </button>
+          </div>
+          {tab === "search" ? (
+            <label className="forum-field">
+              <Search size={14} />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Szukaj we wszystkich regulaminach"
+              />
+            </label>
+          ) : (
+            <form
+              className="forum-field forum-ask"
+              onSubmit={(e) => {
+                e.preventDefault();
+                runAsk();
               }}
-              placeholder="Szukaj we wszystkich regulaminach"
-            />
-          </label>
-          <form
-            className="forum-field forum-ask"
-            onSubmit={(e) => {
-              e.preventDefault();
-              runAsk();
-            }}
-          >
-            <Sparkles size={14} />
-            <input
-              value={ask}
-              onChange={(e) => setAsk(e.target.value)}
-              placeholder="Zapytaj asystenta, np. kara za RDM"
-            />
-            <button type="submit">Sprawdź</button>
-          </form>
+            >
+              <Sparkles size={14} />
+              <input
+                value={ask}
+                onChange={(e) => setAsk(e.target.value)}
+                placeholder="Zapytaj asystenta, np. kara za RDM"
+              />
+              <button type="submit">Sprawdź</button>
+            </form>
+          )}
         </div>
 
         {showAsk ? (
@@ -191,7 +217,7 @@ export function ForumPage() {
                 <HitCard
                   key={`${hit.ruleId}-${hit.lineIndex}`}
                   hit={hit}
-                  active={hit.ruleId === rule.id && hit.lineIndex === activeStart}
+                  active={hitActive(hit)}
                   onOpen={openHit}
                 />
               ))
@@ -209,7 +235,7 @@ export function ForumPage() {
                 <HitCard
                   key={`${hit.ruleId}-${hit.lineIndex}`}
                   hit={hit}
-                  active={hit.ruleId === rule.id && hit.lineIndex === activeStart}
+                  active={hitActive(hit)}
                   onOpen={openHit}
                 />
               ))
@@ -224,11 +250,7 @@ export function ForumPage() {
             {lines.map((line, i) => {
               const nl = i < lines.length - 1 ? "\n" : "";
               const heading = isSectionTitle(line);
-              const active =
-                activeStart != null &&
-                i >= activeStart &&
-                i <= (activeEnd ?? activeStart) &&
-                line.trim().length > 0;
+              const active = Boolean(highlight && i >= highlight.start && i <= highlight.end && line.trim());
               return (
                 <span
                   key={i}

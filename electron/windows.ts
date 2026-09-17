@@ -393,9 +393,19 @@ function pasteWaitMs(text: string, fast?: boolean) {
   return Math.max(220, Math.min(1500, 120 + text.length * 10));
 }
 
+async function releaseModifiers() {
+  ensureNative();
+  for (const vk of [VK_CONTROL, 0x10, 0x12, VK_V]) {
+    const scan = MapVirtualKeyW(vk, 0);
+    sendEvents([keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
+  }
+  await sleep(12);
+}
+
 async function pasteText(text: string, fast?: boolean) {
   ensureNative();
   if (!text) return;
+  await releaseModifiers();
   clipboard.writeText(text);
   await sleep(fast ? 18 : 50);
   const ctrlScan = MapVirtualKeyW(VK_CONTROL, 0);
@@ -404,8 +414,11 @@ async function pasteText(text: string, fast?: boolean) {
   await sleep(fast ? 12 : 25);
   sendEvents([keyboardEvent(VK_V, vScan, 0)]);
   await sleep(fast ? 16 : 30);
-  sendEvents([keyboardEvent(VK_V, vScan, KEYEVENTF_KEYUP), keyboardEvent(VK_CONTROL, ctrlScan, KEYEVENTF_KEYUP)]);
+  sendEvents([keyboardEvent(VK_V, vScan, KEYEVENTF_KEYUP)]);
+  await sleep(fast ? 12 : 20);
+  sendEvents([keyboardEvent(VK_CONTROL, ctrlScan, KEYEVENTF_KEYUP)]);
   await sleep(pasteWaitMs(text, fast));
+  await releaseModifiers();
 }
 
 function unicodeEvents(text: string): unknown[] {
@@ -434,17 +447,21 @@ async function typeChars(text: string) {
   }
 }
 
-async function typeLine(text: string, fast?: boolean) {
+async function typeLine(text: string, fast?: boolean, preferType?: boolean) {
   const parts = text.split(/\{tab\}/gi);
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
     if (part) {
-      clipboard.writeText(part);
-      await sleep(fast ? 8 : 20);
-      if (clipboard.readText() === part) {
-        await pasteText(part, fast);
-      } else {
+      if (preferType) {
         await typeChars(part);
+      } else {
+        clipboard.writeText(part);
+        await sleep(fast ? 8 : 20);
+        if (clipboard.readText() === part) {
+          await pasteText(part, fast);
+        } else {
+          await typeChars(part);
+        }
       }
     }
     if (i < parts.length - 1) await tapVk(VK_TAB);
@@ -455,8 +472,9 @@ function splitChatLines(text: string): string[] {
   return text
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n")
+    .replace(/[\u0085\u2028\u2029]/g, "\n")
     .split("\n")
-    .map((line) => line.trim())
+    .map((line) => line.replace(/\s+/g, " ").trim())
     .filter(Boolean);
 }
 
@@ -478,34 +496,30 @@ async function typeText(text: string, options: TypeTextOptions) {
   const fast = Boolean(options.fastPaste);
   try {
     const chatLines = Boolean(options.pressT || options.enterEachLine);
-    const reopenChat = Boolean(options.pressT) || chatLines;
-    const rawLines = chatLines
+    const reopenChat = Boolean(options.pressT);
+    const toSend = chatLines
       ? splitChatLines(text)
-      : text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-    const toSend: string[] = [];
-    let previousLine = "";
-    for (const line of rawLines) {
-      if (chatLines) {
-        const key = line.trim().toLowerCase();
-        if (key && key === previousLine) continue;
-        previousLine = key;
-      }
-      toSend.push(line);
-    }
+      : text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").replace(/[\u0085\u2028\u2029]/g, "\n").split("\n");
+    const lastIndex = toSend.reduce((acc, line, idx) => (line ? idx : acc), -1);
     const skipFirstT = options.skipFirstT !== false;
     for (let i = 0; i < toSend.length; i++) {
       const line = toSend[i];
-      const last = i === toSend.length - 1;
+      if (!line) continue;
+      const last = i === lastIndex;
       const openChat = reopenChat && (i > 0 || !skipFirstT);
       if (openChat) {
+        await releaseModifiers();
         await tapVk(0x54);
-        await sleep(fast ? 160 : 320);
+        await sleep(chatLines ? 280 : fast ? 160 : 220);
       }
-      await typeLine(line, fast && !chatLines);
-      await sleep(chatLines ? (fast ? 80 : 140) : fast ? 12 : 40);
+      // Chat lines are typed, not pasted: Ctrl+V plus a trailing CF_TEXT newline
+      // makes GTA/RAGE send the message, then Enter sends the same line again.
+      await typeLine(line, fast && !chatLines, chatLines);
+      await sleep(chatLines ? 90 : fast ? 12 : 40);
       if (chatLines || (options.pressEnter && last)) {
+        await releaseModifiers();
         await tapVk(VK_RETURN);
-        if (!last) await sleep(chatLines ? (fast ? 220 : 380) : fast ? 90 : 220);
+        if (!last) await sleep(chatLines ? 320 : fast ? 90 : 220);
       }
     }
   } finally {

@@ -31,15 +31,6 @@ function bumpCounter(id: string) {
   refreshOverlay();
 }
 
-async function withInjecting(fn: () => Promise<void> | void) {
-  setMacroInjecting(true);
-  try {
-    await fn();
-  } finally {
-    setMacroInjecting(false);
-  }
-}
-
 async function runStep(step: MacroStep, macros: Macro[], ctx: { inChat: boolean }): Promise<void> {
   if (step.type === "random") {
     const kids = step.children?.filter(Boolean) ?? [];
@@ -65,24 +56,20 @@ async function runStep(step: MacroStep, macros: Macro[], ctx: { inChat: boolean 
     return;
   }
   if (step.type === "key-press") {
-    await withInjecting(async () => {
-      pressKeyForeground(step.key || step.text || "Enter");
-      await sleep(12);
-    });
+    pressKeyForeground(step.key || step.text || "Enter");
+    await sleep(12);
     return;
   }
   if (step.text) {
     const chat =
       Boolean(step.pressT || step.enterEachLine) ||
-      (step.type === "multiline-text" && step.pressT == null && step.enterEachLine == null);
-    await withInjecting(async () => {
-      await sendTextForeground(step.text, {
-        pressEnter: Boolean(step.pressEnter) || chat,
-        enterEachLine: chat,
-        pressT: chat,
-        skipFirstT: true,
-        fastPaste: !chat,
-      });
+      (step.type === "multiline-text" && step.pressT !== false && step.enterEachLine !== false);
+    await sendTextForeground(step.text, {
+      pressEnter: Boolean(step.pressEnter) || chat,
+      enterEachLine: chat,
+      pressT: chat,
+      skipFirstT: true,
+      fastPaste: !chat,
     });
     if (chat) ctx.inChat = false;
     await sleep(8);

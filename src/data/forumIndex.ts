@@ -69,6 +69,14 @@ function tokens(value: string) {
     .filter((t) => t.length >= 2);
 }
 
+export function splitRuleLines(body: string): string[] {
+  return body.replace(/\u200B/g, "").replace(/\r\n/g, "\n").split("\n");
+}
+
+function isHeadingLine(trimmed: string) {
+  return HEADING_RE.test(trimmed.replace(/:$/, "")) && trimmed.length <= 90 && !trimmed.includes("|");
+}
+
 function splitPenalty(line: string) {
   const pipe = line.search(/\s*\|\s*/);
   if (pipe < 0) return { text: line.trim(), penalty: null as string | null };
@@ -96,7 +104,7 @@ type Chunk = {
 function buildChunks(): Chunk[] {
   const chunks: Chunk[] = [];
   for (const rule of FORUM_RULES) {
-    const lines = rule.body.replace(/\u200B/g, "").replace(/\r\n/g, "\n").split("\n");
+    const lines = splitRuleLines(rule.body);
     let section = rule.title;
     let current: Chunk | null = null;
     const push = () => {
@@ -112,7 +120,7 @@ function buildChunks(): Chunk[] {
         if (current && current.hay.length > 80) push();
         continue;
       }
-      const heading = HEADING_RE.test(trimmed.replace(/:$/, "")) && trimmed.length <= 90 && !trimmed.includes("|");
+      const heading = isHeadingLine(trimmed);
       if (heading) {
         section = trimmed.replace(/:$/, "");
         push();
@@ -241,6 +249,40 @@ function toHit(chunk: Chunk, score: number): ForumHit & { isDef: boolean } {
     score,
     isDef: chunk.isDef,
   };
+}
+
+export function resolveHitRange(
+  lines: string[],
+  hit: Pick<ForumHit, "point" | "text" | "lineIndex" | "lineEnd">,
+): { start: number; end: number } {
+  const foldedLead = fold(hit.text).replace(/\s+/g, " ").slice(0, 72);
+  const pointAt = (line: string) => {
+    if (!hit.point) return false;
+    const t = line.trim();
+    const numbered = t.match(POINT_RE);
+    if (numbered && numbered[1] === hit.point) return true;
+    const def = t.match(ACRONYM_DEF_RE);
+    return Boolean(def && def[1].toUpperCase() === hit.point);
+  };
+  let start = lines.findIndex(pointAt);
+  if (start < 0 && foldedLead.length >= 8) {
+    start = lines.findIndex((line) => fold(line).includes(foldedLead));
+  }
+  if (start < 0 && hit.lineIndex >= 0 && hit.lineIndex < lines.length) start = hit.lineIndex;
+  if (start < 0) start = 0;
+
+  let end = start;
+  for (let i = start + 1; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (!t) continue;
+    if (POINT_RE.test(t) || ACRONYM_DEF_RE.test(t) || isHeadingLine(t)) break;
+    end = i;
+  }
+  if (!hit.point) {
+    const cap = hit.lineEnd >= start ? hit.lineEnd : start;
+    end = Math.min(end, cap);
+  }
+  return { start, end: Math.max(start, end) };
 }
 
 function rank(query: string, limit: number, minScore: number) {
