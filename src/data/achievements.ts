@@ -20,6 +20,7 @@ export type MoneyTier = {
   id: string;
   points: number;
   amount: number;
+  prize: "cash" | "vip";
 };
 
 export const ACHIEVEMENT_CATEGORIES: { id: AchievementCategory; title: string; blurb: string }[] = [
@@ -86,10 +87,11 @@ export const ACHIEVEMENT_TASKS: AchievementTask[] = [
 ];
 
 export const MONEY_TIERS: MoneyTier[] = [
-  { id: "cash-1500", points: 1500, amount: 10_000 },
-  { id: "cash-2400", points: 2400, amount: 20_000 },
-  { id: "cash-3300", points: 3300, amount: 30_000 },
-  { id: "cash-4300", points: 4300, amount: 50_000 },
+  { id: "rank-500", points: 500, amount: 0, prize: "vip" },
+  { id: "cash-1500", points: 1500, amount: 15_000, prize: "cash" },
+  { id: "cash-2400", points: 2400, amount: 25_000, prize: "cash" },
+  { id: "cash-3300", points: 3300, amount: 70_000, prize: "cash" },
+  { id: "cash-4300", points: 4300, amount: 100_000, prize: "cash" },
 ];
 
 export type AchievementStats = Record<AchievementStat, number>;
@@ -114,4 +116,8 @@ export function totalAchievementPoints(stats: AchievementStats, custom: Achievem
 
 export function formatCash(amount: number) {
   return `${amount.toLocaleString("pl-PL")} $`;
+}
+
+export function formatPrize(tier: MoneyTier) {
+  return tier.prize === "vip" ? "Ranga VIP" : formatCash(tier.amount);
 }

@@ -206,12 +206,38 @@ function task_points($mysqli, $stats) {
 
 function money_tier($id) {
   $tiers = array(
-    "cash-1500" => array(1500, 10000),
-    "cash-2400" => array(2400, 20000),
-    "cash-3300" => array(3300, 30000),
-    "cash-4300" => array(4300, 50000),
+    "rank-500" => array(500, 0, "vip"),
+    "cash-1500" => array(1500, 15000, "cash"),
+    "cash-2400" => array(2400, 25000, "cash"),
+    "cash-3300" => array(3300, 70000, "cash"),
+    "cash-4300" => array(4300, 100000, "cash"),
   );
   return isset($tiers[$id]) ? $tiers[$id] : null;
+}
+
+function grant_vip($mysqli, $discordId, $name) {
+  $stmt = $mysqli->prepare("SELECT rank FROM account_roles WHERE discord_id = ? LIMIT 1");
+  if (!$stmt) return;
+  $stmt->bind_param("s", $discordId);
+  $stmt->execute();
+  $res = $stmt->get_result();
+  $row = $res ? $res->fetch_assoc() : null;
+  $rank = $row ? (string) $row["rank"] : "";
+  if (stripos($rank, "vip") !== false) return;
+  $next = $rank === "" ? "vip" : $rank . ",vip";
+  if ($row) {
+    $upd = $mysqli->prepare("UPDATE account_roles SET rank = ? WHERE discord_id = ?");
+    if ($upd) {
+      $upd->bind_param("ss", $next, $discordId);
+      $upd->execute();
+    }
+    return;
+  }
+  $ins = $mysqli->prepare("INSERT INTO account_roles (discord_id, name, discord, rank) VALUES (?, ?, '', ?)");
+  if ($ins) {
+    $ins->bind_param("sss", $discordId, $name, $next);
+    $ins->execute();
+  }
 }
 
 function read_state($mysqli, $discordId) {
@@ -312,12 +338,27 @@ else $name = substr($name, 0, 191);
 
 if ($action === "rewardsAccounts") {
   $accounts = array();
-  $result = $mysqli->query("SELECT discord_id FROM discord_accounts");
+  $result = $mysqli->query(
+    "SELECT a.discord_id AS id,
+            COALESCE(NULLIF(d.name, ''), NULLIF(s.name, ''), NULLIF(p.name, ''), a.discord_id) AS name,
+            COALESCE(d.avatar_url, '') AS avatar_url
+     FROM (
+       SELECT discord_id FROM discord_accounts
+       UNION SELECT discord_id FROM promo_codes
+       UNION SELECT discord_id FROM reward_stats
+       UNION SELECT discord_id FROM reward_claims
+     ) a
+     LEFT JOIN discord_accounts d ON d.discord_id = a.discord_id
+     LEFT JOIN reward_stats s ON s.discord_id = a.discord_id
+     LEFT JOIN promo_codes p ON p.discord_id = a.discord_id"
+  );
   if ($result) {
     while ($row = $result->fetch_assoc()) {
-      $state = read_state($mysqli, $row["discord_id"]);
+      $state = read_state($mysqli, $row["id"]);
       $accounts[] = array(
-        "id" => $row["discord_id"],
+        "id" => $row["id"],
+        "name" => $row["name"],
+        "avatarUrl" => $row["avatar_url"],
         "code" => $state["code"],
         "referrals" => $state["referrals"],
         "redeemed" => $state["redeemed"],
@@ -327,6 +368,10 @@ if ($action === "rewardsAccounts") {
       );
     }
   }
+  usort($accounts, function ($a, $b) {
+    if ($a["points"] === $b["points"]) return strcasecmp($a["name"], $b["name"]);
+    return $b["points"] - $a["points"];
+  });
   json_out(array("ok" => true, "accounts" => $accounts));
 }
 
@@ -431,8 +476,11 @@ if ($action === "rewardsClaim") {
     json_out($state, 400);
   }
   $amount = $tier[1];
-  $ins = $mysqli->prepare("INSERT INTO reward_claims (discord_id, kind, amount, status) VALUES (?, ?, ?, 'pending')");
-  $ins->bind_param("ssi", $discordId, $kind, $amount);
+  $vip = isset($tier[2]) && $tier[2] === "vip";
+  $status = $vip ? "paid" : "pending";
+  if ($vip) grant_vip($mysqli, $discordId, $name);
+  $ins = $mysqli->prepare("INSERT INTO reward_claims (discord_id, kind, amount, status) VALUES (?, ?, ?, ?)");
+  $ins->bind_param("ssis", $discordId, $kind, $amount, $status);
   $ins->execute();
 }
 

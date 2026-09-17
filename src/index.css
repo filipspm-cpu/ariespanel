@@ -940,82 +940,114 @@ textarea {
 }
 
 .achieve-track {
-  position: relative;
-  margin: 28px 18px 8px;
-  height: 86px;
+  margin: 20px 0 2px;
 }
 
-.achieve-track-line,
-.achieve-track-fill {
+.achieve-rail {
+  position: relative;
+  height: 14px;
+}
+
+.achieve-rail::before {
+  content: "";
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 22px;
-  height: 3px;
-  background: #7a1f2a;
+  top: 50%;
+  height: 2px;
+  background: #3f3f46;
+  transform: translateY(-50%);
 }
 
-.achieve-track-fill {
-  right: auto;
-  background: #e11d48;
-}
-
-.achieve-node {
+.achieve-rail-fill {
   position: absolute;
-  bottom: 22px;
+  left: 0;
+  top: 50%;
+  height: 2px;
+  background: #e11d48;
+  transform: translateY(-50%);
+  max-width: 100%;
+}
+
+.achieve-dot {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #27272a;
+  border: 2px solid #71717a;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+}
+
+.achieve-dot.on {
+  background: #e11d48;
+  border-color: #fda4af;
+}
+
+.achieve-dot.done {
+  background: #fff;
+  border-color: #fff;
+}
+
+.achieve-track-labels {
+  position: relative;
+  height: 44px;
+  margin-top: 10px;
+}
+
+.achieve-label {
+  position: absolute;
+  top: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  transform: translate(-50%, 3px);
+  gap: 2px;
+  width: max-content;
+  max-width: 108px;
   background: none;
   border: 0;
   padding: 0;
-  color: inherit;
+  color: #737373;
+  transform: translateX(-50%);
   cursor: default;
 }
 
-.achieve-node:not(:disabled) {
+.achieve-label.start {
+  transform: translateX(-30%);
+}
+
+.achieve-label.end {
+  transform: translateX(-100%);
+  align-items: flex-end;
+  text-align: right;
+}
+
+.achieve-label:not(:disabled) {
   cursor: pointer;
-}
-
-.achieve-node-box {
-  min-width: 58px;
-  height: 26px;
-  padding: 0 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid #7a1f2a;
-  border-radius: 10px;
-  background: #12080a;
-  color: #f4d5da;
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.achieve-node.on .achieve-node-box {
-  background: #7a1f2a;
   color: #fff;
 }
 
-.achieve-node.done .achieve-node-box {
-  background: #fff;
-  color: #7a1f2a;
-}
-
-.achieve-node-stem {
-  width: 2px;
-  height: 18px;
-  background: #7a1f2a;
-}
-
-.achieve-node-pts {
-  position: absolute;
-  top: 48px;
-  font-size: 10px;
-  color: #8a8a8a;
+.achieve-label strong {
+  font-size: 12px;
+  font-weight: 700;
+  color: inherit;
   white-space: nowrap;
+}
+
+.achieve-label span {
+  font-size: 10px;
+  color: #737373;
+}
+
+.achieve-label.on strong {
+  color: #fda4af;
+}
+
+.achieve-label.done strong {
+  color: #fff;
 }
 
 .achieve-rank-list {
@@ -1099,8 +1131,8 @@ textarea {
 
 .achieve-badges {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 22px;
 }
 
 .achieve-badge {
@@ -1111,9 +1143,9 @@ textarea {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 18px 12px 12px;
-  border: 3px solid #111;
-  border-radius: 28px;
+  padding: 28px 16px 16px;
+  border: 4px solid #111;
+  border-radius: 32px;
   background: #fff;
   color: #111;
   opacity: 0.55;
@@ -1124,9 +1156,9 @@ textarea {
 }
 
 .achieve-badge-mark {
-  width: 42%;
-  height: 42%;
-  margin-top: 8px;
+  width: 54%;
+  height: 54%;
+  margin-top: 10px;
   background: #8b5a2b;
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
@@ -1153,27 +1185,27 @@ textarea {
 }
 
 .achieve-badge-name {
-  margin-top: 10px;
+  margin-top: 16px;
   max-width: 86%;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
   border-bottom: 2px solid #111;
   text-align: center;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.2;
 }
 
 .achieve-badge-meta {
-  margin-top: 6px;
-  font-size: 10px;
+  margin-top: 8px;
+  font-size: 12px;
   color: #52525b;
 }
 
 .achieve-badge-xp {
   position: absolute;
-  right: 12px;
-  bottom: 10px;
-  font-size: 11px;
+  right: 16px;
+  bottom: 14px;
+  font-size: 13px;
   font-weight: 700;
 }
 

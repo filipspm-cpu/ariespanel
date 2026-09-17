@@ -7,6 +7,7 @@ import {
   allAchievementTasks,
   emptyAchievementStats,
   formatCash,
+  formatPrize,
   MONEY_TIERS,
   taskUnlocked,
   type AchievementCategory,
@@ -36,7 +37,7 @@ const emptyRewards = (): RewardsState => ({
   leaderboard: [],
 });
 
-const TRACK = [{ id: "start", points: 0, amount: 0 }, ...MONEY_TIERS];
+const TRACK = MONEY_TIERS;
 
 export function AchievementsPage() {
   const discordId = useAppStore((s) => s.settings.discordId);
@@ -68,8 +69,18 @@ export function AchievementsPage() {
   const load = useCallback(async () => {
     if (!window.synvity?.rewardsState) return;
     await pushRewardStats(useAppStore.getState());
-    const next = await window.synvity.rewardsState();
-    if (next) setRewards(next);
+    const [next, accounts] = await Promise.all([
+      window.synvity.rewardsState(),
+      window.synvity.rewardsAccounts?.() ?? Promise.resolve([]),
+    ]);
+    if (next) {
+      setRewards({
+        ...next,
+        leaderboard: next.leaderboard?.length ? next.leaderboard : accounts ?? [],
+      });
+    } else if (accounts?.length) {
+      setRewards((prev) => ({ ...prev, leaderboard: accounts }));
+    }
   }, []);
 
   useEffect(() => {
@@ -91,14 +102,19 @@ export function AchievementsPage() {
     () => MONEY_TIERS.find((tier) => !rewards.claimedKinds.includes(tier.id)) ?? MONEY_TIERS[MONEY_TIERS.length - 1],
     [rewards.claimedKinds],
   );
-  const lastReached = [...TRACK].reverse().find((tier) => rewards.points >= tier.points) ?? TRACK[0];
-  const lastIdx = TRACK.findIndex((tier) => tier.id === lastReached.id);
-  const nextTrack = TRACK[Math.min(TRACK.length - 1, lastIdx + 1)];
-  const span = Math.max(1, nextTrack.points - lastReached.points);
-  const trackPct = Math.min(
-    100,
-    ((lastIdx + (rewards.points - lastReached.points) / span) / (TRACK.length - 1)) * 100,
-  );
+  const trackPct = useMemo(() => {
+    const stops = [0, ...TRACK.map((tier) => tier.points)];
+    if (rewards.points <= 0) return 0;
+    for (let i = 0; i < stops.length - 1; i++) {
+      const from = stops[i];
+      const to = stops[i + 1];
+      if (rewards.points <= to) {
+        const t = (rewards.points - from) / Math.max(1, to - from);
+        return ((i + t) / (stops.length - 1)) * 100;
+      }
+    }
+    return 100;
+  }, [rewards.points]);
 
   const claim = async (id: string) => {
     setBusy(id);
@@ -109,7 +125,11 @@ export function AchievementsPage() {
       else {
         apply(next);
         if (next.ok === false) setMsg(rewardsErrorText(next.error));
-        else setMsg("Nagroda zapisana. Developer wypłaci ją w grze.");
+        else {
+          setMsg(id === "rank-500" ? "Ranga VIP przyznana." : "Nagroda zapisana. Developer wypłaci ją w grze.");
+          const testers = await window.synvity?.ranksList?.();
+          if (testers) useAppStore.getState().setTesters(testers);
+        }
       }
     } catch {
       setMsg(rewardsErrorText("network"));
@@ -184,34 +204,44 @@ export function AchievementsPage() {
           </div>
 
           <div className="achieve-track">
-            <div className="achieve-track-line" />
-            <div className="achieve-track-fill" style={{ width: `${trackPct}%` }} />
-            {TRACK.map((tier, index) => {
-              const reached = rewards.points >= tier.points;
-              const claimed = tier.id === "start" || rewards.claimedKinds.includes(tier.id);
-              const ready = discordId && reached && !claimed && tier.id !== "start";
-              return (
-                <button
-                  key={tier.id}
-                  type="button"
-                  className={`achieve-node ${reached ? "on" : ""} ${claimed && tier.id !== "start" ? "done" : ""}`}
-                  disabled={!ready || busy === tier.id}
-                  onClick={() => (ready ? void claim(tier.id) : undefined)}
-                  style={{ left: `${(index / (TRACK.length - 1)) * 100}%` }}
-                >
-                  <span className="achieve-node-box">
-                    {tier.id === "start" ? "Start" : formatCash(tier.amount)}
-                  </span>
-                  <span className="achieve-node-stem" />
-                  <span className="achieve-node-pts">
-                    {tier.points ? `${tier.points.toLocaleString("pl-PL")} pkt` : "0"}
-                  </span>
-                </button>
-              );
-            })}
+            <div className="achieve-rail">
+              <div className="achieve-rail-fill" style={{ width: `${trackPct}%` }} />
+              {TRACK.map((tier, index) => {
+                const reached = rewards.points >= tier.points;
+                const claimed = rewards.claimedKinds.includes(tier.id);
+                return (
+                  <span
+                    key={tier.id}
+                    className={`achieve-dot ${reached ? "on" : ""} ${claimed ? "done" : ""}`}
+                    style={{ left: `${((index + 1) / TRACK.length) * 100}%` }}
+                  />
+                );
+              })}
+            </div>
+            <div className="achieve-track-labels">
+              {TRACK.map((tier, index) => {
+                const reached = rewards.points >= tier.points;
+                const claimed = rewards.claimedKinds.includes(tier.id);
+                const ready = Boolean(discordId && reached && !claimed);
+                const edge = index === TRACK.length - 1 ? "end" : index === 0 ? "start" : "";
+                return (
+                  <button
+                    key={tier.id}
+                    type="button"
+                    className={`achieve-label ${edge} ${reached ? "on" : ""} ${claimed ? "done" : ""}`}
+                    style={{ left: `${((index + 1) / TRACK.length) * 100}%` }}
+                    disabled={!ready || busy === tier.id}
+                    onClick={() => (ready ? void claim(tier.id) : undefined)}
+                  >
+                    <strong>{formatPrize(tier)}</strong>
+                    <span>{tier.points.toLocaleString("pl-PL")} xp</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div className="achieve-bar-meta">
-            Następna wypłata: {formatCash(nextTier.amount)} za {nextTier.points.toLocaleString("pl-PL")} pkt
+            Następna nagroda: {formatPrize(nextTier)} za {nextTier.points.toLocaleString("pl-PL")} xp
             {rewards.points >= nextTier.points && !rewards.claimedKinds.includes(nextTier.id)
               ? " — kliknij próg, żeby odebrać"
               : ` · brakuje ${Math.max(0, nextTier.points - rewards.points).toLocaleString("pl-PL")}`}
@@ -223,24 +253,26 @@ export function AchievementsPage() {
 
         {msg ? <div className="achieve-msg">{msg}</div> : null}
 
-        {board.length > 0 ? (
-          <section className="studio-card achieve-rank">
-            <div className="achieve-cat-head">
-              <h2>Ranking</h2>
-              <p>Kto ma najwięcej punktów za osiągnięcia.</p>
-            </div>
+        <section className="studio-card achieve-rank">
+          <div className="achieve-cat-head">
+            <h2>Ranking</h2>
+            <p>Kto ma najwięcej punktów za osiągnięcia.</p>
+          </div>
+          {board.length ? (
             <ol className="achieve-rank-list">
               {board.slice(0, 12).map((row, index) => (
                 <li key={row.id || row.name} className={row.id === discordId ? "me" : ""}>
                   <span className="achieve-rank-pos">{index + 1}</span>
                   {row.avatarUrl ? <img src={row.avatarUrl} alt="" /> : <span className="achieve-rank-fallback" />}
                   <span className="achieve-rank-name">{row.name || row.id}</span>
-                  <strong>{row.points.toLocaleString("pl-PL")} pkt</strong>
+                  <strong>{row.points.toLocaleString("pl-PL")} xp</strong>
                 </li>
               ))}
             </ol>
-          </section>
-        ) : null}
+          ) : (
+            <div className="achieve-empty">Ranking pojawi się, gdy ktoś zbierze punkty.</div>
+          )}
+        </section>
 
         {isDev ? (
           <section className="studio-card achieve-dev">

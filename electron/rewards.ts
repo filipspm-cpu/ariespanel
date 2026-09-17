@@ -1,7 +1,7 @@
 import mysql from "mysql2/promise";
 import { apiRequestUrls } from "./accountsApi";
 import { loadState } from "./storage";
-import { loadTesters } from "./testers";
+import { loadTesters, setAccountRank } from "./testers";
 import {
   MONEY_TIERS,
   PROMO_CASH,
@@ -123,6 +123,16 @@ function caller() {
 
 function isDeveloper(id: string) {
   return loadTesters().some((row) => row.id === id && /dev/i.test(row.role));
+}
+
+async function grantVipRank(discordId: string, name: string) {
+  const row = loadTesters().find((item) => item.id === discordId);
+  const parts = String(row?.role || "")
+    .split(/[,|/]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (!parts.some((part) => /vip/i.test(part))) parts.push("vip");
+  await setAccountRank(discordId, parts.join(",") || "vip", name || row?.name);
 }
 
 function makeCode() {
@@ -510,12 +520,16 @@ export async function claimMoneyTier(tierId: string): Promise<RewardsState> {
     const state = await readState(db, discordId, name);
     if (state.points < tier.points) return { ...state, ok: false, error: "points" };
     if (state.claimedKinds.includes(tier.id)) return { ...state, ok: false, error: "claimed" };
-    await db.execute("INSERT INTO reward_claims (discord_id, kind, amount, status) VALUES (?, ?, ?, 'pending')", [
+    const status = tier.prize === "vip" ? "paid" : "pending";
+    await db.execute("INSERT INTO reward_claims (discord_id, kind, amount, status) VALUES (?, ?, ?, ?)", [
       discordId,
       tier.id,
       tier.amount,
+      status,
     ]);
+    if (tier.prize === "vip") await grantVipRank(discordId, name);
     const next = await readState(db, discordId, name);
+    next.leaderboard = await boardFrom(db);
     return { ...next, ok: true };
   });
   if (sql) return sql;
@@ -591,7 +605,9 @@ export async function listAccountRewards(): Promise<AccountRewards[]> {
   if (sql) return sql;
   const payload = await php("rewardsAccounts", { discordId: caller().discordId });
   if (payload && typeof payload === "object" && Array.isArray((payload as { accounts?: unknown }).accounts)) {
-    return (payload as { accounts: AccountRewards[] }).accounts;
+    return (payload as { accounts: AccountRewards[] }).accounts.sort(
+      (a, b) => b.points - a.points || String(a.name || a.id).localeCompare(String(b.name || b.id), "pl"),
+    );
   }
   return [];
 }

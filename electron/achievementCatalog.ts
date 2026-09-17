@@ -38,10 +38,11 @@ const TASKS: Task[] = [
 ];
 
 export const MONEY_TIERS = [
-  { id: "cash-1500", points: 1500, amount: 10_000 },
-  { id: "cash-2400", points: 2400, amount: 20_000 },
-  { id: "cash-3300", points: 3300, amount: 30_000 },
-  { id: "cash-4300", points: 4300, amount: 50_000 },
+  { id: "rank-500", points: 500, amount: 0, prize: "vip" as const },
+  { id: "cash-1500", points: 1500, amount: 15_000, prize: "cash" as const },
+  { id: "cash-2400", points: 2400, amount: 25_000, prize: "cash" as const },
+  { id: "cash-3300", points: 3300, amount: 70_000, prize: "cash" as const },
+  { id: "cash-4300", points: 4300, amount: 100_000, prize: "cash" as const },
 ];
 
 export function totalAchievementPoints(stats: AchievementStats, extra: Task[] = []) {
