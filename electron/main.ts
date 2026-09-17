@@ -16,6 +16,7 @@ import {
   deleteCustomAchievement,
   generatePromoCode,
   getRewardsState,
+  grantAchievement,
   listAccountRewards,
   markRewardsPaid,
   redeemPromoCode,
@@ -407,6 +408,7 @@ function registerIpc() {
     }),
   );
   ipcMain.handle("rewards:undefine", (_e, id: string) => deleteCustomAchievement(String(id || "")));
+  ipcMain.handle("rewards:grant", (_e, id: string) => grantAchievement(String(id || "")));
 
   ipcMain.handle("displays:list", () =>
     screen.getAllDisplays().map((d, i) => ({

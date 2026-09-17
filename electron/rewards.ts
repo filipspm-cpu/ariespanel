@@ -5,6 +5,7 @@ import { loadTesters, setAccountRank } from "./testers";
 import {
   MONEY_TIERS,
   PROMO_CASH,
+  findCatalogTask,
   totalAchievementPoints,
   type AchievementStat,
   type AchievementStats,
@@ -199,9 +200,11 @@ async function ensure(db: mysql.Connection) {
       online_ms BIGINT NOT NULL DEFAULT 0,
       night_reports INT NOT NULL DEFAULT 0,
       active_days INT NOT NULL DEFAULT 0,
+      referrals INT NOT NULL DEFAULT 0,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
+  await db.query("ALTER TABLE reward_stats ADD COLUMN referrals INT NOT NULL DEFAULT 0").catch(() => undefined);
   await db.query(`
     CREATE TABLE IF NOT EXISTS reward_claims (
       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -278,6 +281,34 @@ function pointsFrom(stats: AchievementStats, extra: CustomAchievement[] = []) {
   return totalAchievementPoints(stats, extra);
 }
 
+async function bumpStat(
+  db: mysql.Connection,
+  discordId: string,
+  name: string,
+  stat: AchievementStat,
+  need: number,
+) {
+  const reports = stat === "reports" ? need : 0;
+  const events = stat === "events" ? need : 0;
+  const onlineMs = stat === "onlineHours" ? need * 3_600_000 : 0;
+  const nightReports = stat === "nightReports" ? need : 0;
+  const activeDays = stat === "activeDays" ? need : 0;
+  const referrals = stat === "referrals" ? need : 0;
+  await db.execute(
+    `INSERT INTO reward_stats (discord_id, name, reports, events, online_ms, night_reports, active_days, referrals)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       name = VALUES(name),
+       reports = GREATEST(reports, VALUES(reports)),
+       events = GREATEST(events, VALUES(events)),
+       online_ms = GREATEST(online_ms, VALUES(online_ms)),
+       night_reports = GREATEST(night_reports, VALUES(night_reports)),
+       active_days = GREATEST(active_days, VALUES(active_days)),
+       referrals = GREATEST(referrals, VALUES(referrals))`,
+    [discordId, name, reports, events, onlineMs, nightReports, activeDays, referrals],
+  );
+}
+
 async function readState(db: mysql.Connection, discordId: string, name: string): Promise<RewardsState> {
   const customTasks = await loadCustom(db);
   const [[codeRow]] = (await db.query("SELECT code FROM promo_codes WHERE discord_id = ? LIMIT 1", [discordId])) as [
@@ -301,7 +332,7 @@ async function readState(db: mysql.Connection, discordId: string, name: string):
     [discordId],
   )) as [SqlRow[], unknown];
 
-  const referrals = Number(refRow?.c || 0);
+  const referrals = Math.max(Number(refRow?.c || 0), Number(statRow?.referrals || 0));
   const stats: AchievementStats = {
     reports: Number(statRow?.reports || 0),
     events: Number(statRow?.events || 0),
@@ -564,7 +595,8 @@ async function boardFrom(db: mysql.Connection): Promise<AccountRewards[]> {
             COALESCE(s.events, 0) AS events,
             COALESCE(s.online_ms, 0) AS online_ms,
             COALESCE(s.night_reports, 0) AS night_reports,
-            COALESCE(s.active_days, 0) AS active_days
+            COALESCE(s.active_days, 0) AS active_days,
+            COALESCE(s.referrals, 0) AS granted_referrals
      FROM (
        SELECT discord_id FROM discord_accounts
        UNION SELECT discord_id FROM promo_codes
@@ -583,14 +615,14 @@ async function boardFrom(db: mysql.Connection): Promise<AccountRewards[]> {
         onlineHours: Math.floor(Number(row.online_ms || 0) / 3_600_000),
         nightReports: Number(row.night_reports || 0),
         activeDays: Number(row.active_days || 0),
-        referrals: Number(row.referrals || 0),
+        referrals: Math.max(Number(row.referrals || 0), Number(row.granted_referrals || 0)),
       };
       return {
         id: String(row.id || ""),
         name: String(row.name || row.id || "Konto"),
         avatarUrl: String(row.avatarUrl || ""),
         code: String(row.code || ""),
-        referrals: Number(row.referrals || 0),
+        referrals: stats.referrals,
         redeemed: Number(row.redeemed || 0) > 0,
         pendingCash: Number(row.pendingCash || 0),
         paidCash: Number(row.paidCash || 0),
@@ -669,4 +701,28 @@ export async function deleteCustomAchievement(id: string): Promise<RewardsState>
   });
   if (sql) return sql;
   return parseState(await php("rewardsUndefine", { discordId, name, id: key })) || emptyState("network");
+}
+
+export async function grantAchievement(taskId: string): Promise<RewardsState> {
+  const { discordId, name } = caller();
+  if (!discordId) return emptyState("login");
+  if (!isDeveloper(discordId)) {
+    const state = await getRewardsState();
+    return { ...state, ok: false, error: "forbidden" };
+  }
+  const id = String(taskId || "").trim();
+  const sql = await withDb(async (db) => {
+    const extra = await loadCustom(db);
+    const task = findCatalogTask(id, extra);
+    if (!task) {
+      const state = await readState(db, discordId, name);
+      return { ...state, ok: false, error: "invalid" };
+    }
+    await bumpStat(db, discordId, name, task.stat, task.need);
+    const next = await readState(db, discordId, name);
+    next.leaderboard = await boardFrom(db);
+    return { ...next, ok: true };
+  });
+  if (sql) return sql;
+  return parseState(await php("rewardsGrant", { discordId, name, id })) || emptyState("network");
 }

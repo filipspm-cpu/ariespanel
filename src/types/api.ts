@@ -99,6 +99,7 @@ export interface SynvityApi {
   rewardsPaid: (targetId: string) => Promise<import("./rewards").AccountRewards[]>;
   rewardsDefine: (payload: import("./rewards").CustomAchievementInput) => Promise<import("./rewards").RewardsState>;
   rewardsUndefine: (id: string) => Promise<import("./rewards").RewardsState>;
+  rewardsGrant: (id: string) => Promise<import("./rewards").RewardsState>;
 };
 
 export {};

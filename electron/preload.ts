@@ -118,6 +118,7 @@ const api = {
     rarity?: string;
   }) => ipcRenderer.invoke("rewards:define", payload),
   rewardsUndefine: (id: string) => ipcRenderer.invoke("rewards:undefine", id),
+  rewardsGrant: (id: string) => ipcRenderer.invoke("rewards:grant", id),
 };
 
 contextBridge.exposeInMainWorld("synvity", api);

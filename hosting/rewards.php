@@ -102,8 +102,10 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS reward_stats (
   online_ms BIGINT NOT NULL DEFAULT 0,
   night_reports INT NOT NULL DEFAULT 0,
   active_days INT NOT NULL DEFAULT 0,
+  referrals INT NOT NULL DEFAULT 0,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$mysqli->query("ALTER TABLE reward_stats ADD COLUMN referrals INT NOT NULL DEFAULT 0");
 $mysqli->query("CREATE TABLE IF NOT EXISTS reward_claims (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
   discord_id VARCHAR(32) NOT NULL,
@@ -204,6 +206,66 @@ function task_points($mysqli, $stats) {
   return $sum;
 }
 
+function builtin_task($id) {
+  $tasks = array(
+    "rep-100" => array("reports", 100),
+    "rep-200" => array("reports", 200),
+    "rep-500" => array("reports", 500),
+    "rep-1000" => array("reports", 1000),
+    "rep-2000" => array("reports", 2000),
+    "rep-3500" => array("reports", 3500),
+    "rep-5000" => array("reports", 5000),
+    "duty-40" => array("onlineHours", 40),
+    "duty-100" => array("onlineHours", 100),
+    "duty-200" => array("onlineHours", 200),
+    "duty-400" => array("onlineHours", 400),
+    "duty-700" => array("onlineHours", 700),
+    "duty-1000" => array("onlineHours", 1000),
+    "ev-80" => array("events", 80),
+    "ev-200" => array("events", 200),
+    "ev-500" => array("events", 500),
+    "ev-1000" => array("events", 1000),
+    "ref-1" => array("referrals", 1),
+    "ref-2" => array("referrals", 2),
+    "ref-5" => array("referrals", 5),
+    "ref-10" => array("referrals", 10),
+    "day-14" => array("activeDays", 14),
+    "day-30" => array("activeDays", 30),
+    "day-60" => array("activeDays", 60),
+    "day-120" => array("activeDays", 120),
+    "night-30" => array("nightReports", 30),
+    "night-80" => array("nightReports", 80),
+    "night-180" => array("nightReports", 180),
+    "night-300" => array("nightReports", 300),
+  );
+  return isset($tasks[$id]) ? $tasks[$id] : null;
+}
+
+function grant_stat($mysqli, $discordId, $name, $stat, $need) {
+  $reports = $stat === "reports" ? $need : 0;
+  $events = $stat === "events" ? $need : 0;
+  $onlineMs = $stat === "onlineHours" ? $need * 3600000 : 0;
+  $night = $stat === "nightReports" ? $need : 0;
+  $days = $stat === "activeDays" ? $need : 0;
+  $refs = $stat === "referrals" ? $need : 0;
+  $stmt = $mysqli->prepare(
+    "INSERT INTO reward_stats (discord_id, name, reports, events, online_ms, night_reports, active_days, referrals)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       name = VALUES(name),
+       reports = GREATEST(reports, VALUES(reports)),
+       events = GREATEST(events, VALUES(events)),
+       online_ms = GREATEST(online_ms, VALUES(online_ms)),
+       night_reports = GREATEST(night_reports, VALUES(night_reports)),
+       active_days = GREATEST(active_days, VALUES(active_days)),
+       referrals = GREATEST(referrals, VALUES(referrals))"
+  );
+  if (!$stmt) return;
+  $onlineMsStr = (string) $onlineMs;
+  $stmt->bind_param("ssiisiii", $discordId, $name, $reports, $events, $onlineMsStr, $night, $days, $refs);
+  $stmt->execute();
+}
+
 function money_tier($id) {
   $tiers = array(
     "rank-500" => array(500, 0, "vip"),
@@ -281,7 +343,8 @@ function read_state($mysqli, $discordId) {
       $stats["onlineHours"] = (int) floor(((int) $row["online_ms"]) / 3600000);
       $stats["nightReports"] = (int) $row["night_reports"];
       $stats["activeDays"] = (int) $row["active_days"];
-      $stats["referrals"] = $referrals;
+      $grantedRefs = isset($row["referrals"]) ? (int) $row["referrals"] : 0;
+      $stats["referrals"] = max($referrals, $grantedRefs);
     }
   }
   $payouts = array();
@@ -532,6 +595,31 @@ if ($action === "rewardsUndefine") {
     $del->bind_param("s", $id);
     $del->execute();
   }
+}
+
+if ($action === "rewardsGrant") {
+  if (!is_developer_id($mysqli, $discordId)) {
+    json_out(array("ok" => false, "error" => "forbidden"), 403);
+  }
+  $id = req_get($data, "id");
+  $task = builtin_task($id);
+  if (!$task) {
+    $stmt = $mysqli->prepare("SELECT stat, need FROM achievement_defs WHERE id = ? LIMIT 1");
+    if ($stmt) {
+      $stmt->bind_param("s", $id);
+      $stmt->execute();
+      $res = $stmt->get_result();
+      $row = $res ? $res->fetch_assoc() : null;
+      if ($row) $task = array($row["stat"], (int) $row["need"]);
+    }
+  }
+  if (!$task) {
+    $state = read_state($mysqli, $discordId);
+    $state["ok"] = false;
+    $state["error"] = "invalid";
+    json_out($state, 400);
+  }
+  grant_stat($mysqli, $discordId, $name, $task[0], $task[1]);
 }
 
 json_out(read_state($mysqli, $discordId));

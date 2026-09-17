@@ -170,6 +170,24 @@ export function AchievementsPage() {
     }
   };
 
+  const grantTask = async (id: string) => {
+    setBusy(id);
+    setMsg("");
+    try {
+      const next = await window.synvity?.rewardsGrant?.(id);
+      if (!next) setMsg(rewardsErrorText("network"));
+      else {
+        apply(next);
+        if (next.ok === false) setMsg(rewardsErrorText(next.error));
+        else setMsg("Osiągnięcie przyznane.");
+      }
+    } catch {
+      setMsg(rewardsErrorText("network"));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const board = rewards.leaderboard ?? [];
   const visible = useMemo(
     () => (filter === "all" ? tasks : tasks.filter((task) => task.category === filter)),
@@ -258,7 +276,7 @@ export function AchievementsPage() {
           <section className="studio-card achieve-dev">
             <div className="achieve-cat-head">
               <h2>Wersja developera</h2>
-              <p>Dodaj własne osiągnięcie — kafel, trudność i punkty od razu wchodzą wszystkim.</p>
+              <p>Tylko ty widzisz to pole. Przyznaj sobie wykonane zadania na kafelkach albo dodaj nowe osiągnięcie dla wszystkich.</p>
             </div>
             <div className="achieve-dev-grid">
               <label>
@@ -378,16 +396,22 @@ export function AchievementsPage() {
             ))}
           </div>
           <div className="achieve-badges">
-            {visible.map((task) => (
-              <AchievementBadge
-                key={task.id}
-                task={task}
-                unlocked={taskUnlocked(task, rewards.stats)}
-                have={rewards.stats[task.stat] || 0}
-                canDelete={isDev && Boolean(task.custom)}
-                onDelete={() => void removeCustom(task.id)}
-              />
-            ))}
+            {visible.map((task) => {
+              const unlocked = taskUnlocked(task, rewards.stats);
+              return (
+                <AchievementBadge
+                  key={task.id}
+                  task={task}
+                  unlocked={unlocked}
+                  have={rewards.stats[task.stat] || 0}
+                  canDelete={isDev && Boolean(task.custom)}
+                  canGrant={Boolean(isDev && discordId && !unlocked)}
+                  busy={busy === task.id}
+                  onDelete={() => void removeCustom(task.id)}
+                  onGrant={() => void grantTask(task.id)}
+                />
+              );
+            })}
           </div>
         </section>
       </div>
