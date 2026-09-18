@@ -118,7 +118,14 @@ export async function setAccountRank(id: string, rank: string, name?: string): P
   } else {
     const next = loadTesters().filter((row) => row.id !== id);
     const normalized = ranks
-      .map((part) => (/dev/i.test(part) ? "developer" : /vip/i.test(part) ? "vip" : /beta/i.test(part) ? "beta" : ""))
+      .map((part) => {
+        const token = part.trim().toLowerCase().replace(/[_\s]+/g, "-");
+        if (token === "m-dev" || token === "mdev" || token.includes("main-dev")) return "";
+        if (token.includes("dev")) return "developer";
+        if (token.includes("vip")) return "vip";
+        if (token.includes("beta")) return "beta";
+        return "";
+      })
       .filter(Boolean);
     const unique = [...new Set(normalized)];
     if (unique.length) {

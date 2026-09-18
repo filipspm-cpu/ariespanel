@@ -20,6 +20,7 @@ export function RankBadge({
 }) {
   if (!rank) return null;
   const labels = {
+    "main-developer": { xs: "M-DEV", full: "MAIN DEVELOPER" },
     developer: { xs: "Dev", full: "Developer" },
     vip: { xs: "VIP", full: "VIP" },
     beta: { xs: "Beta", full: "Beta tester" },

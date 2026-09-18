@@ -17,25 +17,32 @@ export function parseTesters(raw: string): Tester[] {
   return raw.split(/\r?\n/).map(parseTesterLine).filter((row): row is Tester => Boolean(row));
 }
 
-export type AccountRank = "developer" | "vip" | "beta";
+export type AccountRank = "main-developer" | "developer" | "vip" | "beta";
 
-export const RANK_ORDER: AccountRank[] = ["developer", "vip", "beta"];
+export const RANK_ORDER: AccountRank[] = ["main-developer", "developer", "vip", "beta"];
+export const EDITABLE_RANKS: AccountRank[] = ["developer", "vip", "beta"];
+
+function rankFromToken(token: string): AccountRank | null {
+  const normalized = token.trim().toLowerCase().replace(/[_\s]+/g, "-");
+  if (!normalized) return null;
+  if (normalized === "m-dev" || normalized === "mdev" || normalized.includes("main-dev")) return "main-developer";
+  if (normalized.includes("dev")) return "developer";
+  if (normalized.includes("vip")) return "vip";
+  if (normalized.includes("beta")) return "beta";
+  return null;
+}
 
 export function ranksFromRole(role: string): AccountRank[] {
   const found = new Set<AccountRank>();
   for (const part of role.split(/[,|/]+/)) {
-    const token = part.trim();
-    if (!token) continue;
-    if (/dev/i.test(token)) found.add("developer");
-    else if (/vip/i.test(token)) found.add("vip");
-    else if (/beta/i.test(token)) found.add("beta");
+    const rank = rankFromToken(part);
+    if (rank) found.add(rank);
   }
   if (!found.size) {
-    if (/dev/i.test(role)) found.add("developer");
-    if (/vip/i.test(role)) found.add("vip");
-    if (/beta/i.test(role)) found.add("beta");
+    const rank = rankFromToken(role);
+    if (rank) found.add(rank);
   }
-  return RANK_ORDER.filter((rank) => found.has(rank));
+  return RANK_ORDER.filter((item) => found.has(item));
 }
 
 export function rankFromRole(role: string): AccountRank | null {
@@ -63,7 +70,7 @@ export function accountRank(discordId: string | undefined, testers: Tester[]): A
 }
 
 export function isDeveloper(discordId: string | undefined, testers: Tester[]) {
-  return accountRanks(discordId, testers).includes("developer");
+  return hasDeveloperAccess(accountRanks(discordId, testers));
 }
 
 export function isBetaTester(discordId: string | undefined, testers: Tester[]) {
@@ -72,9 +79,10 @@ export function isBetaTester(discordId: string | undefined, testers: Tester[]) {
 
 export function hasBetaAccess(rank: AccountRank | AccountRank[] | null | undefined) {
   const ranks = asRankList(rank);
-  return ranks.includes("beta") || ranks.includes("developer");
+  return ranks.includes("beta") || ranks.includes("developer") || ranks.includes("main-developer");
 }
 
 export function hasDeveloperAccess(rank: AccountRank | AccountRank[] | null | undefined) {
-  return asRankList(rank).includes("developer");
+  const ranks = asRankList(rank);
+  return ranks.includes("main-developer") || ranks.includes("developer");
 }

@@ -106,17 +106,33 @@ try {
       rank VARCHAR(64) NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
   );
-  $mysqli->query("ALTER TABLE account_roles MODIFY rank VARCHAR(64) NOT NULL");
+  $mysqli->query("ALTER TABLE account_roles MODIFY rank VARCHAR(96) NOT NULL");
 } catch (Exception $e) {
   /* kolumny mogły już istnieć */
 }
 
 function normalize_rank($raw) {
   $r = strtolower(trim((string) $raw));
+  $r = str_replace(array("_", " "), "-", $r);
+  if ($r === "m-dev" || $r === "mdev" || strpos($r, "main-dev") !== false) return "main-developer";
   if (strpos($r, "dev") !== false) return "developer";
   if (strpos($r, "vip") !== false) return "vip";
   if (strpos($r, "beta") !== false) return "beta";
   return "";
+}
+
+function rank_sort_order() {
+  return array("main-developer" => 0, "developer" => 1, "vip" => 2, "beta" => 3);
+}
+
+function sort_ranks($found) {
+  $order = rank_sort_order();
+  usort($found, function ($a, $b) use ($order) {
+    $aa = isset($order[$a]) ? $order[$a] : 9;
+    $bb = isset($order[$b]) ? $order[$b] : 9;
+    return $aa - $bb;
+  });
+  return $found;
 }
 
 function seed_roles($mysqli) {
@@ -149,7 +165,7 @@ function ranks_from_stored($raw) {
     $n = normalize_rank($raw);
     if ($n !== "") $found[] = $n;
   }
-  $order = array("developer" => 0, "vip" => 1, "beta" => 2);
+  $order = rank_sort_order();
   usort($found, function ($a, $b) use ($order) {
     $aa = isset($order[$a]) ? $order[$a] : 9;
     $bb = isset($order[$b]) ? $order[$b] : 9;
@@ -172,15 +188,21 @@ function collect_ranks($data) {
   $found = array();
   foreach ($raw as $item) {
     $n = normalize_rank($item);
-    if ($n !== "" && !in_array($n, $found, true)) $found[] = $n;
+    if ($n === "" || $n === "main-developer") continue;
+    if (!in_array($n, $found, true)) $found[] = $n;
   }
-  $order = array("developer" => 0, "vip" => 1, "beta" => 2);
-  usort($found, function ($a, $b) use ($order) {
-    $aa = isset($order[$a]) ? $order[$a] : 9;
-    $bb = isset($order[$b]) ? $order[$b] : 9;
-    return $aa - $bb;
-  });
-  return $found;
+  return sort_ranks($found);
+}
+
+function stored_has_main_developer($mysqli, $id) {
+  $stmt = $mysqli->prepare("SELECT rank FROM account_roles WHERE discord_id = ? LIMIT 1");
+  if (!$stmt) return false;
+  $stmt->bind_param("s", $id);
+  $stmt->execute();
+  $res = $stmt->get_result();
+  $row = $res ? $res->fetch_assoc() : null;
+  if (!$row) return false;
+  return in_array("main-developer", ranks_from_stored($row["rank"]), true);
 }
 
 function list_roles($mysqli) {
@@ -462,12 +484,16 @@ try {
 $action = req_get($data, "action");
 if ($method === "POST" && $action === "setRank") {
   $id = preg_replace("/[^0-9]/", "", req_get($data, "id"));
-  $ranks = collect_ranks($data);
-  $rank = implode(",", $ranks);
   $name = req_get($data, "name");
   if ($id === "") {
     json_out(array("error" => "invalid", "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)), 400);
   }
+  $ranks = collect_ranks($data);
+  if (stored_has_main_developer($mysqli, $id) && !in_array("main-developer", $ranks, true)) {
+    array_unshift($ranks, "main-developer");
+    $ranks = sort_ranks($ranks);
+  }
+  $rank = implode(",", $ranks);
   if ($rank === "") {
     $stmt = $mysqli->prepare("DELETE FROM account_roles WHERE discord_id = ?");
     if ($stmt) {

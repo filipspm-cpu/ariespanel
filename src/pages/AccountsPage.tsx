@@ -1,7 +1,7 @@
 import { Copyright } from "@/components/Copyright";
 import { RankBadges, useAccountRanks } from "@/components/RankBadge";
 import { formatCash } from "@/data/achievements";
-import { RANK_ORDER, encodeRanks, hasDeveloperAccess, ranksFromRole, type AccountRank } from "@/data/testers";
+import { EDITABLE_RANKS, encodeRanks, hasDeveloperAccess, ranksFromRole, type AccountRank } from "@/data/testers";
 import { useAppStore } from "@/store/useAppStore";
 import type { AccountRewards } from "@/types/rewards";
 import { RefreshCw } from "lucide-react";
@@ -41,6 +41,7 @@ function AccountAvatar({ name, url }: { name: string; url?: string }) {
 }
 
 const RANK_LABELS: Record<AccountRank, string> = {
+  "main-developer": "MAIN DEVELOPER",
   developer: "Developer",
   vip: "VIP",
   beta: "Beta tester",
@@ -105,10 +106,12 @@ export function AccountsPage() {
 
   const changeRanks = async (account: AccountCard, next: AccountRank[]) => {
     if (!account.id || !window.synvity?.ranksSet) return;
-    const encoded = encodeRanks(next);
+    const encoded = encodeRanks(next.filter((rank) => rank !== "main-developer"));
     const testers = await window.synvity.ranksSet({ id: account.id, rank: encoded, name: account.name });
     if (testers) setTesters(testers);
-    setAccounts((rows) => rows.map((row) => (row.id === account.id ? { ...row, rank: encoded } : row)));
+    setAccounts((rows) =>
+      rows.map((row) => (row.id === account.id ? { ...row, rank: testers?.find((item) => item.id === account.id)?.role || encoded } : row)),
+    );
   };
 
   return (
@@ -144,7 +147,7 @@ export function AccountsPage() {
                   <RankBadges ranks={ranks} size="xs" />
                   {canEdit && account.id ? (
                     <div className="accounts-rank-list">
-                      {RANK_ORDER.map((rank) => {
+                      {EDITABLE_RANKS.map((rank) => {
                         const checked = ranks.includes(rank);
                         return (
                           <label key={rank} className="accounts-rank-option">
@@ -152,8 +155,12 @@ export function AccountsPage() {
                               type="checkbox"
                               checked={checked}
                               onChange={() => {
-                                const next = checked ? ranks.filter((item) => item !== rank) : [...ranks, rank];
-                                void changeRanks(account, next);
+                                const locked = ranks.filter((item) => item === "main-developer");
+                                const editable = ranks.filter((item) => item !== "main-developer");
+                                const nextEditable = checked
+                                  ? editable.filter((item) => item !== rank)
+                                  : [...editable, rank];
+                                void changeRanks(account, [...locked, ...nextEditable]);
                               }}
                             />
                             {RANK_LABELS[rank]}

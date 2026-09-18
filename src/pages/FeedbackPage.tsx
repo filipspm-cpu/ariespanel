@@ -1,5 +1,6 @@
 import { RankBadges, useAccountRanks } from "@/components/RankBadge";
 import { FEEDBACK_CHANNELS, feedbackChannelLabel, type FeedbackChannelId } from "@/data/feedbackChannels";
+import { hasDeveloperAccess } from "@/data/testers";
 import { useAppStore } from "@/store/useAppStore";
 import { Bug, Check, Lightbulb, LogIn, RefreshCw, Send, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -185,7 +186,7 @@ export function FeedbackPage() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [items, setItems] = useState<FeedbackItem[]>([]);
-  const [developer, setDeveloper] = useState(ranks.includes("developer"));
+  const [developer, setDeveloper] = useState(hasDeveloperAccess(ranks));
   const [busy, setBusy] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -209,7 +210,7 @@ export function FeedbackPage() {
     try {
       const result = (await window.synvity.feedbackList()) as FeedbackList;
       setItems(dedupeItems(result?.items ?? []));
-      setDeveloper(Boolean(result?.developer) || ranks.includes("developer"));
+      setDeveloper(Boolean(result?.developer) || hasDeveloperAccess(ranks));
       if (result?.error === "network" || result?.error === "server") {
         setMessage("Nie udało się pobrać zgłoszeń.");
       }
@@ -276,7 +277,7 @@ export function FeedbackPage() {
         return;
       }
       setItems(dedupeItems(result.items ?? []));
-      setDeveloper(Boolean(result.developer) || ranks.includes("developer"));
+      setDeveloper(Boolean(result.developer) || hasDeveloperAccess(ranks));
       setTitle("");
       setBody("");
       setMessage(kind === "bug" ? "Błąd został zgłoszony." : "Sugestia została wysłana.");
