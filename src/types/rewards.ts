@@ -35,6 +35,7 @@ export type RewardsState = {
   claimedKinds: string[];
   customTasks?: AchievementTask[];
   leaderboard?: AccountRewards[];
+  deviceLocked?: boolean;
 };
 
 export type CustomAchievementInput = {

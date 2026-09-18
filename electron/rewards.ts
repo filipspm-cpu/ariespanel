@@ -1,5 +1,6 @@
 import mysql from "mysql2/promise";
 import { apiRequestUrls } from "./accountsApi";
+import { loadPromoDevice, markPromoDeviceRedeemed } from "./promoDevice";
 import { loadState } from "./storage";
 import { loadTesters, setAccountRank } from "./testers";
 import {
@@ -58,6 +59,7 @@ export type RewardsState = {
   claimedKinds: string[];
   customTasks: CustomAchievement[];
   leaderboard: AccountRewards[];
+  deviceLocked?: boolean;
 };
 
 export type AccountRewards = {
@@ -107,6 +109,7 @@ function emptyState(error?: string): RewardsState {
     claimedKinds: [],
     customTasks: [],
     leaderboard: [],
+    deviceLocked: loadPromoDevice().redeemed,
   };
 }
 
@@ -187,10 +190,18 @@ async function ensure(db: mysql.Connection) {
       code VARCHAR(24) NOT NULL,
       owner_id VARCHAR(32) NOT NULL,
       amount INT NOT NULL DEFAULT 30000,
+      device_id VARCHAR(64) NOT NULL DEFAULT '',
+      device_hash VARCHAR(64) NOT NULL DEFAULT '',
+      ip VARCHAR(45) NOT NULL DEFAULT '',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      INDEX idx_promo_owner (owner_id)
+      INDEX idx_promo_owner (owner_id),
+      INDEX idx_promo_device (device_id),
+      INDEX idx_promo_ip (ip)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
+  await db.query("ALTER TABLE promo_redemptions ADD COLUMN device_id VARCHAR(64) NOT NULL DEFAULT ''").catch(() => undefined);
+  await db.query("ALTER TABLE promo_redemptions ADD COLUMN device_hash VARCHAR(64) NOT NULL DEFAULT ''").catch(() => undefined);
+  await db.query("ALTER TABLE promo_redemptions ADD COLUMN ip VARCHAR(45) NOT NULL DEFAULT ''").catch(() => undefined);
   await db.query(`
     CREATE TABLE IF NOT EXISTS reward_stats (
       discord_id VARCHAR(32) NOT NULL PRIMARY KEY,
@@ -368,6 +379,7 @@ async function readState(db: mysql.Connection, discordId: string, name: string):
     claimedKinds: payouts.map((p) => p.kind),
     customTasks,
     leaderboard: [],
+    deviceLocked: loadPromoDevice().redeemed,
   };
 }
 
@@ -387,11 +399,12 @@ async function withDb<T>(fn: (db: mysql.Connection) => Promise<T>): Promise<T | 
 function parseState(payload: unknown): RewardsState | null {
   if (!payload || typeof payload !== "object") return null;
   const data = payload as Partial<RewardsState> & { ok?: unknown };
-  if (data.ok !== true && !data.code && !data.stats) return null;
+  const error = typeof data.error === "string" && data.error ? data.error : undefined;
+  if (data.ok !== true && !data.code && !data.stats && !error) return null;
   const stats = { ...emptyStats(), ...(data.stats || {}) };
   return {
     ok: data.ok === true,
-    error: typeof data.error === "string" ? data.error : undefined,
+    error,
     code: String(data.code || ""),
     redeemed: Boolean(data.redeemed),
     redeemedCode: String(data.redeemedCode || ""),
@@ -404,25 +417,28 @@ function parseState(payload: unknown): RewardsState | null {
     claimedKinds: Array.isArray(data.claimedKinds) ? data.claimedKinds : [],
     customTasks: Array.isArray(data.customTasks) ? data.customTasks : [],
     leaderboard: Array.isArray(data.leaderboard) ? data.leaderboard : [],
+    deviceLocked: Boolean(data.deviceLocked) || loadPromoDevice().redeemed,
   };
 }
 
 export async function getRewardsState(): Promise<RewardsState> {
   const { discordId, name } = caller();
+  const remote = parseState(await php("rewardsState", { discordId, name }));
+  if (remote) return remote;
   const sql = await withDb(async (db) => {
     const state = discordId ? await readState(db, discordId, name) : emptyState("login");
     if (!discordId) state.customTasks = await loadCustom(db);
     state.leaderboard = await boardFrom(db);
     return state;
   });
-  if (sql) return sql;
-  const remote = parseState(await php("rewardsState", { discordId, name }));
-  return remote || emptyState("network");
+  return sql || emptyState("network");
 }
 
 export async function generatePromoCode(): Promise<RewardsState> {
   const { discordId, name } = caller();
   if (!discordId) return emptyState("login");
+  const remote = parseState(await php("promoGenerate", { discordId, name }));
+  if (remote) return remote;
   const sql = await withDb(async (db) => {
     const [[existing]] = (await db.query("SELECT code FROM promo_codes WHERE discord_id = ? LIMIT 1", [discordId])) as [
       SqlRow[],
@@ -440,8 +456,7 @@ export async function generatePromoCode(): Promise<RewardsState> {
     }
     return readState(db, discordId, name);
   });
-  if (sql) return sql;
-  return parseState(await php("promoGenerate", { discordId, name })) || emptyState("network");
+  return sql || emptyState("network");
 }
 
 export async function redeemPromoCode(raw: string): Promise<RewardsState> {
@@ -452,6 +467,20 @@ export async function redeemPromoCode(raw: string): Promise<RewardsState> {
     const state = await getRewardsState();
     return { ...state, ok: false, error: "invalid" };
   }
+  const device = loadPromoDevice();
+  if (device.redeemed) {
+    const state = await getRewardsState();
+    if (!state.redeemed) return { ...state, ok: false, error: "device" };
+  }
+  const finish = (state: RewardsState) => {
+    if (state.ok && state.redeemed) markPromoDeviceRedeemed();
+    if (state.error === "device" || state.error === "ip") markPromoDeviceRedeemed();
+    return state;
+  };
+  const remote = parseState(
+    await php("promoRedeem", { discordId, name, code, deviceId: device.id, deviceHash: device.hash }),
+  );
+  if (remote) return finish(remote);
   const sql = await withDb(async (db) => {
     const [[mine]] = (await db.query("SELECT code FROM promo_codes WHERE discord_id = ? LIMIT 1", [discordId])) as [
       SqlRow[],
@@ -468,6 +497,16 @@ export async function redeemPromoCode(raw: string): Promise<RewardsState> {
       const state = await readState(db, discordId, name);
       return { ...state, ok: false, error: "used" };
     }
+    const [[taken]] = (await db.query(
+      `SELECT discord_id FROM promo_redemptions
+       WHERE (device_id <> '' AND device_id = ?) OR (device_hash <> '' AND device_hash = ?)
+       LIMIT 1`,
+      [device.id, device.hash],
+    )) as [SqlRow[], unknown];
+    if (taken?.discord_id && String(taken.discord_id) !== discordId) {
+      const state = await readState(db, discordId, name);
+      return { ...state, ok: false, error: "device" };
+    }
     const [[owner]] = (await db.query("SELECT discord_id FROM promo_codes WHERE code = ? LIMIT 1", [code])) as [
       SqlRow[],
       unknown,
@@ -477,12 +516,19 @@ export async function redeemPromoCode(raw: string): Promise<RewardsState> {
       const state = await readState(db, discordId, name);
       return { ...state, ok: false, error: "missing" };
     }
-    await db.execute("INSERT INTO promo_redemptions (discord_id, code, owner_id, amount) VALUES (?, ?, ?, ?)", [
-      discordId,
-      code,
-      ownerId,
-      PROMO_CASH,
-    ]);
+    try {
+      await db.execute(
+        "INSERT INTO promo_redemptions (discord_id, code, owner_id, amount, device_id, device_hash) VALUES (?, ?, ?, ?, ?, ?)",
+        [discordId, code, ownerId, PROMO_CASH, device.id, device.hash],
+      );
+    } catch {
+      await db.execute("INSERT INTO promo_redemptions (discord_id, code, owner_id, amount) VALUES (?, ?, ?, ?)", [
+        discordId,
+        code,
+        ownerId,
+        PROMO_CASH,
+      ]);
+    }
     await db.execute(
       "INSERT INTO reward_claims (discord_id, kind, amount, status) VALUES (?, 'promo', ?, 'pending')",
       [discordId, PROMO_CASH],
@@ -490,8 +536,7 @@ export async function redeemPromoCode(raw: string): Promise<RewardsState> {
     const state = await readState(db, discordId, name);
     return { ...state, ok: true };
   });
-  if (sql) return sql;
-  return parseState(await php("promoRedeem", { discordId, name, code })) || emptyState("network");
+  return finish(sql || emptyState("network"));
 }
 
 export async function syncRewardStats(input: {
@@ -508,6 +553,18 @@ export async function syncRewardStats(input: {
   const onlineMs = Math.max(0, Math.floor(input.onlineMs || 0));
   const nightReports = Math.max(0, Math.floor(input.nightReports || 0));
   const activeDays = Math.max(0, Math.floor(input.activeDays || 0));
+  const remote = parseState(
+    await php("rewardsSync", {
+      discordId,
+      name,
+      reports,
+      events,
+      onlineMs,
+      nightReports,
+      activeDays,
+    }),
+  );
+  if (remote) return remote;
   const sql = await withDb(async (db) => {
     await db.execute(
       `INSERT INTO reward_stats (discord_id, name, reports, events, online_ms, night_reports, active_days)
@@ -523,20 +580,7 @@ export async function syncRewardStats(input: {
     );
     return readState(db, discordId, name);
   });
-  if (sql) return sql;
-  return (
-    parseState(
-      await php("rewardsSync", {
-        discordId,
-        name,
-        reports,
-        events,
-        onlineMs,
-        nightReports,
-        activeDays,
-      }),
-    ) || emptyState("network")
-  );
+  return sql || emptyState("network");
 }
 
 export async function claimMoneyTier(tierId: string): Promise<RewardsState> {
@@ -546,6 +590,11 @@ export async function claimMoneyTier(tierId: string): Promise<RewardsState> {
   if (!tier) {
     const state = await getRewardsState();
     return { ...state, ok: false, error: "invalid" };
+  }
+  const remote = parseState(await php("rewardsClaim", { discordId, name, kind: tier.id }));
+  if (remote) {
+    if (remote.ok && tier.prize === "vip") await grantVipRank(discordId, name);
+    return remote;
   }
   const sql = await withDb(async (db) => {
     const state = await readState(db, discordId, name);
@@ -563,8 +612,7 @@ export async function claimMoneyTier(tierId: string): Promise<RewardsState> {
     next.leaderboard = await boardFrom(db);
     return { ...next, ok: true };
   });
-  if (sql) return sql;
-  return parseState(await php("rewardsClaim", { discordId, name, kind: tier.id })) || emptyState("network");
+  return sql || emptyState("network");
 }
 
 export async function markRewardsPaid(targetId: string): Promise<AccountRewards[]> {
@@ -572,11 +620,11 @@ export async function markRewardsPaid(targetId: string): Promise<AccountRewards[
   if (!isDeveloper(discordId)) return listAccountRewards();
   const id = asId(targetId);
   if (!id) return listAccountRewards();
+  await php("rewardsPaid", { discordId, targetId: id });
   await withDb(async (db) => {
     await db.execute("UPDATE reward_claims SET status = 'paid' WHERE discord_id = ? AND status = 'pending'", [id]);
     return true;
   });
-  await php("rewardsPaid", { discordId, targetId: id });
   return listAccountRewards();
 }
 
@@ -633,15 +681,13 @@ async function boardFrom(db: mysql.Connection): Promise<AccountRewards[]> {
 }
 
 export async function listAccountRewards(): Promise<AccountRewards[]> {
-  const sql = await withDb((db) => boardFrom(db));
-  if (sql) return sql;
   const payload = await php("rewardsAccounts", { discordId: caller().discordId });
   if (payload && typeof payload === "object" && Array.isArray((payload as { accounts?: unknown }).accounts)) {
     return (payload as { accounts: AccountRewards[] }).accounts.sort(
       (a, b) => b.points - a.points || String(a.name || a.id).localeCompare(String(b.name || b.id), "pl"),
     );
   }
-  return [];
+  return (await withDb((db) => boardFrom(db))) || [];
 }
 
 export async function createCustomAchievement(input: CustomAchievementInput): Promise<RewardsState> {
@@ -656,6 +702,8 @@ export async function createCustomAchievement(input: CustomAchievementInput): Pr
     const state = await getRewardsState();
     return { ...state, ok: false, error: "invalid" };
   }
+  const remote = parseState(await php("rewardsDefine", { discordId, name, ...input }));
+  if (remote) return remote;
   const sql = await withDb(async (db) => {
     const id = `custom-${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
     await db.execute(
@@ -677,8 +725,7 @@ export async function createCustomAchievement(input: CustomAchievementInput): Pr
     state.leaderboard = await boardFrom(db);
     return { ...state, ok: true };
   });
-  if (sql) return sql;
-  return parseState(await php("rewardsDefine", { discordId, name, ...input })) || emptyState("network");
+  return sql || emptyState("network");
 }
 
 export async function deleteCustomAchievement(id: string): Promise<RewardsState> {
@@ -693,14 +740,15 @@ export async function deleteCustomAchievement(id: string): Promise<RewardsState>
     const state = await getRewardsState();
     return { ...state, ok: false, error: "invalid" };
   }
+  const remote = parseState(await php("rewardsUndefine", { discordId, name, id: key }));
+  if (remote) return remote;
   const sql = await withDb(async (db) => {
     await db.execute("DELETE FROM achievement_defs WHERE id = ?", [key]);
     const state = await readState(db, discordId, name);
     state.leaderboard = await boardFrom(db);
     return { ...state, ok: true };
   });
-  if (sql) return sql;
-  return parseState(await php("rewardsUndefine", { discordId, name, id: key })) || emptyState("network");
+  return sql || emptyState("network");
 }
 
 export async function grantAchievement(taskId: string): Promise<RewardsState> {
@@ -711,6 +759,8 @@ export async function grantAchievement(taskId: string): Promise<RewardsState> {
     return { ...state, ok: false, error: "forbidden" };
   }
   const id = String(taskId || "").trim();
+  const remote = parseState(await php("rewardsGrant", { discordId, name, id }));
+  if (remote) return remote;
   const sql = await withDb(async (db) => {
     const extra = await loadCustom(db);
     const task = findCatalogTask(id, extra);
@@ -723,6 +773,5 @@ export async function grantAchievement(taskId: string): Promise<RewardsState> {
     next.leaderboard = await boardFrom(db);
     return { ...next, ok: true };
   });
-  if (sql) return sql;
-  return parseState(await php("rewardsGrant", { discordId, name, id })) || emptyState("network");
+  return sql || emptyState("network");
 }

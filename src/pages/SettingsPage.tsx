@@ -323,8 +323,8 @@ export function SettingsPage() {
           <div className="text-[11px] uppercase tracking-[0.22em] text-zinc-500">Promokod</div>
           <div className="mt-2 text-[18px] font-medium text-white">Twój kod i wpisanie kodu</div>
           <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-zinc-500">
-            Każdy użytkownik może wygenerować jeden kod i wpisać cudzy kod tylko raz. Za wpisanie jest{" "}
-            {formatCash(PROMO_CASH)} do wypłaty w grze.
+            Każdy użytkownik może wygenerować jeden kod. Cudzy kod można wpisać tylko raz na konto i tylko raz na
+            komputer — zapamiętywany jest też adres IP. Za wpisanie jest {formatCash(PROMO_CASH)} do wypłaty w grze.
           </p>
           {!discordConnected ? (
             <div className="mt-4 text-[13px] text-zinc-400">Najpierw połącz Discord.</div>
@@ -359,19 +359,21 @@ export function SettingsPage() {
                   onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
                   className="settings-input"
                   placeholder="ARIES-XXXXXX"
-                  disabled={Boolean(promo?.redeemed)}
+                  disabled={Boolean(promo?.redeemed || promo?.deviceLocked)}
                 />
                 <button
                   type="button"
                   className="settings-btn primary"
-                  disabled={promoBusy || Boolean(promo?.redeemed) || promoInput.trim().length < 8}
+                  disabled={promoBusy || Boolean(promo?.redeemed || promo?.deviceLocked) || promoInput.trim().length < 8}
                   onClick={() => void redeemPromo()}
                 >
-                  {promo?.redeemed ? "Kod wpisany" : "Wpisz kod"}
+                  {promo?.redeemed ? "Kod wpisany" : promo?.deviceLocked ? "Komputer zużyty" : "Wpisz kod"}
                 </button>
               </div>
               {promo?.redeemedCode ? (
                 <div className="mt-2 text-[12px] text-zinc-500">Wpisany kod: {promo.redeemedCode}</div>
+              ) : promo?.deviceLocked ? (
+                <div className="mt-2 text-[12px] text-zinc-500">Na tym komputerze kod promocyjny został już użyty.</div>
               ) : null}
               {promo && promo.pendingCash > 0 ? (
                 <div className="mt-2 text-[12px] text-emerald-300">

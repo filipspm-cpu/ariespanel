@@ -53,10 +53,14 @@ async function requestOne(url: string, method: "GET" | "POST", body?: unknown): 
     }),
     12000,
   );
-  if (!res.ok) throw new Error(String(res.status));
   const text = (await res.text()).trim();
-  if (!text) throw new Error("empty");
-  return parseJsonLoose(text);
+  if (!text) throw new Error(res.ok ? "empty" : String(res.status));
+  try {
+    return parseJsonLoose(text);
+  } catch {
+    if (!res.ok) throw new Error(String(res.status));
+    throw new Error("invalid json");
+  }
 }
 
 export async function apiRequestUrls(

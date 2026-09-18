@@ -91,9 +91,15 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS promo_redemptions (
   code VARCHAR(24) NOT NULL,
   owner_id VARCHAR(32) NOT NULL,
   amount INT NOT NULL DEFAULT 30000,
+  device_id VARCHAR(64) NOT NULL DEFAULT '',
+  device_hash VARCHAR(64) NOT NULL DEFAULT '',
+  ip VARCHAR(45) NOT NULL DEFAULT '',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_promo_owner (owner_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$mysqli->query("ALTER TABLE promo_redemptions ADD COLUMN device_id VARCHAR(64) NOT NULL DEFAULT ''");
+$mysqli->query("ALTER TABLE promo_redemptions ADD COLUMN device_hash VARCHAR(64) NOT NULL DEFAULT ''");
+$mysqli->query("ALTER TABLE promo_redemptions ADD COLUMN ip VARCHAR(45) NOT NULL DEFAULT ''");
 $mysqli->query("CREATE TABLE IF NOT EXISTS reward_stats (
   discord_id VARCHAR(32) NOT NULL PRIMARY KEY,
   name VARCHAR(191) NOT NULL DEFAULT '',
@@ -128,6 +134,57 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS achievement_defs (
   created_by VARCHAR(32) NOT NULL DEFAULT '',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+function client_ip() {
+  $candidates = array();
+  if (!empty($_SERVER["HTTP_CF_CONNECTING_IP"])) $candidates[] = $_SERVER["HTTP_CF_CONNECTING_IP"];
+  if (!empty($_SERVER["HTTP_X_FORWARDED_FOR"])) {
+    foreach (explode(",", $_SERVER["HTTP_X_FORWARDED_FOR"]) as $part) $candidates[] = trim($part);
+  }
+  if (!empty($_SERVER["HTTP_X_REAL_IP"])) $candidates[] = $_SERVER["HTTP_X_REAL_IP"];
+  if (!empty($_SERVER["REMOTE_ADDR"])) $candidates[] = $_SERVER["REMOTE_ADDR"];
+  foreach ($candidates as $ip) {
+    $ip = trim((string) $ip);
+    if ($ip === "") continue;
+    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) return $ip;
+  }
+  return "";
+}
+
+function norm_device($raw) {
+  $value = preg_replace("/[^a-zA-Z0-9_-]/", "", (string) $raw);
+  if (strlen($value) < 8) return "";
+  if (strlen($value) > 64) return substr($value, 0, 64);
+  return $value;
+}
+
+function fail_state($mysqli, $discordId, $error) {
+  $state = read_state($mysqli, $discordId);
+  $state["ok"] = false;
+  $state["error"] = $error;
+  json_out($state);
+}
+
+function device_taken($mysqli, $discordId, $deviceId, $deviceHash, $ip) {
+  $checks = array($deviceId, $deviceHash, $ip);
+  $sqls = array(
+    "SELECT discord_id FROM promo_redemptions WHERE device_id <> '' AND device_id = ? LIMIT 1",
+    "SELECT discord_id FROM promo_redemptions WHERE device_hash <> '' AND device_hash = ? LIMIT 1",
+    "SELECT discord_id FROM promo_redemptions WHERE ip <> '' AND ip = ? LIMIT 1",
+  );
+  for ($i = 0; $i < 3; $i++) {
+    $value = $checks[$i];
+    if ($value === "") continue;
+    $stmt = $mysqli->prepare($sqls[$i]);
+    if (!$stmt) continue;
+    $stmt->bind_param("s", $value);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res ? $res->fetch_assoc() : null;
+    if ($row && (string) $row["discord_id"] !== $discordId) return true;
+  }
+  return false;
+}
 
 function is_developer_id($mysqli, $id) {
   if ($id === "") return false;
@@ -463,38 +520,53 @@ if ($action === "promoRedeem") {
   $code = normalize_code(req_get($data, "code"));
   $state = read_state($mysqli, $discordId);
   if (!preg_match("/^ARIES-[A-Z0-9]{6}$/", $code)) {
-    $state["ok"] = false;
-    $state["error"] = "invalid";
-    json_out($state, 400);
+    fail_state($mysqli, $discordId, "invalid");
   }
   if ($state["code"] === $code) {
-    $state["ok"] = false;
-    $state["error"] = "own";
-    json_out($state, 400);
+    fail_state($mysqli, $discordId, "own");
   }
   if ($state["redeemed"]) {
-    $state["ok"] = false;
-    $state["error"] = "used";
-    json_out($state, 400);
+    fail_state($mysqli, $discordId, "used");
+  }
+  $deviceId = norm_device(req_get($data, "deviceId"));
+  $deviceHash = norm_device(req_get($data, "deviceHash"));
+  $ip = client_ip();
+  if (device_taken($mysqli, $discordId, $deviceId, $deviceHash, $ip)) {
+    fail_state($mysqli, $discordId, "device");
   }
   $find = $mysqli->prepare("SELECT discord_id FROM promo_codes WHERE code = ? LIMIT 1");
+  if (!$find) fail_state($mysqli, $discordId, "db");
   $find->bind_param("s", $code);
   $find->execute();
   $res = $find->get_result();
   $owner = $res ? $res->fetch_assoc() : null;
   if (!$owner) {
-    $state["ok"] = false;
-    $state["error"] = "missing";
-    json_out($state, 400);
+    fail_state($mysqli, $discordId, "missing");
   }
   $ownerId = $owner["discord_id"];
   $amount = 30000;
-  $ins = $mysqli->prepare("INSERT INTO promo_redemptions (discord_id, code, owner_id, amount) VALUES (?, ?, ?, ?)");
-  $ins->bind_param("sssi", $discordId, $code, $ownerId, $amount);
-  $ins->execute();
+  $ins = $mysqli->prepare(
+    "INSERT INTO promo_redemptions (discord_id, code, owner_id, amount, device_id, device_hash, ip) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  );
+  if ($ins) {
+    $ins->bind_param("sssisss", $discordId, $code, $ownerId, $amount, $deviceId, $deviceHash, $ip);
+    if (!$ins->execute()) {
+      $fallback = $mysqli->prepare("INSERT INTO promo_redemptions (discord_id, code, owner_id, amount) VALUES (?, ?, ?, ?)");
+      if (!$fallback) fail_state($mysqli, $discordId, "db");
+      $fallback->bind_param("sssi", $discordId, $code, $ownerId, $amount);
+      if (!$fallback->execute()) fail_state($mysqli, $discordId, "device");
+    }
+  } else {
+    $fallback = $mysqli->prepare("INSERT INTO promo_redemptions (discord_id, code, owner_id, amount) VALUES (?, ?, ?, ?)");
+    if (!$fallback) fail_state($mysqli, $discordId, "db");
+    $fallback->bind_param("sssi", $discordId, $code, $ownerId, $amount);
+    if (!$fallback->execute()) fail_state($mysqli, $discordId, "db");
+  }
   $claim = $mysqli->prepare("INSERT INTO reward_claims (discord_id, kind, amount, status) VALUES (?, 'promo', ?, 'pending')");
-  $claim->bind_param("si", $discordId, $amount);
-  $claim->execute();
+  if ($claim) {
+    $claim->bind_param("si", $discordId, $amount);
+    $claim->execute();
+  }
 }
 
 if ($action === "rewardsSync") {
@@ -526,17 +598,17 @@ if ($action === "rewardsClaim") {
   if (!$tier) {
     $state["ok"] = false;
     $state["error"] = "invalid";
-    json_out($state, 400);
+    json_out($state);
   }
   if ($state["points"] < $tier[0]) {
     $state["ok"] = false;
     $state["error"] = "points";
-    json_out($state, 400);
+    json_out($state);
   }
   if (in_array($kind, $state["claimedKinds"], true)) {
     $state["ok"] = false;
     $state["error"] = "claimed";
-    json_out($state, 400);
+    json_out($state);
   }
   $amount = $tier[1];
   $vip = isset($tier[2]) && $tier[2] === "vip";
@@ -568,7 +640,7 @@ if ($action === "rewardsDefine") {
     $state = read_state($mysqli, $discordId);
     $state["ok"] = false;
     $state["error"] = "invalid";
-    json_out($state, 400);
+    json_out($state);
   }
   $id = "custom-" . uniqid();
   $hint = substr(trim(req_get($data, "hint")), 0, 255);
@@ -617,7 +689,7 @@ if ($action === "rewardsGrant") {
     $state = read_state($mysqli, $discordId);
     $state["ok"] = false;
     $state["error"] = "invalid";
-    json_out($state, 400);
+    json_out($state);
   }
   grant_stat($mysqli, $discordId, $name, $task[0], $task[1]);
 }
