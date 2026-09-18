@@ -1456,7 +1456,7 @@ textarea {
 }
 
 .accounts-rank-option.is-locked input {
-  cursor: not-allowed;
+  pointer-events: none;
   accent-color: #fbbf24;
 }
 

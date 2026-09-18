@@ -162,7 +162,6 @@ export function AccountsPage() {
                             <input
                               type="checkbox"
                               checked={checked}
-                              disabled={locked}
                               onChange={() => {
                                 if (locked) return;
                                 const keepMain = ranks.filter((item) => item === "main-developer");
