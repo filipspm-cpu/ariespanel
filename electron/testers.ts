@@ -138,7 +138,10 @@ export async function setAccountRank(id: string, rank: string, name?: string): P
         return "";
       })
       .filter(Boolean);
-    const unique = [...new Set(normalized)];
+    const unique: Array<"main-developer" | "developer" | "vip" | "beta"> = [];
+    for (const item of normalized) {
+      if (item === "developer" || item === "vip" || item === "beta") unique.push(item);
+    }
     if (hadMain) unique.unshift("main-developer");
     if (unique.length) {
       next.push({
