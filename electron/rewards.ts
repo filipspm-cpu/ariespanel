@@ -252,11 +252,11 @@ async function php(action: string, extra: Record<string, unknown>) {
 
 const STATS: AchievementStat[] = ["reports", "events", "onlineHours", "nightReports", "activeDays", "referrals"];
 const RARITIES = ["brown", "silver", "gold", "rainbow"];
-const CATEGORIES = ["reporty", "dyzur", "eventy", "rekrutacja", "staz", "noc", "wlasne"];
+const CATEGORIES = ["dyzur", "rekrutacja", "staz", "wlasne"];
 
 function asStat(value: unknown): AchievementStat {
   const key = String(value || "");
-  return STATS.includes(key as AchievementStat) ? (key as AchievementStat) : "reports";
+  return STATS.includes(key as AchievementStat) ? (key as AchievementStat) : "onlineHours";
 }
 
 function asRarity(value: unknown) {

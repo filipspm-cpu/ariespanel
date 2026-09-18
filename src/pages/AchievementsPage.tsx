@@ -81,7 +81,7 @@ export function AchievementsPage() {
   const tasks = useMemo(() => {
     const extra = (rewards.customTasks ?? []).map((task) => ({
       ...task,
-      category: (task.category || "wlasne") as AchievementCategory,
+      category: (ACHIEVEMENT_CATEGORIES.some((cat) => cat.id === task.category) ? task.category : "wlasne") as AchievementCategory,
       rarity: (task.rarity || "brown") as AchievementRarity,
       custom: true,
     }));

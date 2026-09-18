@@ -243,14 +243,10 @@ function custom_tasks($mysqli) {
 
 function task_points($mysqli, $stats) {
   $tasks = array(
-    array("reports", 100, 30), array("reports", 200, 50), array("reports", 500, 90),
-    array("reports", 1000, 150), array("reports", 2000, 260), array("reports", 3500, 420), array("reports", 5000, 200),
     array("onlineHours", 40, 20), array("onlineHours", 100, 45), array("onlineHours", 200, 90),
     array("onlineHours", 400, 150), array("onlineHours", 700, 240), array("onlineHours", 1000, 180),
-    array("events", 80, 40), array("events", 200, 80), array("events", 500, 150), array("events", 1000, 250),
     array("referrals", 1, 100), array("referrals", 2, 160), array("referrals", 5, 280), array("referrals", 10, 450),
     array("activeDays", 14, 25), array("activeDays", 30, 50), array("activeDays", 60, 90), array("activeDays", 120, 160),
-    array("nightReports", 30, 70), array("nightReports", 80, 140), array("nightReports", 180, 250), array("nightReports", 300, 160),
   );
   foreach (extra_tasks($mysqli) as $task) $tasks[] = $task;
   $sum = 0;
@@ -265,23 +261,12 @@ function task_points($mysqli, $stats) {
 
 function builtin_task($id) {
   $tasks = array(
-    "rep-100" => array("reports", 100),
-    "rep-200" => array("reports", 200),
-    "rep-500" => array("reports", 500),
-    "rep-1000" => array("reports", 1000),
-    "rep-2000" => array("reports", 2000),
-    "rep-3500" => array("reports", 3500),
-    "rep-5000" => array("reports", 5000),
     "duty-40" => array("onlineHours", 40),
     "duty-100" => array("onlineHours", 100),
     "duty-200" => array("onlineHours", 200),
     "duty-400" => array("onlineHours", 400),
     "duty-700" => array("onlineHours", 700),
     "duty-1000" => array("onlineHours", 1000),
-    "ev-80" => array("events", 80),
-    "ev-200" => array("events", 200),
-    "ev-500" => array("events", 500),
-    "ev-1000" => array("events", 1000),
     "ref-1" => array("referrals", 1),
     "ref-2" => array("referrals", 2),
     "ref-5" => array("referrals", 5),
@@ -290,10 +275,6 @@ function builtin_task($id) {
     "day-30" => array("activeDays", 30),
     "day-60" => array("activeDays", 60),
     "day-120" => array("activeDays", 120),
-    "night-30" => array("nightReports", 30),
-    "night-80" => array("nightReports", 80),
-    "night-180" => array("nightReports", 180),
-    "night-300" => array("nightReports", 300),
   );
   return isset($tasks[$id]) ? $tasks[$id] : null;
 }
@@ -325,11 +306,11 @@ function grant_stat($mysqli, $discordId, $name, $stat, $need) {
 
 function money_tier($id) {
   $tiers = array(
-    "rank-500" => array(500, 0, "vip"),
-    "cash-1500" => array(1500, 15000, "cash"),
-    "cash-2400" => array(2400, 25000, "cash"),
-    "cash-3300" => array(3300, 70000, "cash"),
-    "cash-4300" => array(4300, 100000, "cash"),
+    "rank-500" => array(400, 0, "vip"),
+    "cash-1500" => array(800, 15000, "cash"),
+    "cash-2400" => array(1200, 25000, "cash"),
+    "cash-3300" => array(1600, 70000, "cash"),
+    "cash-4300" => array(2000, 100000, "cash"),
   );
   return isset($tiers[$id]) ? $tiers[$id] : null;
 }
@@ -647,7 +628,7 @@ if ($action === "rewardsDefine") {
   $category = req_get($data, "category");
   if ($category === "") $category = "wlasne";
   $stat = req_get($data, "stat");
-  if ($stat === "") $stat = "reports";
+  if ($stat === "") $stat = "onlineHours";
   $need = max(1, (int) req_get($data, "need"));
   $points = max(1, min(5000, (int) req_get($data, "points")));
   $rarity = req_get($data, "rarity");
