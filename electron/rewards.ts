@@ -224,10 +224,23 @@ async function ensure(db: mysql.Connection) {
       amount INT NOT NULL,
       status VARCHAR(16) NOT NULL DEFAULT 'pending',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE KEY uniq_reward_claim (discord_id, kind),
-      INDEX idx_reward_user (discord_id)
+      INDEX idx_reward_user (discord_id),
+      INDEX idx_reward_claim_kind (discord_id, kind)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
+  await db.query("ALTER TABLE reward_claims DROP INDEX uniq_reward_claim").catch(() => undefined);
+  await db.query("ALTER TABLE reward_claims ADD INDEX idx_reward_claim_kind (discord_id, kind)").catch(() => undefined);
+  await db
+    .query(
+      `UPDATE reward_claims AS c
+       INNER JOIN promo_redemptions AS r
+         ON r.discord_id = c.discord_id AND c.kind = 'promo'
+       SET c.discord_id = r.owner_id
+       WHERE c.status = 'pending'
+         AND r.owner_id <> ''
+         AND r.owner_id <> c.discord_id`,
+    )
+    .catch(() => undefined);
   await db.query(`
     CREATE TABLE IF NOT EXISTS achievement_defs (
       id VARCHAR(48) NOT NULL PRIMARY KEY,
@@ -531,7 +544,7 @@ export async function redeemPromoCode(raw: string): Promise<RewardsState> {
     }
     await db.execute(
       "INSERT INTO reward_claims (discord_id, kind, amount, status) VALUES (?, 'promo', ?, 'pending')",
-      [discordId, PROMO_CASH],
+      [ownerId, PROMO_CASH],
     );
     const state = await readState(db, discordId, name);
     return { ...state, ok: true };

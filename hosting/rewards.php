@@ -119,9 +119,20 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS reward_claims (
   amount INT NOT NULL,
   status VARCHAR(16) NOT NULL DEFAULT 'pending',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uniq_reward_claim (discord_id, kind),
-  INDEX idx_reward_user (discord_id)
+  INDEX idx_reward_user (discord_id),
+  INDEX idx_reward_claim_kind (discord_id, kind)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$mysqli->query("ALTER TABLE reward_claims DROP INDEX uniq_reward_claim");
+$mysqli->query("ALTER TABLE reward_claims ADD INDEX idx_reward_claim_kind (discord_id, kind)");
+$mysqli->query(
+  "UPDATE reward_claims AS c
+   INNER JOIN promo_redemptions AS r
+     ON r.discord_id = c.discord_id AND c.kind = 'promo'
+   SET c.discord_id = r.owner_id
+   WHERE c.status = 'pending'
+     AND r.owner_id <> ''
+     AND r.owner_id <> c.discord_id"
+);
 $mysqli->query("CREATE TABLE IF NOT EXISTS achievement_defs (
   id VARCHAR(48) NOT NULL PRIMARY KEY,
   label VARCHAR(191) NOT NULL,
@@ -545,7 +556,7 @@ if ($action === "promoRedeem") {
   }
   $claim = $mysqli->prepare("INSERT INTO reward_claims (discord_id, kind, amount, status) VALUES (?, 'promo', ?, 'pending')");
   if ($claim) {
-    $claim->bind_param("si", $discordId, $amount);
+    $claim->bind_param("si", $ownerId, $amount);
     $claim->execute();
   }
 }

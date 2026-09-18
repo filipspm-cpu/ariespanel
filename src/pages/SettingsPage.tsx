@@ -130,7 +130,7 @@ export function SettingsPage() {
         if (next.ok === false) setPromoMsg(rewardsErrorText(next.error));
         else {
           setPromoInput("");
-          setPromoMsg(`Kod przyjęty. Do wypłaty w grze: ${formatCash(PROMO_CASH)}.`);
+          setPromoMsg(`Kod przyjęty. Właściciel kodu dostaje ${formatCash(PROMO_CASH)} do wypłaty w grze.`);
         }
       }
     } catch {
@@ -324,7 +324,8 @@ export function SettingsPage() {
           <div className="mt-2 text-[18px] font-medium text-white">Twój kod i wpisanie kodu</div>
           <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-zinc-500">
             Każdy użytkownik może wygenerować jeden kod. Cudzy kod można wpisać tylko raz na konto i tylko raz na
-            komputer — zapamiętywany jest też adres IP. Za wpisanie jest {formatCash(PROMO_CASH)} do wypłaty w grze.
+            komputer — zapamiętywany jest też adres IP. {formatCash(PROMO_CASH)} za wpisanie idzie do właściciela
+            kodu, nie do osoby, która go wpisuje.
           </p>
           {!discordConnected ? (
             <div className="mt-4 text-[13px] text-zinc-400">Najpierw połącz Discord.</div>
@@ -348,6 +349,11 @@ export function SettingsPage() {
                   </button>
                 )}
               </div>
+              {promo?.code ? (
+                <div className="mt-2 text-[12px] text-zinc-500">
+                  Każdy, kto wpisze Twój kod, dodaje Ci {formatCash(PROMO_CASH)} do wypłaty w grze.
+                </div>
+              ) : null}
               {promo?.referrals ? (
                 <div className="mt-2 text-[12px] text-zinc-500">
                   Twój kod wpisało {promo.referrals} {promo.referrals === 1 ? "osoba" : "osób"}.
