@@ -1450,6 +1450,16 @@ textarea {
   accent-color: #e4e4e7;
 }
 
+.accounts-rank-option.is-locked {
+  cursor: not-allowed;
+  color: #fff7ed;
+}
+
+.accounts-rank-option.is-locked input {
+  cursor: not-allowed;
+  accent-color: #fbbf24;
+}
+
 .accounts-rank-select {
   width: 100%;
   max-width: 140px;

@@ -101,11 +101,22 @@ export async function refreshAccountRoles(): Promise<Tester[]> {
   return ingestRolesPayload(payload);
 }
 
+function isMainDeveloperToken(part: string) {
+  const token = part.trim().toLowerCase().replace(/[_\s]+/g, "-");
+  return token === "m-dev" || token === "mdev" || token.includes("main-dev");
+}
+
+function roleHasMainDeveloper(role: string) {
+  return role.split(/[,|/]+/).some((part) => isMainDeveloperToken(part));
+}
+
 export async function setAccountRank(id: string, rank: string, name?: string): Promise<Tester[]> {
+  const prev = loadTesters().find((row) => row.id === id);
+  const hadMain = Boolean(prev && roleHasMainDeveloper(prev.role));
   const ranks = rank
     .split(/[,|/]+/)
     .map((part) => part.trim())
-    .filter(Boolean);
+    .filter((part) => part && !isMainDeveloperToken(part));
   const payload = await apiRequest("POST", {
     action: "setRank",
     id,
@@ -120,7 +131,7 @@ export async function setAccountRank(id: string, rank: string, name?: string): P
     const normalized = ranks
       .map((part) => {
         const token = part.trim().toLowerCase().replace(/[_\s]+/g, "-");
-        if (token === "m-dev" || token === "mdev" || token.includes("main-dev")) return "";
+        if (isMainDeveloperToken(token)) return "";
         if (token.includes("dev")) return "developer";
         if (token.includes("vip")) return "vip";
         if (token.includes("beta")) return "beta";
@@ -128,11 +139,12 @@ export async function setAccountRank(id: string, rank: string, name?: string): P
       })
       .filter(Boolean);
     const unique = [...new Set(normalized)];
+    if (hadMain) unique.unshift("main-developer");
     if (unique.length) {
       next.push({
         id,
-        name: name || "Konto",
-        discord: "",
+        name: name || prev?.name || "Konto",
+        discord: prev?.discord || "",
         role: unique.join(","),
       });
     }

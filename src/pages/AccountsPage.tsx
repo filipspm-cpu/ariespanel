@@ -1,7 +1,7 @@
 import { Copyright } from "@/components/Copyright";
 import { RankBadges, useAccountRanks } from "@/components/RankBadge";
 import { formatCash } from "@/data/achievements";
-import { EDITABLE_RANKS, encodeRanks, hasDeveloperAccess, ranksFromRole, type AccountRank } from "@/data/testers";
+import { EDITABLE_RANKS, RANK_ORDER, encodeRanks, hasDeveloperAccess, ranksFromRole, type AccountRank } from "@/data/testers";
 import { useAppStore } from "@/store/useAppStore";
 import type { AccountRewards } from "@/types/rewards";
 import { RefreshCw } from "lucide-react";
@@ -109,8 +109,11 @@ export function AccountsPage() {
     const encoded = encodeRanks(next.filter((rank) => rank !== "main-developer"));
     const testers = await window.synvity.ranksSet({ id: account.id, rank: encoded, name: account.name });
     if (testers) setTesters(testers);
+    const saved = testers?.find((item) => item.id === account.id)?.role;
     setAccounts((rows) =>
-      rows.map((row) => (row.id === account.id ? { ...row, rank: testers?.find((item) => item.id === account.id)?.role || encoded } : row)),
+      rows.map((row) =>
+        row.id === account.id ? { ...row, rank: saved || encodeRanks(next) || row.rank } : row,
+      ),
     );
   };
 
@@ -147,20 +150,27 @@ export function AccountsPage() {
                   <RankBadges ranks={ranks} size="xs" />
                   {canEdit && account.id ? (
                     <div className="accounts-rank-list">
-                      {EDITABLE_RANKS.map((rank) => {
+                      {RANK_ORDER.map((rank) => {
                         const checked = ranks.includes(rank);
+                        const locked = !EDITABLE_RANKS.includes(rank);
                         return (
-                          <label key={rank} className="accounts-rank-option">
+                          <label
+                            key={rank}
+                            className={`accounts-rank-option${locked ? " is-locked" : ""}`}
+                            title={locked ? "MAIN DEVELOPER można nadać i zdjąć tylko w bazie danych" : undefined}
+                          >
                             <input
                               type="checkbox"
                               checked={checked}
+                              disabled={locked}
                               onChange={() => {
-                                const locked = ranks.filter((item) => item === "main-developer");
+                                if (locked) return;
+                                const keepMain = ranks.filter((item) => item === "main-developer");
                                 const editable = ranks.filter((item) => item !== "main-developer");
                                 const nextEditable = checked
                                   ? editable.filter((item) => item !== rank)
                                   : [...editable, rank];
-                                void changeRanks(account, [...locked, ...nextEditable]);
+                                void changeRanks(account, [...keepMain, ...nextEditable]);
                               }}
                             />
                             {RANK_LABELS[rank]}

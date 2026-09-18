@@ -20,6 +20,7 @@ export function parseTesters(raw: string): Tester[] {
 export type AccountRank = "main-developer" | "developer" | "vip" | "beta";
 
 export const RANK_ORDER: AccountRank[] = ["main-developer", "developer", "vip", "beta"];
+/** Developer / VIP / Beta — MAIN DEVELOPER widać w panelu, ale nie da się go nadać ani zdjąć. */
 export const EDITABLE_RANKS: AccountRank[] = ["developer", "vip", "beta"];
 
 function rankFromToken(token: string): AccountRank | null {
