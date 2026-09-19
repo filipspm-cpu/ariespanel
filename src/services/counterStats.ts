@@ -34,12 +34,13 @@ export function isoDate(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-export function sumInRange(history: HistoryEntry[] | undefined, start: number, end: number, positiveOnly = true) {
-  return (history ?? []).reduce((sum, entry) => {
+export function sumInRange(history: HistoryEntry[] | undefined, start: number, end: number, positiveOnly = false) {
+  const total = (history ?? []).reduce((sum, entry) => {
     if (entry.timestamp < start || entry.timestamp >= end) return sum;
     if (positiveOnly && entry.delta <= 0) return sum;
     return sum + entry.delta;
   }, 0);
+  return positiveOnly ? total : Math.max(0, total);
 }
 
 export function rangeForHomePeriod(
@@ -89,11 +90,11 @@ export function seriesFromHistory(
     buckets.push({ label, start: t, value: 0 });
   }
   for (const entry of history ?? []) {
-    if (entry.delta <= 0) continue;
     if (entry.timestamp < start || entry.timestamp >= end) continue;
     const i = Math.floor((entry.timestamp - start) / step);
     if (buckets[i]) buckets[i].value += entry.delta;
   }
+  for (const bucket of buckets) bucket.value = Math.max(0, bucket.value);
   return buckets;
 }
 
@@ -105,7 +106,7 @@ export function previousRange(start: number, end: number) {
 export function peakDay(history: HistoryEntry[] | undefined, start: number, end: number) {
   const byDay = new Map<number, number>();
   for (const entry of history ?? []) {
-    if (entry.delta <= 0 || entry.timestamp < start || entry.timestamp >= end) continue;
+    if (entry.timestamp < start || entry.timestamp >= end) continue;
     const key = startOfDay(new Date(entry.timestamp)).getTime();
     byDay.set(key, (byDay.get(key) ?? 0) + entry.delta);
   }
@@ -118,18 +119,27 @@ export function peakDay(history: HistoryEntry[] | undefined, start: number, end:
 
 export function activeDays(history: HistoryEntry[] | undefined, start: number, end: number) {
   const days = new Set<number>();
+  const byDay = new Map<number, number>();
   for (const entry of history ?? []) {
-    if (entry.delta <= 0 || entry.timestamp < start || entry.timestamp >= end) continue;
-    days.add(startOfDay(new Date(entry.timestamp)).getTime());
+    if (entry.timestamp < start || entry.timestamp >= end) continue;
+    const key = startOfDay(new Date(entry.timestamp)).getTime();
+    byDay.set(key, (byDay.get(key) ?? 0) + entry.delta);
+  }
+  for (const [key, value] of byDay) {
+    if (value > 0) days.add(key);
   }
   return days.size;
 }
 
 export function streakDays(history: HistoryEntry[] | undefined) {
   const days = new Set<number>();
+  const byDay = new Map<number, number>();
   for (const entry of history ?? []) {
-    if (entry.delta <= 0) continue;
-    days.add(startOfDay(new Date(entry.timestamp)).getTime());
+    const key = startOfDay(new Date(entry.timestamp)).getTime();
+    byDay.set(key, (byDay.get(key) ?? 0) + entry.delta);
+  }
+  for (const [key, value] of byDay) {
+    if (value > 0) days.add(key);
   }
   let streak = 0;
   let cursor = startOfDay().getTime();

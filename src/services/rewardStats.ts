@@ -18,11 +18,13 @@ export function collectRewardStats(state: {
 }
 
 function nightCount(counter?: Counter) {
-  return (counter?.history ?? []).reduce((sum, entry) => {
-    if (entry.delta <= 0) return sum;
-    const hour = new Date(entry.timestamp).getHours();
-    return hour >= 0 && hour < 6 ? sum + entry.delta : sum;
-  }, 0);
+  return Math.max(
+    0,
+    (counter?.history ?? []).reduce((sum, entry) => {
+      const hour = new Date(entry.timestamp).getHours();
+      return hour >= 0 && hour < 6 ? sum + entry.delta : sum;
+    }, 0),
+  );
 }
 
 function uniqueDays(counter?: Counter) {
