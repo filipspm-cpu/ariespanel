@@ -719,6 +719,22 @@ textarea {
   color: #8a8a8a;
 }
 
+.about-privacy {
+  margin-top: 14px;
+  border: 0;
+  background: transparent;
+  color: #d4d4d8;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.about-privacy:hover {
+  color: #fff;
+}
+
 .app-copyright {
   margin: 0;
   font-size: 11px;

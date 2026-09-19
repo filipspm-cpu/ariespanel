@@ -73,6 +73,7 @@ export interface SynvityApi {
   updateNoticesRead: () => Promise<UpdateNotice[]>;
   majesticServers: (force?: boolean) => Promise<import("./index").LiveServerStatus[]>;
   forumOpen: (url: string) => Promise<unknown>;
+  openPrivacy: () => Promise<unknown>;
   discordConnect: () => Promise<{
     id: string;
     username: string;

@@ -1,0 +1,38 @@
+MICROSOFT STORE — co wkleić przy ponownym zgłoszeniu
+Produkt: ARIES Panel (ID 7d5dd763-5679-47f6-b368-f36174055c99)
+
+1) NAZWA (10.1.4.3 + 11.9)
+Zmień nazwę z „Panel Barana” na: ARIES Panel
+Nie używaj w nazwie, opisie ani zrzutach żartów, przekleństw ani przezwisk.
+
+2) POLITYKA PRYWATNOŚCI (10.5.1)
+Wgraj na hosting do katalogu /aries/ pliki:
+  - .htaccess
+  - aries_panel_polityka_prywatnosci.html
+  - polityka-prywatnosci.php
+
+Potem w Partner Center wklej ten URL:
+https://filipekweb.pl/aries/polityka-prywatnosci.php
+
+Sprawdź w Chrome (tryb incognito), że strona SIĘ OTWIERA, a nie pobiera plik.
+Jeśli stary link nadal pobiera plik, zostaw nowy URL z .php.
+
+3) KRÓTKI OPIS (do pola krótkiego)
+Panel dla administracji GTA RP: makra czatu, nakładka na grę, statystyki reportów, regulamin, rzemiosło i aktualizacje. Prywatne narzędzie drużyny, nie gra.
+
+4) PEŁNY OPIS (wklej w polskie listing — 10.1.4.3)
+ARIES Panel to aplikacja pulpitowa dla administracji serwerów GTA Roleplay. Pomaga prowadzić służbę przy komputerze: szybciej odpowiadać na czacie, trzymać ważne informacje na nakładce i liczyć reporty bez skakania między notatkami.
+
+W panelu znajdziesz:
+• makra i wykonawcę komend — zapisujesz powtarzalne odpowiedzi i wysyłasz je do okna gry;
+• nakładkę HUD — reporty, zegar i Spotify na ekranie podczas gry;
+• statystyki — reporty i event specyfikacje z historią dnia, tygodnia i miesiąca;
+• regulamin serwera i tabelę kraftu — szybki podgląd zasad i receptur;
+• konta Discord, rangi, osiągnięcia i kody promocyjne dla drużyny;
+• zgłaszanie błędów oraz aktualizacje z GitHuba.
+
+Aplikacja jest przeznaczona dla uprawnionej administracji, nie zastępuje gry i nie jest sklepem. Logowanie Discord służy tylko do rozpoznania konta w panelu. Szczegóły przetwarzania danych są w polityce prywatności.
+
+Wymagania: Windows 10 lub nowszy. Do części funkcji potrzebne jest połączenie z internetem i konto Discord.
+
+--- koniec opisu ---

@@ -1,0 +1,45 @@
+Options -Indexes
+
+AddType text/html .html .htm
+AddType application/json .json
+
+<IfModule mod_mime.c>
+  AddType text/html .html .htm
+</IfModule>
+
+<FilesMatch "\.(html|htm)$">
+  <IfModule mod_mime.c>
+    ForceType text/html
+  </IfModule>
+  <IfModule mod_headers.c>
+    Header set Content-Type "text/html; charset=utf-8"
+    Header unset Content-Disposition
+  </IfModule>
+</FilesMatch>
+
+<Files "polityka-prywatnosci.php">
+  <IfModule mod_headers.c>
+    Header set Content-Type "text/html; charset=utf-8"
+    Header unset Content-Disposition
+  </IfModule>
+</Files>
+
+<FilesMatch "\.(sql|bak|old|log|inc|json)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+<FilesMatch "^(config|aries_lib)\.php$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+  </IfModule>
+</FilesMatch>

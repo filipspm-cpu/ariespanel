@@ -376,6 +376,9 @@ function registerIpc() {
     });
   });
   ipcMain.handle("forum:open", (_e, url: string) => shell.openExternal(assertForumUrl(url)));
+  ipcMain.handle("app:openPrivacy", () =>
+    shell.openExternal("https://filipekweb.pl/aries/polityka-prywatnosci.php"),
+  );
   ipcMain.handle("rewards:state", () => getRewardsState());
   ipcMain.handle("rewards:generate", () => generatePromoCode());
   ipcMain.handle("rewards:redeem", (_e, code: string) => redeemPromoCode(String(code || "")));

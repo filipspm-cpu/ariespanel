@@ -45,6 +45,13 @@ export function AboutPage() {
           <p className="about-lead">
             Prywatny panel do makr, nakładki, komend i statystyk na serwerach GTA RP.
           </p>
+          <button
+            type="button"
+            className="about-privacy"
+            onClick={() => void window.synvity?.openPrivacy?.()}
+          >
+            Polityka prywatności
+          </button>
           <Copyright className="mt-5" />
         </div>
 
