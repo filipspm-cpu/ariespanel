@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Terminal, Trash2, X } from "lucide-react";
 import type { PanelLogEntry } from "@/types/api";
+import { ariesLogBuffer, mergeLogEntries, subscribeAriesLog } from "@/services/ariesLog";
 
 function formatTime(at: number) {
   return new Intl.DateTimeFormat("pl-PL", {
@@ -17,23 +18,35 @@ export function AriesConsole() {
   const scroller = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    void window.synvity?.consoleHistory?.().then((rows) => {
-      if (Array.isArray(rows)) setEntries(rows);
-    });
-    const offEntry = window.synvity?.onConsoleEntry?.((entry) => {
-      const next = entry as PanelLogEntry;
-      if (!next?.id || !next.message) return;
-      setEntries((prev) => [...prev, next].slice(-250));
-      if (next.open) setOpen(true);
-    });
+    const add = (entry: PanelLogEntry) => {
+      if (!entry?.id || !entry.message) return;
+      setEntries((prev) => mergeLogEntries(prev, [entry]));
+      if (entry.open) setOpen(true);
+    };
+    const load = () => {
+      void window.synvity?.consoleHistory?.().then((rows) => {
+        setEntries((prev) => mergeLogEntries(ariesLogBuffer(), Array.isArray(rows) ? rows : [], prev));
+      });
+    };
+    load();
+    const offLocal = subscribeAriesLog(add);
+    const offEntry = window.synvity?.onConsoleEntry?.(add);
     const offToggle = window.synvity?.onToggleConsole?.((force) => {
       setOpen((prev) => (force === undefined ? !prev : Boolean(force)));
     });
     return () => {
+      offLocal();
       offEntry?.();
       offToggle?.();
     };
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    void window.synvity?.consoleHistory?.().then((rows) => {
+      setEntries((prev) => mergeLogEntries(ariesLogBuffer(), Array.isArray(rows) ? rows : [], prev));
+    });
+  }, [open]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

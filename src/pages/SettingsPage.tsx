@@ -3,6 +3,7 @@ import { RankBadges, useAccountRanks } from "@/components/RankBadge";
 import { APP_VERSION } from "@/data/appVersion";
 import { formatCash, PROMO_ENTER_CASH, PROMO_OWNER_CASH } from "@/data/achievements";
 import { rewardsErrorText } from "@/services/rewardStats";
+import { ariesLog } from "@/services/ariesLog";
 import { useAppStore } from "@/store/useAppStore";
 import { mergeImportedMacros, parseMacroFile } from "@/services/macroPack";
 import type { UpdateStatus } from "@/types";
@@ -74,7 +75,15 @@ export function SettingsPage() {
       });
       setDiscordMsg("Połączono z Discordem.");
     } catch (err) {
-      setDiscordMsg(err instanceof Error ? err.message : "Nie udało się połączyć z Discordem.");
+      const text = err instanceof Error ? err.message : "Nie udało się połączyć z Discordem.";
+      setDiscordMsg(text);
+      ariesLog({
+        level: "error",
+        source: "ustawienia",
+        message: "Połączenie z Discordem nie udało się",
+        detail: text,
+        open: true,
+      });
     } finally {
       setDiscordBusy(false);
     }
@@ -97,17 +106,43 @@ export function SettingsPage() {
     try {
       const next = await window.synvity?.rewardsGenerate();
       if (!next) {
-        setPromoMsg(rewardsErrorText("network"));
+        const text = rewardsErrorText("network");
+        setPromoMsg(text);
+        ariesLog({
+          level: "error",
+          source: "ustawienia",
+          message: "Generowanie kodu nie udało się",
+          detail: text,
+          open: true,
+        });
       } else {
         setPromo(next);
         if (next.ok === false) {
           if (next.error === "device" && next.deviceLocked) setPromoMsg("");
-          else setPromoMsg(next.detail || rewardsErrorText(next.error));
+          else {
+            const text = next.detail || rewardsErrorText(next.error);
+            setPromoMsg(text);
+            ariesLog({
+              level: next.error === "login" ? "warn" : "error",
+              source: "ustawienia",
+              message: "Generowanie kodu nie udało się",
+              detail: text,
+              open: true,
+            });
+          }
         }
         else setPromoMsg(`Kod gotowy. Kto go wpisze, dostanie ${formatCash(PROMO_ENTER_CASH)} w grze, a Ty ${formatCash(PROMO_OWNER_CASH)}.`);
       }
     } catch {
-      setPromoMsg(rewardsErrorText("network"));
+      const text = rewardsErrorText("network");
+      setPromoMsg(text);
+      ariesLog({
+        level: "error",
+        source: "ustawienia",
+        message: "Generowanie kodu nie udało się",
+        detail: text,
+        open: true,
+      });
     } finally {
       setPromoBusy(false);
     }
@@ -144,12 +179,32 @@ export function SettingsPage() {
     try {
       const next = await window.synvity?.rewardsRedeem(promoInput);
       if (!next) {
-        setPromoMsg(rewardsErrorText("network"));
+        const text = rewardsErrorText("network");
+        setPromoMsg(text);
+        ariesLog({
+          level: "error",
+          source: "ustawienia",
+          message: "Wpisanie kodu nie udało się",
+          detail: text,
+          open: true,
+        });
       } else {
         setPromo(next);
         if (next.ok === false) {
           if (next.error === "device" && next.deviceLocked) setPromoMsg("");
-          else setPromoMsg(next.detail || rewardsErrorText(next.error));
+          else {
+            const text = next.detail || rewardsErrorText(next.error);
+            setPromoMsg(text);
+            ariesLog({
+              level: ["network", "phpfile", "timeout", "json", "empty", "http", "db"].includes(String(next.error))
+                ? "error"
+                : "warn",
+              source: "ustawienia",
+              message: "Wpisanie kodu nie udało się",
+              detail: text,
+              open: true,
+            });
+          }
         }
         else {
           setPromoInput("");
