@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Sparkles } from "lucide-react";
-import { useAccountRanks } from "@/components/RankBadge";
 import { forumRuleById } from "@/data/forumRules";
 import { askForum, forumPassages, searchForum, type ForumHit } from "@/data/forumIndex";
-import { hasBetaAccess } from "@/data/testers";
 import { useAppStore } from "@/store/useAppStore";
 
 const SECTION_TITLES = new Set([
@@ -101,9 +99,6 @@ export function ForumPage() {
   const forumRuleId = useAppStore((s) => s.forumRuleId);
   const setForumFocus = useAppStore((s) => s.setForumFocus);
   const forumFocus = useAppStore((s) => s.forumFocus);
-  const discordId = useAppStore((s) => s.settings.discordId);
-  const ranks = useAccountRanks(discordId);
-  const canAskAi = hasBetaAccess(ranks);
   const rule = forumRuleById(forumRuleId);
   const lines = useMemo(
     () => rule.body.replace(/\u200B/g, "").replace(/\r\n/g, "\n").split("\n"),
@@ -148,7 +143,7 @@ export function ForumPage() {
 
   async function runAsk() {
     const q = ask.trim();
-    if (q.length < 2 || !canAskAi) return;
+    if (q.length < 2) return;
     setAsked(q);
     setAnswer("");
     setAnswerSource("");
@@ -167,8 +162,6 @@ export function ForumPage() {
       if (result?.ok && result.answer) {
         setAnswer(result.answer);
         setAnswerSource(result.source || "");
-      } else if (result?.error === "forbidden") {
-        setAnswer("Asystent jest dostępny dla beta testerów.");
       } else {
         setAnswer("Nie udało się uzyskać odpowiedzi asystenta. Poniżej są trafienia z regulaminu.");
       }
@@ -201,12 +194,11 @@ export function ForumPage() {
               placeholder="Szukaj we wszystkich regulaminach"
             />
           </label>
-          {canAskAi ? (
           <form
             className="forum-field forum-ask"
             onSubmit={(e) => {
               e.preventDefault();
-              void runAsk();
+              runAsk();
             }}
           >
             <Sparkles size={14} />
@@ -215,20 +207,15 @@ export function ForumPage() {
               onChange={(e) => setAsk(e.target.value)}
               placeholder="Zapytaj asystenta, np. kara za RDM"
             />
-            <span className="forum-beta-badge">BETA</span>
             <button type="submit" disabled={asking}>
               {asking ? "Myśli…" : "Sprawdź"}
             </button>
           </form>
-          ) : null}
         </div>
 
-        {showAsk && canAskAi ? (
+        {showAsk ? (
           <div className="forum-results">
-            <div className="forum-results-label">
-              Asystent
-              <span className="forum-beta-badge">BETA</span>
-            </div>
+            <div className="forum-results-label">Asystent</div>
             <div className="forum-answer">
               {asking ? (
                 <div className="forum-empty">Asystent czyta regulamin…</div>

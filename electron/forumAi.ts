@@ -1,4 +1,3 @@
-import { isBetaTesterId } from "./testers";
 import { panelLog } from "./panelLog";
 
 const GROQ_KEY = process.env.GROQ_API_KEY || "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";
@@ -118,16 +117,9 @@ async function chatOnce(url: string, key: string, model: string, messages: ChatM
   }
 }
 
-export async function askForumAi(input: {
-  question?: string;
-  passages?: ForumPassage[];
-  discordId?: string;
-}): Promise<ForumAskResult> {
+export async function askForumAi(input: { question?: string; passages?: ForumPassage[] }): Promise<ForumAskResult> {
   const question = String(input?.question || "").trim();
   if (question.length < 2) return { ok: false, answer: "", error: "invalid" };
-  if (!isBetaTesterId(input.discordId)) {
-    return { ok: false, answer: "", error: "forbidden" };
-  }
   const passages = Array.isArray(input.passages) ? input.passages.slice(0, 8) : [];
   const messages: ChatMessage[] = [
     { role: "system", content: SYSTEM },
