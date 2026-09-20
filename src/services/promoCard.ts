@@ -1,5 +1,5 @@
 import logoUrl from "@/assets/aries-logo.png";
-import { PROMO_CASH, formatCash } from "@/data/achievements";
+import { PROMO_ENTER_CASH, formatCash } from "@/data/achievements";
 import { encodeGif, quantizeToPalette } from "@/services/gifEncode";
 
 export const PROMO_CARD_W = 960;
@@ -66,9 +66,9 @@ export async function drawPromoCard(
   ctx.font = "12px Inter, sans-serif";
   ctx.fillText("PANEL", w / 2, 186);
 
-  ctx.fillStyle = "#71717a";
-  ctx.font = "13px Inter, sans-serif";
-  ctx.fillText("PROMOKOD", w / 2, 228);
+  ctx.fillStyle = "#d4d4d8";
+  ctx.font = "16px Inter, sans-serif";
+  ctx.fillText("Wpisz kod", w / 2, 228);
 
   const chipX = w / 2 - 250;
   const chipY = 246;
@@ -87,14 +87,8 @@ export async function drawPromoCard(
   ctx.fillText(opts.code, w / 2, 310);
 
   ctx.fillStyle = "#d4d4d8";
-  ctx.font = "16px Inter, sans-serif";
-  ctx.fillText(`Wpisz w Ustawieniach · ${formatCash(PROMO_CASH)} dla właściciela`, w / 2, 382);
-
-  if (opts.name) {
-    ctx.fillStyle = "#a1a1aa";
-    ctx.font = "14px Inter, sans-serif";
-    ctx.fillText(opts.name, w / 2, 414);
-  }
+  ctx.font = "18px Inter, sans-serif";
+  ctx.fillText(`Aby otrzymać ${formatCash(PROMO_ENTER_CASH)} in game`, w / 2, 392);
 
   ctx.fillStyle = "#52525b";
   ctx.font = "12px Inter, sans-serif";

@@ -326,6 +326,13 @@ function money_tier($id) {
   return isset($tiers[$id]) ? $tiers[$id] : null;
 }
 
+function add_cash_claim($mysqli, $discordId, $kind, $amount) {
+  $claim = $mysqli->prepare("INSERT INTO reward_claims (discord_id, kind, amount, status) VALUES (?, ?, ?, 'pending')");
+  if (!$claim) return;
+  $claim->bind_param("ssi", $discordId, $kind, $amount);
+  $claim->execute();
+}
+
 function grant_vip($mysqli, $discordId, $name) {
   $stmt = $mysqli->prepare("SELECT rank FROM account_roles WHERE discord_id = ? LIMIT 1");
   if (!$stmt) return;
@@ -536,29 +543,27 @@ if ($action === "promoRedeem") {
     fail_state($mysqli, $discordId, "missing");
   }
   $ownerId = $owner["discord_id"];
-  $amount = 30000;
+  $enterAmount = 10000;
+  $ownerAmount = 20000;
   $ins = $mysqli->prepare(
     "INSERT INTO promo_redemptions (discord_id, code, owner_id, amount, device_id, device_hash, ip) VALUES (?, ?, ?, ?, ?, ?, ?)"
   );
   if ($ins) {
-    $ins->bind_param("sssisss", $discordId, $code, $ownerId, $amount, $deviceId, $deviceHash, $ip);
+    $ins->bind_param("sssisss", $discordId, $code, $ownerId, $enterAmount, $deviceId, $deviceHash, $ip);
     if (!$ins->execute()) {
       $fallback = $mysqli->prepare("INSERT INTO promo_redemptions (discord_id, code, owner_id, amount) VALUES (?, ?, ?, ?)");
       if (!$fallback) fail_state($mysqli, $discordId, "db");
-      $fallback->bind_param("sssi", $discordId, $code, $ownerId, $amount);
+      $fallback->bind_param("sssi", $discordId, $code, $ownerId, $enterAmount);
       if (!$fallback->execute()) fail_state($mysqli, $discordId, "device");
     }
   } else {
     $fallback = $mysqli->prepare("INSERT INTO promo_redemptions (discord_id, code, owner_id, amount) VALUES (?, ?, ?, ?)");
     if (!$fallback) fail_state($mysqli, $discordId, "db");
-    $fallback->bind_param("sssi", $discordId, $code, $ownerId, $amount);
+    $fallback->bind_param("sssi", $discordId, $code, $ownerId, $enterAmount);
     if (!$fallback->execute()) fail_state($mysqli, $discordId, "db");
   }
-  $claim = $mysqli->prepare("INSERT INTO reward_claims (discord_id, kind, amount, status) VALUES (?, 'promo', ?, 'pending')");
-  if ($claim) {
-    $claim->bind_param("si", $ownerId, $amount);
-    $claim->execute();
-  }
+  add_cash_claim($mysqli, $ownerId, "promo", $ownerAmount);
+  add_cash_claim($mysqli, $discordId, "promo-enter", $enterAmount);
 }
 
 if ($action === "rewardsSync") {

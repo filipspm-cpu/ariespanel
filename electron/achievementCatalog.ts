@@ -1,4 +1,6 @@
-export const PROMO_CASH = 30_000;
+export const PROMO_ENTER_CASH = 10_000;
+export const PROMO_OWNER_CASH = 20_000;
+export const PROMO_CASH = PROMO_ENTER_CASH + PROMO_OWNER_CASH;
 
 export type AchievementStat = "reports" | "events" | "onlineHours" | "nightReports" | "activeDays" | "referrals";
 export type AchievementStats = Record<AchievementStat, number>;

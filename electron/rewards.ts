@@ -5,7 +5,8 @@ import { loadState } from "./storage";
 import { loadTesters, setAccountRank } from "./testers";
 import {
   MONEY_TIERS,
-  PROMO_CASH,
+  PROMO_ENTER_CASH,
+  PROMO_OWNER_CASH,
   findCatalogTask,
   totalAchievementPoints,
   type AchievementStat,
@@ -532,19 +533,23 @@ export async function redeemPromoCode(raw: string): Promise<RewardsState> {
     try {
       await db.execute(
         "INSERT INTO promo_redemptions (discord_id, code, owner_id, amount, device_id, device_hash) VALUES (?, ?, ?, ?, ?, ?)",
-        [discordId, code, ownerId, PROMO_CASH, device.id, device.hash],
+        [discordId, code, ownerId, PROMO_ENTER_CASH, device.id, device.hash],
       );
     } catch {
       await db.execute("INSERT INTO promo_redemptions (discord_id, code, owner_id, amount) VALUES (?, ?, ?, ?)", [
         discordId,
         code,
         ownerId,
-        PROMO_CASH,
+        PROMO_ENTER_CASH,
       ]);
     }
     await db.execute(
       "INSERT INTO reward_claims (discord_id, kind, amount, status) VALUES (?, 'promo', ?, 'pending')",
-      [ownerId, PROMO_CASH],
+      [ownerId, PROMO_OWNER_CASH],
+    );
+    await db.execute(
+      "INSERT INTO reward_claims (discord_id, kind, amount, status) VALUES (?, 'promo-enter', ?, 'pending')",
+      [discordId, PROMO_ENTER_CASH],
     );
     const state = await readState(db, discordId, name);
     return { ...state, ok: true };

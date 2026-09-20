@@ -1,7 +1,7 @@
 import { Copyright } from "@/components/Copyright";
 import { RankBadges, useAccountRanks } from "@/components/RankBadge";
 import { APP_VERSION } from "@/data/appVersion";
-import { formatCash, PROMO_CASH } from "@/data/achievements";
+import { formatCash, PROMO_ENTER_CASH, PROMO_OWNER_CASH } from "@/data/achievements";
 import { rewardsErrorText } from "@/services/rewardStats";
 import { useAppStore } from "@/store/useAppStore";
 import { mergeImportedMacros, parseMacroFile } from "@/services/macroPack";
@@ -101,7 +101,7 @@ export function SettingsPage() {
       } else {
         setPromo(next);
         if (next.ok === false) setPromoMsg(rewardsErrorText(next.error));
-        else setPromoMsg("Kod gotowy. Daj go innemu adminowi — za wpisanie dostanie 30 000 $ w grze.");
+        else setPromoMsg(`Kod gotowy. Kto go wpisze, dostanie ${formatCash(PROMO_ENTER_CASH)} w grze, a Ty ${formatCash(PROMO_OWNER_CASH)}.`);
       }
     } catch {
       setPromoMsg(rewardsErrorText("network"));
@@ -147,7 +147,9 @@ export function SettingsPage() {
         if (next.ok === false) setPromoMsg(rewardsErrorText(next.error));
         else {
           setPromoInput("");
-          setPromoMsg(`Kod przyjęty. Właściciel kodu dostaje ${formatCash(PROMO_CASH)} do wypłaty w grze.`);
+          setPromoMsg(
+            `Kod przyjęty. Dostajesz ${formatCash(PROMO_ENTER_CASH)} do wypłaty. Właściciel kodu dostaje ${formatCash(PROMO_OWNER_CASH)}.`,
+          );
         }
       }
     } catch {
@@ -341,8 +343,8 @@ export function SettingsPage() {
           <div className="mt-2 text-[18px] font-medium text-white">Twój kod i wpisanie kodu</div>
           <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-zinc-500">
             Każdy użytkownik może wygenerować jeden kod. Cudzy kod można wpisać tylko raz na konto i tylko raz na
-            komputer — zapamiętywany jest też adres IP. {formatCash(PROMO_CASH)} za wpisanie idzie do właściciela
-            kodu, nie do osoby, która go wpisuje.
+            komputer — zapamiętywany jest też adres IP. Osoba, która wpisze kod, dostaje {formatCash(PROMO_ENTER_CASH)}.
+            Właściciel kodu dostaje {formatCash(PROMO_OWNER_CASH)}.
           </p>
           {!discordConnected ? (
             <div className="mt-4 text-[13px] text-zinc-400">Najpierw połącz Discord.</div>
@@ -388,8 +390,8 @@ export function SettingsPage() {
               </div>
               {promo?.code ? (
                 <div className="mt-2 text-[12px] text-zinc-500">
-                  Każdy, kto wpisze Twój kod, dodaje Ci {formatCash(PROMO_CASH)} do wypłaty w grze. PNG i GIF to karta
-                  z kodem do wrzucenia na Discorda.
+                  Każdy, kto wpisze Twój kod, dodaje Ci {formatCash(PROMO_OWNER_CASH)} do wypłaty. Ta osoba dostaje{" "}
+                  {formatCash(PROMO_ENTER_CASH)}. PNG i GIF to karta z kodem do wrzucenia na Discorda.
                 </div>
               ) : null}
               {promo?.referrals ? (
