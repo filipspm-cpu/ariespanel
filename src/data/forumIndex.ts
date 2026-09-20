@@ -86,6 +86,7 @@ type Chunk = {
   lineIndex: number;
   lineEnd: number;
   lead: string;
+  excerpt: string;
   penalty: string | null;
   hay: string;
   body: string;
@@ -132,6 +133,7 @@ function buildChunks(): Chunk[] {
           lineIndex: i,
           lineEnd: i,
           lead: text,
+          excerpt: trimmed,
           penalty,
           body: fold(trimmed),
           hay: fold(`${rule.title} ${section} ${point ?? ""} ${trimmed}`),
@@ -143,6 +145,7 @@ function buildChunks(): Chunk[] {
       if (current) {
         current.body += ` ${fold(trimmed)}`;
         current.hay += ` ${fold(trimmed)}`;
+        current.excerpt += `\n${trimmed}`;
         current.lineEnd = i;
         if (!current.penalty) current.penalty = splitPenalty(trimmed).penalty;
         continue;
@@ -156,6 +159,7 @@ function buildChunks(): Chunk[] {
         lineIndex: i,
         lineEnd: i,
         lead: text,
+        excerpt: trimmed,
         penalty,
         body: fold(trimmed),
         hay: fold(`${rule.title} ${section} ${trimmed}`),
@@ -267,4 +271,30 @@ export function askForum(question: string, limit = 3): ForumHit[] {
   }
   const best = hits[0].score;
   return hits.filter((hit) => hit.score >= best * 0.78).slice(0, limit);
+}
+
+export type ForumPassage = {
+  ruleId: string;
+  ruleTitle: string;
+  point: string | null;
+  section: string | null;
+  excerpt: string;
+  penalty: string | null;
+};
+
+export function forumPassages(question: string, limit = 8): ForumPassage[] {
+  const q = question.trim();
+  if (q.length < 2) return [];
+  return CHUNKS.map((chunk) => ({ chunk, score: scoreChunk(chunk, q) }))
+    .filter((row) => row.score >= 24)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(({ chunk }) => ({
+      ruleId: chunk.ruleId,
+      ruleTitle: chunk.ruleTitle,
+      point: chunk.point,
+      section: chunk.section,
+      excerpt: chunk.excerpt.slice(0, 1600),
+      penalty: chunk.penalty,
+    }));
 }

@@ -30,6 +30,13 @@ export interface FeedbackApiResult {
   created?: boolean;
 }
 
+export interface ForumAskResult {
+  ok: boolean;
+  answer: string;
+  source?: string;
+  error?: string;
+}
+
 export interface SynvityApi {
   minimize: () => Promise<unknown>;
   maximize: () => Promise<unknown>;
@@ -86,6 +93,17 @@ export interface SynvityApi {
   updateNoticesRead: () => Promise<UpdateNotice[]>;
   majesticServers: (force?: boolean) => Promise<import("./index").LiveServerStatus[]>;
   forumOpen: (url: string) => Promise<unknown>;
+  forumAsk: (payload: {
+    question: string;
+    passages: {
+      ruleId?: string;
+      ruleTitle?: string;
+      point?: string | null;
+      section?: string | null;
+      excerpt?: string;
+      penalty?: string | null;
+    }[];
+  }) => Promise<ForumAskResult>;
   openPrivacy: () => Promise<unknown>;
   discordConnect: () => Promise<{
     id: string;

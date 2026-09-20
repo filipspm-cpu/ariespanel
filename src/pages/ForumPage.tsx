@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Sparkles } from "lucide-react";
 import { forumRuleById } from "@/data/forumRules";
-import { askForum, searchForum, type ForumHit } from "@/data/forumIndex";
+import { askForum, forumPassages, searchForum, type ForumHit } from "@/data/forumIndex";
 import { useAppStore } from "@/store/useAppStore";
 
 const SECTION_TITLES = new Set([
@@ -107,6 +107,9 @@ export function ForumPage() {
   const [search, setSearch] = useState("");
   const [ask, setAsk] = useState("");
   const [asked, setAsked] = useState("");
+  const [answer, setAnswer] = useState("");
+  const [answerSource, setAnswerSource] = useState("");
+  const [asking, setAsking] = useState(false);
   const lineRefs = useRef<Record<number, HTMLElement | null>>({});
 
   const searchHits = useMemo(() => searchForum(search, 12), [search]);
@@ -138,12 +141,35 @@ export function ForumPage() {
     });
   }
 
-  function runAsk() {
+  async function runAsk() {
     const q = ask.trim();
     if (q.length < 2) return;
     setAsked(q);
+    setAnswer("");
+    setAnswerSource("");
     const hits = askForum(q, 3);
     if (hits[0]) openHit(hits[0]);
+    if (!window.synvity?.forumAsk) {
+      setAnswer("Asystent AI działa w aplikacji ARIES.");
+      return;
+    }
+    setAsking(true);
+    try {
+      const result = await window.synvity.forumAsk({
+        question: q,
+        passages: forumPassages(q, 8),
+      });
+      if (result?.ok && result.answer) {
+        setAnswer(result.answer);
+        setAnswerSource(result.source || "");
+      } else {
+        setAnswer("Nie udało się uzyskać odpowiedzi asystenta. Poniżej są trafienia z regulaminu.");
+      }
+    } catch {
+      setAnswer("Nie udało się uzyskać odpowiedzi asystenta. Poniżej są trafienia z regulaminu.");
+    } finally {
+      setAsking(false);
+    }
   }
 
   return (
@@ -162,6 +188,8 @@ export function ForumPage() {
               onChange={(e) => {
                 setSearch(e.target.value);
                 setAsked("");
+                setAnswer("");
+                setAnswerSource("");
               }}
               placeholder="Szukaj we wszystkich regulaminach"
             />
@@ -179,12 +207,25 @@ export function ForumPage() {
               onChange={(e) => setAsk(e.target.value)}
               placeholder="Zapytaj asystenta, np. kara za RDM"
             />
-            <button type="submit">Sprawdź</button>
+            <button type="submit" disabled={asking}>
+              {asking ? "Myśli…" : "Sprawdź"}
+            </button>
           </form>
         </div>
 
         {showAsk ? (
           <div className="forum-results">
+            <div className="forum-results-label">Asystent</div>
+            <div className="forum-answer">
+              {asking ? (
+                <div className="forum-empty">Asystent czyta regulamin…</div>
+              ) : (
+                <>
+                  <p>{answer || "Brak odpowiedzi asystenta."}</p>
+                  {answerSource ? <div className="forum-answer-source">{answerSource}</div> : null}
+                </>
+              )}
+            </div>
             <div className="forum-results-label">Konkretne punkty</div>
             {askHits.length ? (
               askHits.map((hit) => (

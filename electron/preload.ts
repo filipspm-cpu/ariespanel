@@ -106,6 +106,7 @@ const api = {
   ranksList: () => ipcRenderer.invoke("ranks:list"),
   ranksSet: (payload: { id: string; rank: string; name?: string }) => ipcRenderer.invoke("ranks:set", payload),
   forumOpen: (url: string) => ipcRenderer.invoke("forum:open", url),
+  forumAsk: (payload: { question: string; passages: unknown[] }) => ipcRenderer.invoke("forum:ask", payload),
   openPrivacy: () => ipcRenderer.invoke("app:openPrivacy"),
   rewardsState: () => ipcRenderer.invoke("rewards:state"),
   rewardsGenerate: () => ipcRenderer.invoke("rewards:generate"),

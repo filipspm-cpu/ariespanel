@@ -2769,17 +2769,8 @@ textarea {
   font-size: 13px;
 }
 
-.forum-ask button {
-  height: 28px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 8px;
-  background: #fff;
-  color: #000;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.forum-ask button:disabled {
+  opacity: 0.55;
 }
 
 .forum-results {
@@ -2853,6 +2844,31 @@ textarea {
 .forum-empty {
   font-size: 13px;
   color: #737373;
+}
+
+.forum-answer {
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(28, 16, 22, 0.94), rgba(8, 8, 8, 0.92));
+  color: #ececec;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.forum-answer p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.forum-answer-source {
+  margin-top: 10px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a8a8a;
 }
 
 .forum-mark {

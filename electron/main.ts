@@ -10,6 +10,7 @@ import { refreshAccountRoles, setAccountRank } from "./testers";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
 import { runMacroById, setCountersListener, setOverlayRefresh, triggersFromMacros } from "./runMacro";
 import { createFeedback, listFeedback, updateFeedback } from "./feedback";
+import { askForumAi } from "./forumAi";
 import {
   claimMoneyTier,
   createCustomAchievement,
@@ -428,6 +429,12 @@ function registerIpc() {
     });
   });
   ipcMain.handle("forum:open", (_e, url: string) => shell.openExternal(assertForumUrl(url)));
+  ipcMain.handle("forum:ask", (_e, payload: { question?: string; passages?: unknown[] }) =>
+    askForumAi({
+      question: String(payload?.question || ""),
+      passages: Array.isArray(payload?.passages) ? (payload.passages as Parameters<typeof askForumAi>[0]["passages"]) : [],
+    }),
+  );
   ipcMain.handle("app:openPrivacy", () =>
     shell.openExternal("https://filipekweb.pl/aries/polityka-prywatnosci.php"),
   );
