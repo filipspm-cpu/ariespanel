@@ -1,5 +1,5 @@
 <?php
-// aries-rewards-1.0.95
+// aries-rewards-1.0.96
 if (function_exists("ob_start")) {
   @ob_start();
 }
@@ -463,10 +463,12 @@ if ($action === "rewardsAccounts") {
             COALESCE(NULLIF(d.name, ''), NULLIF(s.name, ''), NULLIF(p.name, ''), a.discord_id) AS name,
             COALESCE(d.avatar_url, '') AS avatar_url
      FROM (
-       SELECT discord_id FROM discord_accounts
-       UNION SELECT discord_id FROM promo_codes
-       UNION SELECT discord_id FROM reward_stats
-       UNION SELECT discord_id FROM reward_claims
+         SELECT discord_id FROM discord_accounts
+         UNION SELECT discord_id FROM promo_codes
+         UNION SELECT discord_id FROM promo_redemptions
+         UNION SELECT owner_id FROM promo_redemptions WHERE owner_id <> ''
+         UNION SELECT discord_id FROM reward_stats
+         UNION SELECT discord_id FROM reward_claims
      ) a
      LEFT JOIN discord_accounts d ON d.discord_id = a.discord_id
      LEFT JOIN reward_stats s ON s.discord_id = a.discord_id
@@ -476,7 +478,7 @@ if ($action === "rewardsAccounts") {
     while ($row = $result->fetch_assoc()) {
       $state = read_state($mysqli, $row["id"]);
       $accounts[] = array(
-        "id" => $row["id"],
+        "id" => (string) $row["id"],
         "name" => $row["name"],
         "avatarUrl" => $row["avatar_url"],
         "code" => $state["code"],
@@ -492,7 +494,7 @@ if ($action === "rewardsAccounts") {
     if ($a["points"] === $b["points"]) return strcasecmp($a["name"], $b["name"]);
     return $b["points"] - $a["points"];
   });
-  json_out(array("ok" => true, "accounts" => $accounts));
+  json_out(array("ok" => true, "statsReady" => true, "accounts" => $accounts));
 }
 
 if ($discordId === "") {

@@ -133,13 +133,14 @@ export async function apiRequestUrls(
   urls: string[],
   method: "GET" | "POST",
   body?: unknown,
+  accept?: (payload: unknown) => boolean,
 ): Promise<unknown | null> {
   lastFailure = null;
   for (const base of urls) {
     try {
       const payload = await requestOne(base, method, body);
       lastFailure = null;
-      return payload;
+      if (!accept || accept(payload)) return payload;
     } catch (err) {
       lastFailure = classifyApiError(err, base);
     }

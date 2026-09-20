@@ -1,5 +1,5 @@
 <?php
-// aries-accounts-1.0.95
+// aries-accounts-1.0.96
 if (function_exists("ob_start")) {
   @ob_start();
 }
@@ -623,7 +623,44 @@ function aries_rw_dispatch($mysqli, $data, $action) {
   else $name = substr($name, 0, 191);
 
   if ($action === "rewardsAccounts") {
-    json_out(array("ok" => true, "accounts" => array()));
+    $accounts = array();
+    $result = $mysqli->query(
+      "SELECT a.discord_id AS id,
+              COALESCE(NULLIF(d.name, ''), NULLIF(s.name, ''), NULLIF(p.name, ''), a.discord_id) AS name,
+              COALESCE(d.avatar_url, '') AS avatar_url
+       FROM (
+         SELECT discord_id FROM discord_accounts
+         UNION SELECT discord_id FROM promo_codes
+         UNION SELECT discord_id FROM promo_redemptions
+         UNION SELECT owner_id FROM promo_redemptions WHERE owner_id <> ''
+         UNION SELECT discord_id FROM reward_stats
+         UNION SELECT discord_id FROM reward_claims
+       ) a
+       LEFT JOIN discord_accounts d ON d.discord_id = a.discord_id
+       LEFT JOIN reward_stats s ON s.discord_id = a.discord_id
+       LEFT JOIN promo_codes p ON p.discord_id = a.discord_id"
+    );
+    if ($result) {
+      while ($row = $result->fetch_assoc()) {
+        $state = aries_rw_state($mysqli, $row["id"]);
+        $accounts[] = array(
+          "id" => (string) $row["id"],
+          "name" => $row["name"],
+          "avatarUrl" => $row["avatar_url"],
+          "code" => $state["code"],
+          "referrals" => $state["referrals"],
+          "redeemed" => $state["redeemed"],
+          "pendingCash" => $state["pendingCash"],
+          "paidCash" => $state["paidCash"],
+          "points" => $state["points"],
+        );
+      }
+    }
+    usort($accounts, function ($a, $b) {
+      if ($a["referrals"] === $b["referrals"]) return strcasecmp($a["name"], $b["name"]);
+      return $b["referrals"] - $a["referrals"];
+    });
+    json_out(array("ok" => true, "statsReady" => true, "accounts" => $accounts));
   }
   if ($discordId === "") {
     json_out(array("ok" => false, "error" => "login"), 401);
