@@ -108,32 +108,37 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
     }
     .shot {
       position: relative;
-      min-height: 390px; padding: 18px;
-      border: 1px solid rgba(255,255,255,0.08); border-radius: 28px;
-      background:
-        radial-gradient(circle at 50% 18%, rgba(240, 45, 94, 0.2), transparent 48%),
-        linear-gradient(180deg, #151515, #070707);
+      padding: 8px;
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 22px;
+      background: linear-gradient(180deg, #151515, #070707);
       box-shadow: 0 30px 80px rgba(0,0,0,0.5);
-      overflow: hidden;
       animation: shot-in 0.9s cubic-bezier(.2,.8,.2,1) 0.18s both;
     }
-    .chrome { display: flex; gap: 6px; margin-bottom: 18px; }
-    .chrome i { width: 10px; height: 10px; border-radius: 50%; background: #3f3f46; display: block; }
-    .chrome i:first-child { background: #f02d5e; }
-    .shot-body { display: grid; grid-template-columns: 86px 1fr; gap: 14px; min-height: 280px; }
-    .side { display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 8px; }
-    .side img { width: 54px; height: 54px; }
-    .dot { width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.06); }
-    .dot.on { background: rgba(240, 45, 94, 0.35); animation: dot-pulse 1.8s ease-in-out infinite; }
-    .panel { padding: 22px 18px 18px; border-radius: 18px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.05); }
-    .panel img {
-      display: block; width: min(180px, 55%); margin: 8px auto 12px;
-      filter: drop-shadow(0 18px 40px rgba(240, 45, 94, 0.22));
-      animation: logo-float 4.6s ease-in-out infinite;
+    .screens {
+      position: relative;
+      overflow: hidden;
+      border-radius: 16px;
+      aspect-ratio: 16 / 10;
+      background: #050505;
     }
-    .word { font-family: Orbitron, Inter, sans-serif; text-align: center; letter-spacing: 0.34em; font-size: 18px; }
-    .sub { text-align: center; color: #71717a; font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; margin-top: 6px; }
-    .ver { text-align: center; margin-top: 14px; color: #f02d5e; font-size: 13px; font-weight: 700; }
+    .screen {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: left top;
+      opacity: 0;
+      transition: opacity 0.55s ease;
+    }
+    .screen.is-on { opacity: 1; }
+    .screen-dots {
+      display: flex; justify-content: center; gap: 8px;
+      padding: 10px 0 4px;
+    }
+    .screen-dots button {
+      width: 7px; height: 7px; padding: 0; border: 0; border-radius: 50%;
+      background: rgba(255,255,255,0.22); cursor: pointer;
+    }
+    .screen-dots button.is-on { background: #f02d5e; }
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding-bottom: 36px; }
     .card {
       padding: 20px; border: 1px solid rgba(255,255,255,0.07); border-radius: 18px;
@@ -158,9 +163,7 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
     footer { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 24px 0 40px; color: #52525b; font-size: 12px; border-top: 1px solid rgba(255,255,255,0.06); }
     footer a { color: #a1a1aa; }
     @media (max-width: 860px) {
-      .hero, .grid, .shot-body { grid-template-columns: 1fr; }
-      .shot { min-height: 280px; }
-      .side { flex-direction: row; justify-content: center; }
+      .hero, .grid { grid-template-columns: 1fr; }
       .nav { display: none; }
     }
     @keyframes fade-up {
@@ -182,14 +185,6 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
     @keyframes glow-drift {
       0%, 100% { transform: translate(0, 0); opacity: 0.7; }
       50% { transform: translate(-40px, 24px); opacity: 1; }
-    }
-    @keyframes logo-float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
-    }
-    @keyframes dot-pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(240, 45, 94, 0.35); }
-      50% { box-shadow: 0 0 0 7px rgba(240, 45, 94, 0); }
     }
     @keyframes btn-shine {
       0%, 55% { transform: translateX(-130%); }
@@ -241,22 +236,16 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
             <span class="pill">0 zł</span>
           </div>
         </div>
-        <div class="shot" aria-hidden="true">
-          <div class="chrome"><i></i><i></i><i></i></div>
-          <div class="shot-body">
-            <div class="side">
-              <img src="aries-mark.png" alt="" />
-              <div class="dot on"></div>
-              <div class="dot"></div>
-              <div class="dot"></div>
-              <div class="dot"></div>
-            </div>
-            <div class="panel">
-              <img src="aries-logo.png" alt="ARIES" />
-              <div class="word">ARIES</div>
-              <div class="sub">panel</div>
-              <div class="ver"><?php echo $verLabel; ?></div>
-            </div>
+        <div class="shot">
+          <div class="screens">
+            <img class="screen is-on" src="aries-screen-home.jpg" alt="Panel ARIES — główna, reporty i serwery" />
+            <img class="screen" src="aries-screen-achievements.jpg" alt="Panel ARIES — osiągnięcia" />
+            <img class="screen" src="aries-screen-overlay.jpg" alt="Panel ARIES — nakładka HUD" />
+          </div>
+          <div class="screen-dots" role="tablist" aria-label="Zrzuty panelu">
+            <button type="button" class="is-on" aria-label="Główna"></button>
+            <button type="button" aria-label="Osiągnięcia"></button>
+            <button type="button" aria-label="Nakładka"></button>
           </div>
         </div>
       </section>
@@ -306,20 +295,49 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
       var nodes = document.querySelectorAll(".card, .adbar");
       if (!("IntersectionObserver" in window)) {
         for (var i = 0; i < nodes.length; i++) nodes[i].classList.add("in");
-        return;
+      } else {
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("in");
+              io.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.16, rootMargin: "0px 0px -40px 0px" });
+        for (var j = 0; j < nodes.length; j++) {
+          nodes[j].style.setProperty("--d", (j % 3) * 80 + "ms");
+          io.observe(nodes[j]);
+        }
       }
-      var io = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("in");
-            io.unobserve(entry.target);
-          }
-        });
-      }, { threshold: 0.16, rootMargin: "0px 0px -40px 0px" });
-      for (var j = 0; j < nodes.length; j++) {
-        nodes[j].style.setProperty("--d", (j % 3) * 80 + "ms");
-        io.observe(nodes[j]);
+
+      var shots = document.querySelectorAll(".screen");
+      var dots = document.querySelectorAll(".screen-dots button");
+      if (!shots.length) return;
+      var idx = 0;
+      var timer;
+      function show(n) {
+        idx = (n + shots.length) % shots.length;
+        for (var k = 0; k < shots.length; k++) {
+          shots[k].classList.toggle("is-on", k === idx);
+          if (dots[k]) dots[k].classList.toggle("is-on", k === idx);
+        }
       }
+      function start() {
+        stop();
+        timer = setInterval(function () { show(idx + 1); }, 4200);
+      }
+      function stop() { if (timer) clearInterval(timer); }
+      for (var d = 0; d < dots.length; d++) {
+        (function (n) {
+          dots[n].addEventListener("click", function () { show(n); start(); });
+        })(d);
+      }
+      var shot = document.querySelector(".shot");
+      if (shot) {
+        shot.addEventListener("mouseenter", stop);
+        shot.addEventListener("mouseleave", start);
+      }
+      start();
     })();
   </script>
 </body>
