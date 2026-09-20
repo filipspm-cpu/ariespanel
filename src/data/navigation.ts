@@ -66,15 +66,21 @@ export function canAccessRoute(route: RouteId, rank: AccountRank | AccountRank[]
 }
 
 export function visibleNavGroups(rank: AccountRank | AccountRank[] | null): NavGroup[] {
+  const ranks = Array.isArray(rank) ? rank : rank ? [rank] : [];
+  const beta = hasBetaAccess(ranks);
   return navGroups
     .map((group) => ({
       ...group,
       items: group.items
-        .filter((item) => canSeeNavItem(item, rank))
-        .map((item) => ({
-          ...withBetaBadge(item),
-          children: item.children?.filter((child) => canSeeNavItem(child, rank)).map(withBetaBadge),
-        })),
+        .filter((item) => canSeeNavItem(item, ranks))
+        .map((item) => {
+          const next = withBetaBadge(item);
+          const children = item.children?.filter((child) => canSeeNavItem(child, ranks)).map(withBetaBadge);
+          if (item.id === "forum" && beta) {
+            return { ...next, badge: next.badge || "BETA", children };
+          }
+          return { ...next, children };
+        }),
     }))
     .filter((group) => group.items.length > 0);
 }

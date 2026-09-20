@@ -433,6 +433,7 @@ function registerIpc() {
     askForumAi({
       question: String(payload?.question || ""),
       passages: Array.isArray(payload?.passages) ? (payload.passages as Parameters<typeof askForumAi>[0]["passages"]) : [],
+      discordId: loadState().settings.discordId || "",
     }),
   );
   ipcMain.handle("app:openPrivacy", () =>

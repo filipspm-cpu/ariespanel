@@ -158,5 +158,7 @@ export async function setAccountRank(id: string, rank: string, name?: string): P
 
 export function isBetaTesterId(discordId: string | undefined) {
   if (!discordId) return false;
-  return loadTesters().some((t) => t.id === discordId && (/beta/i.test(t.role) || /dev/i.test(t.role)));
+  const id = discordId.replace(/\D/g, "");
+  if (!id) return false;
+  return loadTesters().some((t) => t.id === id && (/beta/i.test(t.role) || /dev/i.test(t.role)));
 }
