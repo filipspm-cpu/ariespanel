@@ -253,6 +253,21 @@ async function mysqlList(): Promise<StoredAccount[]> {
   }
 }
 
+async function mysqlProfiles(): Promise<StoredAccount[]> {
+  let conn: mysql.Connection | undefined;
+  try {
+    conn = await withTimeout(mysqlConn(), 5000);
+    const [rows] = await conn.query(
+      "SELECT discord_id, name FROM panel_profiles WHERE discord_id IS NOT NULL AND discord_id <> ''",
+    );
+    return parseAccounts(rows);
+  } catch {
+    return [];
+  } finally {
+    await conn?.end().catch(() => undefined);
+  }
+}
+
 export async function recordDiscordAccount(
   profile: {
     id?: string;
@@ -275,19 +290,27 @@ export async function recordDiscordAccount(
 }
 
 export async function listDiscordAccounts(): Promise<DiscordAccountCard[]> {
-  const [sql, php] = await Promise.all([mysqlList(), apiRequest("GET")]);
-  ingestRolesPayload(php);
-  const rows = mergeById(parseAccounts(php), sql, readLocal(), knownAccounts());
-  const testers = loadTesters();
-  const rankById = new Map(testers.map((t) => [t.id, t.role]));
-  for (const row of rows) {
-    row.rank = rankById.get(row.id) || "";
+  try {
+    const [sql, php, profiles] = await Promise.all([
+      mysqlList(),
+      apiRequest("GET").catch(() => null),
+      mysqlProfiles(),
+    ]);
+    if (php) ingestRolesPayload(php);
+    const rows = mergeById(parseAccounts(php), sql, profiles, readLocal(), knownAccounts());
+    const testers = loadTesters();
+    const rankById = new Map(testers.map((t) => [t.id, t.role]));
+    for (const row of rows) {
+      row.rank = rankById.get(row.id) || "";
+    }
+    rows.sort((a, b) => {
+      const ta = Date.parse(a.lastLogin || "") || 0;
+      const tb = Date.parse(b.lastLogin || "") || 0;
+      if (tb !== ta) return tb - ta;
+      return a.name.localeCompare(b.name, "pl");
+    });
+    return toCards(rows);
+  } catch {
+    return toCards(mergeById(readLocal(), knownAccounts()));
   }
-  rows.sort((a, b) => {
-    const ta = Date.parse(a.lastLogin || "") || 0;
-    const tb = Date.parse(b.lastLogin || "") || 0;
-    if (tb !== ta) return tb - ta;
-    return a.name.localeCompare(b.name, "pl");
-  });
-  return toCards(rows);
 }

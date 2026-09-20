@@ -234,23 +234,44 @@ function list_roles($mysqli) {
 
 function list_accounts($mysqli) {
   $out = array();
+  $seen = array();
   $result = $mysqli->query("SELECT * FROM discord_accounts ORDER BY name ASC");
-  if (!$result) return $out;
-  while ($row = $result->fetch_assoc()) {
-    $login = "";
-    if (isset($row["last_login"]) && $row["last_login"]) $login = $row["last_login"];
-    else if (isset($row["updated_at"]) && $row["updated_at"]) $login = $row["updated_at"];
-    $iso = "";
-    if ($login) {
-      $ts = strtotime($login);
-      if ($ts) $iso = date("c", $ts);
+  if ($result) {
+    while ($row = $result->fetch_assoc()) {
+      $id = preg_replace("/\\D+/", "", (string) $row["discord_id"]);
+      $name = trim((string) $row["name"]);
+      if ($id === "" || $name === "") continue;
+      $login = "";
+      if (isset($row["last_login"]) && $row["last_login"]) $login = $row["last_login"];
+      else if (isset($row["updated_at"]) && $row["updated_at"]) $login = $row["updated_at"];
+      $iso = "";
+      if ($login) {
+        $ts = strtotime($login);
+        if ($ts) $iso = date("c", $ts);
+      }
+      $seen[$id] = true;
+      $out[] = array(
+        "id" => $id,
+        "name" => $name,
+        "avatarUrl" => isset($row["avatar_url"]) ? $row["avatar_url"] : "",
+        "lastLogin" => $iso,
+      );
     }
-    $out[] = array(
-      "id" => $row["discord_id"],
-      "name" => $row["name"],
-      "avatarUrl" => isset($row["avatar_url"]) ? $row["avatar_url"] : "",
-      "lastLogin" => $iso,
-    );
+  }
+  $profiles = $mysqli->query("SELECT discord_id, name FROM panel_profiles WHERE discord_id IS NOT NULL AND discord_id <> ''");
+  if ($profiles) {
+    while ($row = $profiles->fetch_assoc()) {
+      $id = preg_replace("/\\D+/", "", (string) $row["discord_id"]);
+      $name = trim((string) $row["name"]);
+      if ($id === "" || $name === "" || isset($seen[$id])) continue;
+      $seen[$id] = true;
+      $out[] = array(
+        "id" => $id,
+        "name" => $name,
+        "avatarUrl" => "",
+        "lastLogin" => "",
+      );
+    }
   }
   return $out;
 }

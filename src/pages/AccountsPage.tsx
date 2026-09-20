@@ -65,16 +65,22 @@ export function AccountsPage() {
     }
     if (manual) setRefreshing(true);
     try {
-      const [rows, testers, rewardRows] = await Promise.all([
+      const [rowsResult, testersResult, rewardsResult] = await Promise.allSettled([
         list(),
         window.synvity?.ranksList?.() ?? Promise.resolve(undefined),
         window.synvity?.rewardsAccounts?.() ?? Promise.resolve([]),
       ]);
-      setAccounts(rows ?? []);
-      setRewards(rewardRows ?? []);
-      if (testers) setTesters(testers);
+      if (rowsResult.status === "fulfilled") {
+        setAccounts(rowsResult.value ?? []);
+      }
+      if (testersResult.status === "fulfilled" && testersResult.value) {
+        setTesters(testersResult.value);
+      }
+      if (rewardsResult.status === "fulfilled") {
+        setRewards(rewardsResult.value ?? []);
+      }
     } catch {
-      if (!manual) setAccounts([]);
+      // Keep the last successful list — a ranks/rewards failure must not wipe Konta.
     } finally {
       setReady(true);
       setRefreshing(false);

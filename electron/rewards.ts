@@ -863,24 +863,28 @@ async function boardFrom(db: mysql.Connection): Promise<AccountRewards[]> {
 }
 
 export async function listAccountRewards(): Promise<AccountRewards[]> {
-  const payload = await php("rewardsAccounts", { discordId: caller().discordId });
-  if (payload && typeof payload === "object" && Array.isArray((payload as { accounts?: unknown }).accounts)) {
-    const accounts = (payload as { accounts: AccountRewards[] }).accounts.map((row) => ({
-      ...row,
-      id: String(row.id || "").replace(/\D/g, ""),
-      referrals: Number(row.referrals || 0),
-      redeemed: Boolean(row.redeemed),
-      pendingCash: Number(row.pendingCash || 0),
-      paidCash: Number(row.paidCash || 0),
-      points: Number(row.points || 0),
-    }));
-    if (accounts.length || (payload as { statsReady?: unknown }).statsReady === true) {
-      return accounts.sort(
-        (a, b) => b.referrals - a.referrals || b.points - a.points || String(a.name || a.id).localeCompare(String(b.name || b.id), "pl"),
-      );
+  try {
+    const payload = await php("rewardsAccounts", { discordId: caller().discordId });
+    if (payload && typeof payload === "object" && Array.isArray((payload as { accounts?: unknown }).accounts)) {
+      const accounts = (payload as { accounts: AccountRewards[] }).accounts.map((row) => ({
+        ...row,
+        id: String(row.id || "").replace(/\D/g, ""),
+        referrals: Number(row.referrals || 0),
+        redeemed: Boolean(row.redeemed),
+        pendingCash: Number(row.pendingCash || 0),
+        paidCash: Number(row.paidCash || 0),
+        points: Number(row.points || 0),
+      }));
+      if (accounts.length || (payload as { statsReady?: unknown }).statsReady === true) {
+        return accounts.sort(
+          (a, b) => b.referrals - a.referrals || b.points - a.points || String(a.name || a.id).localeCompare(String(b.name || b.id), "pl"),
+        );
+      }
     }
+    return (await withDb((db) => boardFrom(db))) || [];
+  } catch {
+    return [];
   }
-  return (await withDb((db) => boardFrom(db))) || [];
 }
 
 export async function createCustomAchievement(input: CustomAchievementInput): Promise<RewardsState> {

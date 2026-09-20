@@ -411,6 +411,13 @@ function registerIpc() {
     }
   });
   ipcMain.handle("profile:saveName", (_e, name: string) => savePanelName(String(name || "")));
+  ipcMain.handle("accounts:list", async () => {
+    try {
+      return await listDiscordAccounts();
+    } catch {
+      return [];
+    }
+  });
   ipcMain.handle("ranks:list", () => refreshAccountRoles());
   ipcMain.handle("ranks:set", (_e, payload: { id?: string; rank?: string; name?: string }) =>
     setAccountRank(String(payload?.id || ""), String(payload?.rank || ""), payload?.name),
