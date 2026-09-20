@@ -27,3 +27,173 @@ body::-webkit-scrollbar,
 [data-hud] {
   pointer-events: auto;
 }
+
+.overlay-push {
+  position: relative;
+  overflow: hidden;
+  width: 300px;
+  border-radius: 14px;
+  background: #0a0a0a;
+  color: #fff;
+  padding: 12px 14px 14px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+.overlay-push--live {
+  padding-bottom: 18px;
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(240, 45, 94, 0.22), transparent 55%),
+    linear-gradient(180deg, #141414 0%, #0a0a0a 100%);
+  box-shadow:
+    0 0 0 1px rgba(240, 45, 94, 0.28),
+    0 12px 36px rgba(240, 45, 94, 0.2),
+    0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.overlay-push--live::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.overlay-push--enter {
+  animation: overlay-push-in 0.58s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.overlay-push--leave {
+  animation: overlay-push-out 0.42s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.overlay-push-shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 32%,
+    rgba(255, 255, 255, 0.16) 46%,
+    transparent 60%
+  );
+  transform: translateX(-120%);
+  animation: overlay-push-shine 1.15s ease-out 0.12s both;
+}
+
+.overlay-push-icon {
+  display: flex;
+  height: 34px;
+  width: 34px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(240, 45, 94, 0.16);
+  color: #ff6b90;
+  animation: overlay-push-icon 1.35s ease-in-out infinite;
+}
+
+.overlay-push-kicker {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #a1a1aa;
+}
+
+.overlay-push-body {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.overlay-push-ver {
+  margin-top: 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #a1a1aa;
+}
+
+.overlay-push-timer {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 6px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.overlay-push-timer > span {
+  display: block;
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #f02d5e, #ff8aa8);
+  animation: overlay-push-timer 6s linear forwards;
+}
+
+@keyframes overlay-push-in {
+  from {
+    opacity: 0;
+    transform: translateX(42px) scale(0.9);
+    filter: blur(8px);
+  }
+  62% {
+    opacity: 1;
+    transform: translateX(-7px) scale(1.03);
+    filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes overlay-push-out {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(36px) scale(0.94);
+    filter: blur(5px);
+  }
+}
+
+@keyframes overlay-push-shine {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes overlay-push-icon {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 0 rgba(240, 45, 94, 0.35);
+  }
+  50% {
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 6px rgba(240, 45, 94, 0);
+  }
+}
+
+@keyframes overlay-push-timer {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}

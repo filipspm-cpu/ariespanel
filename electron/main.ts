@@ -215,7 +215,7 @@ export function createOverlayWindow(displayId?: number) {
   overlayWindow.setAlwaysOnTop(true, "screen-saver");
   overlayWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
-  overlayWindow.webContents.setFrameRate(12);
+  overlayWindow.webContents.setFrameRate(30);
   overlayWindow.webContents.on("did-finish-load", () => {
     void overlayWindow?.webContents.insertCSS(
       "html,body,#root{background:transparent!important;background-color:transparent!important;overflow:hidden!important;overscroll-behavior:none;}::-webkit-scrollbar{display:none!important;width:0!important;height:0!important;}",

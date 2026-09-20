@@ -110,7 +110,7 @@ export function OverlayPage() {
             <div className="ink-card divide-y divide-white/[0.06]">
               <Row
                 title="Powiadomienia push"
-                hint="Na nakładce, w wybranym miejscu. W trybie edycji przesuń ramkę."
+                hint="Na nakładce, w wybranym miejscu. Aktualizacja wjeżdża z animacją i znika po 6 sekundach."
                 checked={overlay.showPush}
                 onChange={(v) => patchOverlay({ showPush: v })}
               />

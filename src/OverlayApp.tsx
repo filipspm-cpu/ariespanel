@@ -59,6 +59,14 @@ function screenScale() {
   return Math.max(0.85, Math.min(1.35, Math.min(w / 1920, h / 1080)));
 }
 
+const UPDATE_TOAST_MS = 6000;
+const UPDATE_TOAST_LEAVE_MS = 420;
+
+function noticeKey(notice: OverlayPayload["notice"]) {
+  if (!notice) return "";
+  return `${notice.version ?? ""}::${notice.title}::${notice.body}`;
+}
+
 export function OverlayApp() {
   const [payload, setPayload] = useState<OverlayPayload>({
     overlay: fallbackOverlay,
@@ -66,6 +74,7 @@ export function OverlayApp() {
     track: null,
   });
   const [now, setNow] = useState(() => new Date());
+  const [dismissedNotice, setDismissedNotice] = useState("");
   const uiScale = useScreenScale();
 
   useEffect(() => {
@@ -75,7 +84,31 @@ export function OverlayApp() {
     if (root) root.style.background = "transparent";
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || window.synvityOverlay) return;
+    if (new URLSearchParams(window.location.search).get("preview") !== "update") return;
+    setPayload((p) => ({
+      ...p,
+      overlay: {
+        ...p.overlay,
+        editMode: false,
+        enabled: true,
+        showPush: true,
+        showReports: false,
+        showSpotify: false,
+        showClock: false,
+      },
+      notice: {
+        title: "ARIES",
+        body: "Dostępna jest nowa aktualizacja",
+        version: "1.0.92",
+      },
+    }));
+  }, []);
+
   const { overlay, overlayCounters, ticket, specs, track, notice } = payload;
+  const liveNoticeKey = noticeKey(notice);
+  const liveNotice = notice && liveNoticeKey !== dismissedNotice ? notice : null;
 
   useEffect(() => {
     if (!overlay.showClock) return;
@@ -191,7 +224,7 @@ export function OverlayApp() {
         </Draggable>
       ) : null}
 
-      {overlay.showPush && (notice || overlay.editMode) ? (
+      {overlay.showPush && (liveNotice || overlay.editMode) ? (
         <Draggable
           enabled={overlay.editMode}
           x={overlay.positions.push?.x ?? defaultPositions.push.x}
@@ -203,7 +236,13 @@ export function OverlayApp() {
           }}
           onCommit={(x, y) => commitPos("push", x, y)}
         >
-          <PushCard notice={notice ?? null} placeholder={overlay.editMode && !notice} />
+          <PushCard
+            notice={liveNotice}
+            placeholder={overlay.editMode && !liveNotice}
+            onDismissed={() => {
+              if (liveNoticeKey) setDismissedNotice(liveNoticeKey);
+            }}
+          />
         </Draggable>
       ) : null}
 
@@ -229,20 +268,66 @@ export function OverlayApp() {
 function PushCard({
   notice,
   placeholder,
+  onDismissed,
 }: {
   notice: { title: string; body: string; version?: string } | null;
   placeholder?: boolean;
+  onDismissed?: () => void;
 }) {
+  const live = Boolean(notice) && !placeholder;
+  const key = noticeKey(notice);
+  const [leaving, setLeaving] = useState(false);
+  const onDismissedRef = useRef(onDismissed);
+  onDismissedRef.current = onDismissed;
+
+  useEffect(() => {
+    if (!live || !key) {
+      setLeaving(false);
+      return;
+    }
+    setLeaving(false);
+    const leave = window.setTimeout(() => setLeaving(true), UPDATE_TOAST_MS);
+    const gone = window.setTimeout(() => onDismissedRef.current?.(), UPDATE_TOAST_MS + UPDATE_TOAST_LEAVE_MS);
+    return () => {
+      window.clearTimeout(leave);
+      window.clearTimeout(gone);
+    };
+  }, [live, key]);
+
+  if (!notice && !placeholder) return null;
+
   return (
-    <div className="w-[300px] rounded-xl bg-black px-3.5 py-2.5 text-white">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
-        {notice?.title || "Powiadomienia"}
+    <div
+      className={[
+        "overlay-push",
+        live ? "overlay-push--live" : "",
+        live ? (leaving ? "overlay-push--leave" : "overlay-push--enter") : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {live ? <div className="overlay-push-shine" /> : null}
+      <div className="relative flex items-start gap-2.5">
+        {live ? (
+          <div className="overlay-push-icon" aria-hidden>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M12 19V5" strokeLinecap="round" />
+              <path d="M6.5 10.5 12 5l5.5 5.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <div className="overlay-push-kicker">{notice?.title || "Powiadomienia"}</div>
+          <div className="overlay-push-body">{notice?.body || "Tu będą przychodzić powiadomienia"}</div>
+          {notice?.version ? <div className="overlay-push-ver">v{notice.version}</div> : null}
+          {placeholder ? <div className="mt-1 text-[11px] leading-snug text-zinc-500">Przesuń w trybie edycji</div> : null}
+        </div>
       </div>
-      <div className="mt-1 text-[13px] font-medium leading-snug">
-        {notice?.body || "Tu będą przychodzić powiadomienia"}
-      </div>
-      {notice?.version ? <div className="mt-1 text-[12px] tabular-nums text-zinc-400">v{notice.version}</div> : null}
-      {placeholder ? <div className="mt-1 text-[11px] leading-snug text-zinc-500">Przesuń w trybie edycji</div> : null}
+      {live ? (
+        <div className="overlay-push-timer">
+          <span />
+        </div>
+      ) : null}
     </div>
   );
 }
