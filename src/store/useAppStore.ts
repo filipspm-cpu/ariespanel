@@ -10,7 +10,7 @@ import type {
   RouteId,
 } from "@/types";
 import { persist } from "@/services/storageClient";
-import { pushRewardStats } from "@/services/rewardStats";
+import { pushRewardStats, seedRewardStats } from "@/services/rewardStats";
 import { calendarDayKey } from "@/services/todayStats";
 import { migrateMacro } from "@/data/defaultMacros";
 import type { Tester } from "@/data/testers";
@@ -77,6 +77,9 @@ const defaultSnapshot = (): Omit<AppSnapshot, "route" | "searchOpen" | "searchQu
     appOnlineMs: 0,
     sessionStartedAt: Date.now(),
     onlineDay: calendarDayKey(),
+    rewardOnlineMs: 0,
+    rewardActiveDays: 1,
+    rewardActiveDay: calendarDayKey(),
   },
   testers: [],
 });
@@ -186,15 +189,11 @@ export const useAppStore = create<State>((set, get) => ({
         previousLayout: overlayIn?.previousLayout ?? null,
       },
       stats: (() => {
-        const today = calendarDayKey();
         const incoming = data.stats;
-        const sameDay = incoming?.onlineDay === today;
         return {
           ...defaults.stats,
           ...incoming,
-          appOnlineMs: sameDay ? incoming?.appOnlineMs ?? 0 : 0,
-          onlineDay: today,
-          sessionStartedAt: Date.now(),
+          ...seedRewardStats(incoming, Array.isArray(data.counters) ? data.counters : []),
         };
       })(),
       settings: { ...defaults.settings, ...data.settings },

@@ -3,8 +3,8 @@ import { AppLayout } from "@/layouts/AppLayout";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { hydrate } from "@/services/storageClient";
 import { overlayCounterItems } from "@/services/overlayCounters";
-import { pushRewardStats } from "@/services/rewardStats";
-import { calendarDayKey, msUntilNextMidnight } from "@/services/todayStats";
+import { advanceRewardStats, pushRewardStats } from "@/services/rewardStats";
+import { msUntilNextMidnight } from "@/services/todayStats";
 import { useAppStore } from "@/store/useAppStore";
 
 export function App() {
@@ -109,22 +109,9 @@ export function App() {
 
     const flushOnline = (resetDay: boolean) => {
       const s = useAppStore.getState().stats;
-      const today = calendarDayKey();
-      const elapsed = Math.max(0, Date.now() - s.sessionStartedAt);
-      if (resetDay || s.onlineDay !== today) {
-        useAppStore.getState().patchStats({
-          appOnlineMs: 0,
-          sessionStartedAt: Date.now(),
-          onlineDay: today,
-        });
-        return;
-      }
-      if (elapsed < 20000) return;
-      useAppStore.getState().patchStats({
-        appOnlineMs: s.appOnlineMs + elapsed,
-        sessionStartedAt: Date.now(),
-        onlineDay: today,
-      });
+      const next = advanceRewardStats(s, { resetDay, minElapsedMs: 20000 });
+      if (!next) return;
+      useAppStore.getState().patchStats(next);
     };
 
     const pushOverlay = () => {

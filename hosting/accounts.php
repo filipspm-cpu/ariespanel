@@ -1,5 +1,5 @@
 <?php
-// aries-accounts-1.0.95
+// aries-accounts-1.0.96
 if (function_exists("ob_start")) {
   @ob_start();
 }
@@ -523,8 +523,168 @@ function aries_rw_setup($mysqli) {
     online_ms BIGINT NOT NULL DEFAULT 0,
     night_reports INT NOT NULL DEFAULT 0,
     active_days INT NOT NULL DEFAULT 0,
-    referrals INT NOT NULL DEFAULT 0
+    referrals INT NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  $mysqli->query("ALTER TABLE reward_stats ADD COLUMN referrals INT NOT NULL DEFAULT 0");
+  $mysqli->query("ALTER TABLE reward_stats ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+  $mysqli->query("CREATE TABLE IF NOT EXISTS achievement_defs (
+    id VARCHAR(48) NOT NULL PRIMARY KEY,
+    label VARCHAR(191) NOT NULL,
+    hint VARCHAR(255) NOT NULL DEFAULT '',
+    category VARCHAR(32) NOT NULL DEFAULT 'wlasne',
+    stat VARCHAR(32) NOT NULL,
+    need INT NOT NULL,
+    points INT NOT NULL,
+    rarity VARCHAR(16) NOT NULL DEFAULT 'brown',
+    created_by VARCHAR(32) NOT NULL DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+
+function aries_rw_uint($value) {
+  if (is_int($value) || is_float($value)) {
+    if ($value < 0) return "0";
+    return sprintf("%.0f", $value);
+  }
+  $text = preg_replace("/[^0-9]/", "", (string) $value);
+  if ($text === "" || strlen($text) > 18) return "0";
+  return $text;
+}
+
+function aries_rw_custom_tasks($mysqli) {
+  $out = array();
+  $result = $mysqli->query("SELECT * FROM achievement_defs ORDER BY created_at ASC");
+  if ($result) {
+    while ($row = $result->fetch_assoc()) {
+      $out[] = array(
+        "id" => $row["id"],
+        "category" => $row["category"],
+        "label" => $row["label"],
+        "hint" => $row["hint"],
+        "stat" => $row["stat"],
+        "need" => (int) $row["need"],
+        "points" => (int) $row["points"],
+        "rarity" => $row["rarity"],
+        "custom" => true,
+      );
+    }
+  }
+  return $out;
+}
+
+function aries_rw_task_points($mysqli, $stats) {
+  $tasks = array(
+    array("onlineHours", 40, 20), array("onlineHours", 100, 45), array("onlineHours", 200, 90),
+    array("onlineHours", 400, 150), array("onlineHours", 700, 240), array("onlineHours", 1000, 180),
+    array("referrals", 1, 100), array("referrals", 2, 160), array("referrals", 5, 280), array("referrals", 10, 450),
+    array("activeDays", 14, 25), array("activeDays", 30, 50), array("activeDays", 60, 90), array("activeDays", 120, 160),
+  );
+  $result = $mysqli->query("SELECT stat, need, points FROM achievement_defs");
+  if ($result) {
+    while ($row = $result->fetch_assoc()) {
+      $tasks[] = array($row["stat"], (int) $row["need"], (int) $row["points"]);
+    }
+  }
+  $sum = 0;
+  foreach ($tasks as $task) {
+    $key = $task[0];
+    if ((int) (isset($stats[$key]) ? $stats[$key] : 0) >= $task[1]) $sum += $task[2];
+  }
+  return $sum;
+}
+
+function aries_rw_builtin_task($id) {
+  $tasks = array(
+    "duty-40" => array("onlineHours", 40),
+    "duty-100" => array("onlineHours", 100),
+    "duty-200" => array("onlineHours", 200),
+    "duty-400" => array("onlineHours", 400),
+    "duty-700" => array("onlineHours", 700),
+    "duty-1000" => array("onlineHours", 1000),
+    "ref-1" => array("referrals", 1),
+    "ref-2" => array("referrals", 2),
+    "ref-5" => array("referrals", 5),
+    "ref-10" => array("referrals", 10),
+    "day-14" => array("activeDays", 14),
+    "day-30" => array("activeDays", 30),
+    "day-60" => array("activeDays", 60),
+    "day-120" => array("activeDays", 120),
+  );
+  return isset($tasks[$id]) ? $tasks[$id] : null;
+}
+
+function aries_rw_money_tier($id) {
+  $tiers = array(
+    "rank-500" => array(400, 0, "vip"),
+    "cash-1500" => array(800, 15000, "cash"),
+    "cash-2400" => array(1200, 25000, "cash"),
+    "cash-3300" => array(1600, 70000, "cash"),
+    "cash-4300" => array(2000, 100000, "cash"),
+  );
+  return isset($tiers[$id]) ? $tiers[$id] : null;
+}
+
+function aries_rw_grant_vip($mysqli, $discordId, $name) {
+  $stmt = $mysqli->prepare("SELECT rank FROM account_roles WHERE discord_id = ? LIMIT 1");
+  if (!$stmt) return;
+  $stmt->bind_param("s", $discordId);
+  $stmt->execute();
+  $res = $stmt->get_result();
+  $row = $res ? $res->fetch_assoc() : null;
+  $rank = $row ? (string) $row["rank"] : "";
+  if (stripos($rank, "vip") !== false) return;
+  $next = $rank === "" ? "vip" : $rank . ",vip";
+  if ($row) {
+    $upd = $mysqli->prepare("UPDATE account_roles SET rank = ? WHERE discord_id = ?");
+    if ($upd) {
+      $upd->bind_param("ss", $next, $discordId);
+      $upd->execute();
+    }
+    return;
+  }
+  $ins = $mysqli->prepare("INSERT INTO account_roles (discord_id, name, discord, rank) VALUES (?, ?, '', ?)");
+  if ($ins) {
+    $ins->bind_param("sss", $discordId, $name, $next);
+    $ins->execute();
+  }
+}
+
+function aries_rw_grant_stat($mysqli, $discordId, $name, $stat, $need) {
+  $reports = $stat === "reports" ? $need : 0;
+  $events = $stat === "events" ? $need : 0;
+  $onlineMs = $stat === "onlineHours" ? $need * 3600000 : 0;
+  $night = $stat === "nightReports" ? $need : 0;
+  $days = $stat === "activeDays" ? $need : 0;
+  $refs = $stat === "referrals" ? $need : 0;
+  $stmt = $mysqli->prepare(
+    "INSERT INTO reward_stats (discord_id, name, reports, events, online_ms, night_reports, active_days, referrals)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       name = VALUES(name),
+       reports = GREATEST(reports, VALUES(reports)),
+       events = GREATEST(events, VALUES(events)),
+       online_ms = GREATEST(online_ms, VALUES(online_ms)),
+       night_reports = GREATEST(night_reports, VALUES(night_reports)),
+       active_days = GREATEST(active_days, VALUES(active_days)),
+       referrals = GREATEST(referrals, VALUES(referrals))"
+  );
+  if (!$stmt) return;
+  $onlineMsStr = aries_rw_uint($onlineMs);
+  $stmt->bind_param("ssiisiii", $discordId, $name, $reports, $events, $onlineMsStr, $night, $days, $refs);
+  $stmt->execute();
+}
+
+function aries_rw_sync_sql() {
+  return "INSERT INTO reward_stats (discord_id, name, reports, events, online_ms, night_reports, active_days)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       name = VALUES(name),
+       reports = GREATEST(reports, VALUES(reports)),
+       events = GREATEST(events, VALUES(events)),
+       online_ms = GREATEST(online_ms, VALUES(online_ms)),
+       night_reports = GREATEST(night_reports, VALUES(night_reports)),
+       active_days = GREATEST(active_days + IF(IFNULL(DATE(updated_at), '1970-01-01') < CURDATE(), 1, 0), VALUES(active_days))";
 }
 
 function aries_rw_state($mysqli, $discordId) {
@@ -583,26 +743,45 @@ function aries_rw_state($mysqli, $discordId) {
       else $pending += $amount;
     }
   }
+  $stats = array(
+    "reports" => 0,
+    "events" => 0,
+    "onlineHours" => 0,
+    "nightReports" => 0,
+    "activeDays" => 0,
+    "referrals" => $referrals,
+  );
+  $stmt = $mysqli->prepare("SELECT * FROM reward_stats WHERE discord_id = ? LIMIT 1");
+  if ($stmt) {
+    $stmt->bind_param("s", $discordId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res ? $res->fetch_assoc() : null;
+    if ($row) {
+      $stats["reports"] = (int) $row["reports"];
+      $stats["events"] = (int) $row["events"];
+      $stats["onlineHours"] = (int) floor(((float) $row["online_ms"]) / 3600000);
+      $stats["nightReports"] = (int) $row["night_reports"];
+      $stats["activeDays"] = (int) $row["active_days"];
+      $grantedRefs = isset($row["referrals"]) ? (int) $row["referrals"] : 0;
+      $stats["referrals"] = max($referrals, $grantedRefs);
+    }
+  }
+  $custom = aries_rw_custom_tasks($mysqli);
   return array(
     "ok" => true,
+    "statsReady" => true,
     "code" => $code,
     "redeemed" => $redeemed,
     "redeemedCode" => $redeemedCode,
-    "referrals" => $referrals,
-    "points" => 0,
-    "stats" => array(
-      "reports" => 0,
-      "events" => 0,
-      "onlineHours" => 0,
-      "nightReports" => 0,
-      "activeDays" => 0,
-      "referrals" => $referrals,
-    ),
+    "referrals" => $stats["referrals"],
+    "points" => aries_rw_task_points($mysqli, $stats),
+    "stats" => $stats,
     "pendingCash" => $pending,
     "paidCash" => $paid,
     "payouts" => $payouts,
     "claimedKinds" => $claimed,
-    "customTasks" => array(),
+    "customTasks" => $custom,
     "leaderboard" => array(),
   );
 }
@@ -623,7 +802,42 @@ function aries_rw_dispatch($mysqli, $data, $action) {
   else $name = substr($name, 0, 191);
 
   if ($action === "rewardsAccounts") {
-    json_out(array("ok" => true, "accounts" => array()));
+    $accounts = array();
+    $result = $mysqli->query(
+      "SELECT a.discord_id AS id,
+              COALESCE(NULLIF(d.name, ''), NULLIF(s.name, ''), NULLIF(p.name, ''), a.discord_id) AS name,
+              COALESCE(d.avatar_url, '') AS avatar_url
+       FROM (
+         SELECT discord_id FROM discord_accounts
+         UNION SELECT discord_id FROM promo_codes
+         UNION SELECT discord_id FROM reward_stats
+         UNION SELECT discord_id FROM reward_claims
+       ) a
+       LEFT JOIN discord_accounts d ON d.discord_id = a.discord_id
+       LEFT JOIN reward_stats s ON s.discord_id = a.discord_id
+       LEFT JOIN promo_codes p ON p.discord_id = a.discord_id"
+    );
+    if ($result) {
+      while ($row = $result->fetch_assoc()) {
+        $state = aries_rw_state($mysqli, $row["id"]);
+        $accounts[] = array(
+          "id" => $row["id"],
+          "name" => $row["name"],
+          "avatarUrl" => $row["avatar_url"],
+          "code" => $state["code"],
+          "referrals" => $state["referrals"],
+          "redeemed" => $state["redeemed"],
+          "pendingCash" => $state["pendingCash"],
+          "paidCash" => $state["paidCash"],
+          "points" => $state["points"],
+        );
+      }
+    }
+    usort($accounts, function ($a, $b) {
+      if ($a["points"] === $b["points"]) return strcasecmp($a["name"], $b["name"]);
+      return $b["points"] - $a["points"];
+    });
+    json_out(array("ok" => true, "statsReady" => true, "accounts" => $accounts));
   }
   if ($discordId === "") {
     json_out(array("ok" => false, "error" => "login"), 401);
@@ -696,6 +910,108 @@ function aries_rw_dispatch($mysqli, $data, $action) {
     $next = aries_rw_state($mysqli, $discordId);
     $next["ok"] = true;
     json_out($next);
+  }
+
+  if ($action === "rewardsSync") {
+    $reports = max(0, (int) req_get($data, "reports"));
+    $events = max(0, (int) req_get($data, "events"));
+    $onlineMsStr = aries_rw_uint(isset($data["onlineMs"]) ? $data["onlineMs"] : 0);
+    $night = max(0, (int) req_get($data, "nightReports"));
+    $days = max(0, (int) req_get($data, "activeDays"));
+    $stmt = $mysqli->prepare(aries_rw_sync_sql());
+    if ($stmt) {
+      $stmt->bind_param("ssiisii", $discordId, $name, $reports, $events, $onlineMsStr, $night, $days);
+      $stmt->execute();
+    }
+  }
+
+  if ($action === "rewardsClaim") {
+    $kind = req_get($data, "kind");
+    $tier = aries_rw_money_tier($kind);
+    $state = aries_rw_state($mysqli, $discordId);
+    if (!$tier) aries_rw_fail($mysqli, $discordId, "invalid");
+    if ($state["points"] < $tier[0]) aries_rw_fail($mysqli, $discordId, "points");
+    if (in_array($kind, $state["claimedKinds"], true)) aries_rw_fail($mysqli, $discordId, "claimed");
+    $amount = $tier[1];
+    $vip = isset($tier[2]) && $tier[2] === "vip";
+    $status = $vip ? "paid" : "pending";
+    if ($vip) aries_rw_grant_vip($mysqli, $discordId, $name);
+    $ins = $mysqli->prepare("INSERT INTO reward_claims (discord_id, kind, amount, status) VALUES (?, ?, ?, ?)");
+    if ($ins) {
+      $ins->bind_param("ssis", $discordId, $kind, $amount, $status);
+      $ins->execute();
+    }
+  }
+
+  if ($action === "rewardsPaid") {
+    if (!is_developer_id($mysqli, $discordId)) {
+      json_out(array("ok" => false, "error" => "forbidden"), 403);
+    }
+    $target = preg_replace("/[^0-9]/", "", req_get($data, "targetId"));
+    if ($target !== "") {
+      $upd = $mysqli->prepare("UPDATE reward_claims SET status = 'paid' WHERE discord_id = ? AND status = 'pending'");
+      if ($upd) {
+        $upd->bind_param("s", $target);
+        $upd->execute();
+      }
+    }
+  }
+
+  if ($action === "rewardsDefine") {
+    if (!is_developer_id($mysqli, $discordId)) {
+      json_out(array("ok" => false, "error" => "forbidden"), 403);
+    }
+    $label = substr(trim(req_get($data, "label")), 0, 80);
+    if (strlen($label) < 2) aries_rw_fail($mysqli, $discordId, "invalid");
+    $id = "custom-" . uniqid();
+    $hint = substr(trim(req_get($data, "hint")), 0, 255);
+    $category = req_get($data, "category");
+    if ($category === "") $category = "wlasne";
+    $stat = req_get($data, "stat");
+    if ($stat === "") $stat = "onlineHours";
+    $need = max(1, (int) req_get($data, "need"));
+    $points = max(1, min(5000, (int) req_get($data, "points")));
+    $rarity = req_get($data, "rarity");
+    if ($rarity === "") $rarity = "brown";
+    $ins = $mysqli->prepare("INSERT INTO achievement_defs (id, label, hint, category, stat, need, points, rarity, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    if ($ins) {
+      $ins->bind_param("sssssiiss", $id, $label, $hint, $category, $stat, $need, $points, $rarity, $discordId);
+      $ins->execute();
+    }
+  }
+
+  if ($action === "rewardsUndefine") {
+    if (!is_developer_id($mysqli, $discordId)) {
+      json_out(array("ok" => false, "error" => "forbidden"), 403);
+    }
+    $id = req_get($data, "id");
+    if (strpos($id, "custom-") === 0) {
+      $del = $mysqli->prepare("DELETE FROM achievement_defs WHERE id = ?");
+      if ($del) {
+        $del->bind_param("s", $id);
+        $del->execute();
+      }
+    }
+  }
+
+  if ($action === "rewardsGrant") {
+    if (!is_developer_id($mysqli, $discordId)) {
+      json_out(array("ok" => false, "error" => "forbidden"), 403);
+    }
+    $id = req_get($data, "id");
+    $task = aries_rw_builtin_task($id);
+    if (!$task) {
+      $stmt = $mysqli->prepare("SELECT stat, need FROM achievement_defs WHERE id = ? LIMIT 1");
+      if ($stmt) {
+        $stmt->bind_param("s", $id);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = $res ? $res->fetch_assoc() : null;
+        if ($row) $task = array($row["stat"], (int) $row["need"]);
+      }
+    }
+    if (!$task) aries_rw_fail($mysqli, $discordId, "invalid");
+    aries_rw_grant_stat($mysqli, $discordId, $name, $task[0], $task[1]);
   }
 
   json_out(aries_rw_state($mysqli, $discordId));
