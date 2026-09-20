@@ -810,6 +810,8 @@ function aries_rw_dispatch($mysqli, $data, $action) {
        FROM (
          SELECT discord_id FROM discord_accounts
          UNION SELECT discord_id FROM promo_codes
+         UNION SELECT discord_id FROM promo_redemptions
+         UNION SELECT owner_id FROM promo_redemptions WHERE owner_id <> ''
          UNION SELECT discord_id FROM reward_stats
          UNION SELECT discord_id FROM reward_claims
        ) a
@@ -821,7 +823,7 @@ function aries_rw_dispatch($mysqli, $data, $action) {
       while ($row = $result->fetch_assoc()) {
         $state = aries_rw_state($mysqli, $row["id"]);
         $accounts[] = array(
-          "id" => $row["id"],
+          "id" => (string) $row["id"],
           "name" => $row["name"],
           "avatarUrl" => $row["avatar_url"],
           "code" => $state["code"],
@@ -834,8 +836,9 @@ function aries_rw_dispatch($mysqli, $data, $action) {
       }
     }
     usort($accounts, function ($a, $b) {
-      if ($a["points"] === $b["points"]) return strcasecmp($a["name"], $b["name"]);
-      return $b["points"] - $a["points"];
+      if ($a["referrals"] !== $b["referrals"]) return $b["referrals"] - $a["referrals"];
+      if ($a["points"] !== $b["points"]) return $b["points"] - $a["points"];
+      return strcasecmp($a["name"], $b["name"]);
     });
     json_out(array("ok" => true, "statsReady" => true, "accounts" => $accounts));
   }

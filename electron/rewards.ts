@@ -828,6 +828,8 @@ async function boardFrom(db: mysql.Connection): Promise<AccountRewards[]> {
      FROM (
        SELECT discord_id FROM discord_accounts
        UNION SELECT discord_id FROM promo_codes
+       UNION SELECT discord_id FROM promo_redemptions
+       UNION SELECT owner_id FROM promo_redemptions WHERE owner_id <> ''
        UNION SELECT discord_id FROM reward_stats
        UNION SELECT discord_id FROM reward_claims
      ) a
@@ -846,7 +848,7 @@ async function boardFrom(db: mysql.Connection): Promise<AccountRewards[]> {
         referrals: Math.max(Number(row.referrals || 0), Number(row.granted_referrals || 0)),
       };
       return {
-        id: String(row.id || ""),
+        id: String(row.id || "").replace(/\D/g, ""),
         name: String(row.name || row.id || "Konto"),
         avatarUrl: String(row.avatarUrl || ""),
         code: String(row.code || ""),
@@ -857,16 +859,24 @@ async function boardFrom(db: mysql.Connection): Promise<AccountRewards[]> {
         points: pointsFrom(stats, extra),
       };
     })
-    .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, "pl"));
+    .sort((a, b) => b.referrals - a.referrals || b.points - a.points || a.name.localeCompare(b.name, "pl"));
 }
 
 export async function listAccountRewards(): Promise<AccountRewards[]> {
   const payload = await php("rewardsAccounts", { discordId: caller().discordId });
   if (payload && typeof payload === "object" && Array.isArray((payload as { accounts?: unknown }).accounts)) {
-    const accounts = (payload as { accounts: AccountRewards[] }).accounts;
+    const accounts = (payload as { accounts: AccountRewards[] }).accounts.map((row) => ({
+      ...row,
+      id: String(row.id || "").replace(/\D/g, ""),
+      referrals: Number(row.referrals || 0),
+      redeemed: Boolean(row.redeemed),
+      pendingCash: Number(row.pendingCash || 0),
+      paidCash: Number(row.paidCash || 0),
+      points: Number(row.points || 0),
+    }));
     if (accounts.length || (payload as { statsReady?: unknown }).statsReady === true) {
       return accounts.sort(
-        (a, b) => b.points - a.points || String(a.name || a.id).localeCompare(String(b.name || b.id), "pl"),
+        (a, b) => b.referrals - a.referrals || b.points - a.points || String(a.name || a.id).localeCompare(String(b.name || b.id), "pl"),
       );
     }
   }

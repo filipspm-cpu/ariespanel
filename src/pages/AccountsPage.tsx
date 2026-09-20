@@ -142,7 +142,8 @@ export function AccountsPage() {
           <div className="accounts-grid">
             {accounts.map((account, index) => {
               const ranks = ranksFromRole(account.rank || "");
-              const reward = rewards.find((row) => row.id === account.id);
+              const accountId = String(account.id || "").replace(/\D/g, "");
+              const reward = rewards.find((row) => String(row.id || "").replace(/\D/g, "") === accountId);
               return (
                 <div key={`${account.id || account.name}-${index}`} className="accounts-card">
                   <AccountAvatar name={account.name} url={account.avatarUrl} />
