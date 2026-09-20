@@ -10,9 +10,7 @@ if (!$latest) {
   exit;
 }
 
-$host = parse_url($latest["url"], PHP_URL_HOST);
-$okHost = $host === "github.com" || $host === "objects.githubusercontent.com" || $host === "release-assets.githubusercontent.com";
-if (!$okHost || !preg_match("/^ARIES-Setup-.+\\.exe$/i", $latest["name"])) {
+if (!aries_github_ok($latest["url"]) || !preg_match("/^ARIES-Setup-.+\\.exe$/i", $latest["name"])) {
   http_response_code(502);
   exit;
 }

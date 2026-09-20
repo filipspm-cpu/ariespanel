@@ -11,3 +11,4 @@ Thumbs.db
 build/aries-codesign.pfx
 build/aries-codesign.password
 *.map
+hosting/latest-cache.json

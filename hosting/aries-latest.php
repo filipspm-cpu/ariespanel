@@ -9,6 +9,7 @@ function aries_http_get($url, $timeout = 15) {
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_MAXREDIRS, 8);
     curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
     curl_setopt($ch, CURLOPT_USERAGENT, "ARIES-FilipekWeb/1.0");
     curl_setopt($ch, CURLOPT_HTTPHEADER, array("Accept: application/vnd.github+json"));
@@ -29,12 +30,15 @@ function aries_http_get($url, $timeout = 15) {
   return is_string($body) ? $body : "";
 }
 
-function aries_latest_release() {
-  $cache = __DIR__ . "/latest-cache.json";
-  if (is_file($cache) && (time() - filemtime($cache)) < 600) {
-    $cached = json_decode((string) file_get_contents($cache), true);
-    if (is_array($cached) && !empty($cached["url"]) && !empty($cached["name"])) return $cached;
-  }
+function aries_github_ok($url) {
+  $host = parse_url($url, PHP_URL_HOST);
+  return $host === "github.com"
+    || $host === "objects.githubusercontent.com"
+    || $host === "release-assets.githubusercontent.com"
+    || $host === "github-releases.githubusercontent.com";
+}
+
+function aries_from_api() {
   $raw = aries_http_get("https://api.github.com/repos/filipspm-cpu/ariespanel/releases/latest");
   $data = json_decode($raw, true);
   if (!is_array($data) || empty($data["assets"]) || !is_array($data["assets"])) return null;
@@ -50,13 +54,42 @@ function aries_latest_release() {
   $tag = isset($data["tag_name"]) ? (string) $data["tag_name"] : "";
   $version = ltrim($tag, "vV");
   if (preg_match("/ARIES-Setup-(.+)\\.exe$/i", (string) $asset["name"], $m)) $version = $m[1];
-  $out = array(
+  return array(
     "tag" => $tag,
     "version" => $version,
     "name" => (string) $asset["name"],
     "url" => (string) $asset["browser_download_url"],
     "size" => isset($asset["size"]) ? (int) $asset["size"] : 0,
   );
+}
+
+function aries_from_latest_yml() {
+  $raw = aries_http_get("https://github.com/filipspm-cpu/ariespanel/releases/latest/download/latest.yml");
+  if ($raw === "" || !preg_match("/^version:\\s*([0-9][0-9A-Za-z.\\-]+)/m", $raw, $vm)) return null;
+  $version = $vm[1];
+  $name = "ARIES-Setup-" . $version . ".exe";
+  if (preg_match("/^path:\\s*(ARIES-Setup-.+\\.exe)/m", $raw, $pm)) $name = $pm[1];
+  $url = "https://github.com/filipspm-cpu/ariespanel/releases/latest/download/" . rawurlencode($name);
+  return array(
+    "tag" => "v" . $version,
+    "version" => $version,
+    "name" => $name,
+    "url" => $url,
+    "size" => 0,
+  );
+}
+
+function aries_latest_release() {
+  $cache = __DIR__ . "/latest-cache.json";
+  if (is_file($cache) && (time() - filemtime($cache)) < 600) {
+    $cached = json_decode((string) file_get_contents($cache), true);
+    if (is_array($cached) && !empty($cached["url"]) && !empty($cached["name"]) && aries_github_ok($cached["url"])) {
+      return $cached;
+    }
+  }
+  $out = aries_from_api();
+  if (!$out) $out = aries_from_latest_yml();
+  if (!$out || !aries_github_ok($out["url"])) return null;
   @file_put_contents($cache, json_encode($out));
   return $out;
 }
@@ -73,6 +106,7 @@ function aries_stream_github($url, $filename, $size) {
   if (function_exists("curl_init")) {
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_MAXREDIRS, 8);
     curl_setopt($ch, CURLOPT_USERAGENT, "ARIES-FilipekWeb/1.0");
     curl_setopt($ch, CURLOPT_BUFFERSIZE, 262144);
     curl_setopt($ch, CURLOPT_WRITEFUNCTION, function ($ch, $chunk) {
