@@ -1,4 +1,5 @@
-<?php // aries-rewards-1.0.90
+<?php
+// aries-rewards-1.0.95
 if (function_exists("ob_start")) {
   @ob_start();
 }

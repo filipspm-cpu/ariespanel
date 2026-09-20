@@ -27,6 +27,14 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   }
 }
 
+function looksLikePhpSource(text: string) {
+  const head = text.slice(0, 400);
+  if (/^(<\?php|\?php)/i.test(head)) return true;
+  if (/function_exists\s*\(\s*["']ob_start["']\s*\)/.test(head)) return true;
+  if (/mysqli_report\s*\(/.test(head) && /error_reporting\s*\(/.test(head)) return true;
+  return false;
+}
+
 function parseJsonLoose(text: string): unknown {
   const trimmed = text.trim();
   try {
@@ -55,7 +63,7 @@ async function requestOne(url: string, method: "GET" | "POST", body?: unknown): 
   );
   const text = (await res.text()).trim();
   if (!text) throw new Error(res.ok ? "empty" : String(res.status));
-  if (/^(<\?php|\?php)/i.test(text)) throw new Error("phpfile");
+  if (looksLikePhpSource(text)) throw new Error("phpfile");
   try {
     return parseJsonLoose(text);
   } catch {
@@ -87,7 +95,7 @@ export function classifyApiError(err: unknown, url: string): ApiFailure {
   if (raw === "phpfile" || /^(<\?php|\?php)/i.test(raw)) {
     return {
       code: "phpfile",
-      hint: "Hosting nie uruchamia PHP — oddaje źródło pliku. Wgraj plik ponownie, pierwsza linia musi być <?php.",
+      hint: "Hosting nie uruchamia PHP — oddaje źródło pliku. Wgraj accounts.php z tego repo (rewards.php na serwerze jest popsute).",
       url,
     };
   }

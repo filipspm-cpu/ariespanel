@@ -1,4 +1,5 @@
 <?php
+// aries-accounts-1.0.95
 if (function_exists("ob_start")) {
   @ob_start();
 }
@@ -481,7 +482,230 @@ try {
 } catch (Exception $e) {
 }
 
+function aries_rw_make_code() {
+  $alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  $body = "";
+  for ($i = 0; $i < 6; $i++) $body .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+  return "ARIES-" . $body;
+}
+
+function aries_rw_setup($mysqli) {
+  $mysqli->query("CREATE TABLE IF NOT EXISTS promo_codes (
+    discord_id VARCHAR(32) NOT NULL PRIMARY KEY,
+    code VARCHAR(24) NOT NULL UNIQUE,
+    name VARCHAR(191) NOT NULL DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  $mysqli->query("CREATE TABLE IF NOT EXISTS promo_redemptions (
+    discord_id VARCHAR(32) NOT NULL PRIMARY KEY,
+    code VARCHAR(24) NOT NULL,
+    owner_id VARCHAR(32) NOT NULL,
+    amount INT NOT NULL DEFAULT 10000,
+    device_id VARCHAR(64) NOT NULL DEFAULT '',
+    device_hash VARCHAR(64) NOT NULL DEFAULT '',
+    ip VARCHAR(45) NOT NULL DEFAULT '',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  $mysqli->query("CREATE TABLE IF NOT EXISTS reward_claims (
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    discord_id VARCHAR(32) NOT NULL,
+    kind VARCHAR(32) NOT NULL,
+    amount INT NOT NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_reward_user (discord_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  $mysqli->query("CREATE TABLE IF NOT EXISTS reward_stats (
+    discord_id VARCHAR(32) NOT NULL PRIMARY KEY,
+    name VARCHAR(191) NOT NULL DEFAULT '',
+    reports INT NOT NULL DEFAULT 0,
+    events INT NOT NULL DEFAULT 0,
+    online_ms BIGINT NOT NULL DEFAULT 0,
+    night_reports INT NOT NULL DEFAULT 0,
+    active_days INT NOT NULL DEFAULT 0,
+    referrals INT NOT NULL DEFAULT 0
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+
+function aries_rw_state($mysqli, $discordId) {
+  $code = "";
+  $stmt = $mysqli->prepare("SELECT code FROM promo_codes WHERE discord_id = ? LIMIT 1");
+  if ($stmt) {
+    $stmt->bind_param("s", $discordId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res ? $res->fetch_assoc() : null;
+    if ($row) $code = (string) $row["code"];
+  }
+  $redeemed = false;
+  $redeemedCode = "";
+  $stmt = $mysqli->prepare("SELECT code FROM promo_redemptions WHERE discord_id = ? LIMIT 1");
+  if ($stmt) {
+    $stmt->bind_param("s", $discordId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res ? $res->fetch_assoc() : null;
+    if ($row) {
+      $redeemed = true;
+      $redeemedCode = (string) $row["code"];
+    }
+  }
+  $referrals = 0;
+  $stmt = $mysqli->prepare("SELECT COUNT(*) AS c FROM promo_redemptions WHERE owner_id = ?");
+  if ($stmt) {
+    $stmt->bind_param("s", $discordId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res ? $res->fetch_assoc() : null;
+    $referrals = (int) (isset($row["c"]) ? $row["c"] : 0);
+  }
+  $pending = 0;
+  $paid = 0;
+  $payouts = array();
+  $claimed = array();
+  $stmt = $mysqli->prepare("SELECT id, kind, amount, status, created_at FROM reward_claims WHERE discord_id = ? ORDER BY id ASC");
+  if ($stmt) {
+    $stmt->bind_param("s", $discordId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($res && ($row = $res->fetch_assoc())) {
+      $status = $row["status"] === "paid" ? "paid" : "pending";
+      $amount = (int) $row["amount"];
+      $payouts[] = array(
+        "id" => (int) $row["id"],
+        "kind" => $row["kind"],
+        "amount" => $amount,
+        "status" => $status,
+        "createdAt" => $row["created_at"],
+      );
+      $claimed[] = $row["kind"];
+      if ($status === "paid") $paid += $amount;
+      else $pending += $amount;
+    }
+  }
+  return array(
+    "ok" => true,
+    "code" => $code,
+    "redeemed" => $redeemed,
+    "redeemedCode" => $redeemedCode,
+    "referrals" => $referrals,
+    "points" => 0,
+    "stats" => array(
+      "reports" => 0,
+      "events" => 0,
+      "onlineHours" => 0,
+      "nightReports" => 0,
+      "activeDays" => 0,
+      "referrals" => $referrals,
+    ),
+    "pendingCash" => $pending,
+    "paidCash" => $paid,
+    "payouts" => $payouts,
+    "claimedKinds" => $claimed,
+    "customTasks" => array(),
+    "leaderboard" => array(),
+  );
+}
+
+function aries_rw_fail($mysqli, $discordId, $error) {
+  $state = aries_rw_state($mysqli, $discordId);
+  $state["ok"] = false;
+  $state["error"] = $error;
+  json_out($state);
+}
+
+function aries_rw_dispatch($mysqli, $data, $action) {
+  aries_rw_setup($mysqli);
+  $discordId = preg_replace("/[^0-9]/", "", req_get($data, "discordId"));
+  if ($discordId === "") $discordId = preg_replace("/[^0-9]/", "", req_get($data, "discord_id"));
+  $name = req_get($data, "name");
+  if (function_exists("mb_substr")) $name = mb_substr($name, 0, 191);
+  else $name = substr($name, 0, 191);
+
+  if ($action === "rewardsAccounts") {
+    json_out(array("ok" => true, "accounts" => array()));
+  }
+  if ($discordId === "") {
+    json_out(array("ok" => false, "error" => "login"), 401);
+  }
+
+  if ($action === "promoGenerate") {
+    $stmt = $mysqli->prepare("SELECT code FROM promo_codes WHERE discord_id = ? LIMIT 1");
+    $row = null;
+    if ($stmt) {
+      $stmt->bind_param("s", $discordId);
+      $stmt->execute();
+      $res = $stmt->get_result();
+      $row = $res ? $res->fetch_assoc() : null;
+    }
+    if (!$row) {
+      for ($i = 0; $i < 8; $i++) {
+        $code = aries_rw_make_code();
+        $ins = $mysqli->prepare("INSERT INTO promo_codes (discord_id, code, name) VALUES (?, ?, ?)");
+        if (!$ins) break;
+        $ins->bind_param("sss", $discordId, $code, $name);
+        if ($ins->execute()) break;
+      }
+    } else if ($name !== "") {
+      $upd = $mysqli->prepare("UPDATE promo_codes SET name = ? WHERE discord_id = ?");
+      if ($upd) {
+        $upd->bind_param("ss", $name, $discordId);
+        $upd->execute();
+      }
+    }
+    json_out(aries_rw_state($mysqli, $discordId));
+  }
+
+  if ($action === "promoRedeem") {
+    $code = strtoupper(preg_replace("/\s+/", "", trim(req_get($data, "code"))));
+    $state = aries_rw_state($mysqli, $discordId);
+    if (!preg_match("/^ARIES-[A-Z0-9]{6}$/", $code)) aries_rw_fail($mysqli, $discordId, "invalid");
+    if ($state["code"] === $code) aries_rw_fail($mysqli, $discordId, "own");
+    if ($state["redeemed"]) aries_rw_fail($mysqli, $discordId, "used");
+    $find = $mysqli->prepare("SELECT discord_id FROM promo_codes WHERE code = ? LIMIT 1");
+    if (!$find) aries_rw_fail($mysqli, $discordId, "db");
+    $find->bind_param("s", $code);
+    $find->execute();
+    $res = $find->get_result();
+    $owner = $res ? $res->fetch_assoc() : null;
+    if (!$owner) aries_rw_fail($mysqli, $discordId, "missing");
+    $ownerId = $owner["discord_id"];
+    $enterAmount = 10000;
+    $ownerAmount = 20000;
+    $deviceId = preg_replace("/[^a-zA-Z0-9_-]/", "", req_get($data, "deviceId"));
+    $deviceHash = preg_replace("/[^a-zA-Z0-9_-]/", "", req_get($data, "deviceHash"));
+    $ins = $mysqli->prepare("INSERT INTO promo_redemptions (discord_id, code, owner_id, amount, device_id, device_hash) VALUES (?, ?, ?, ?, ?, ?)");
+    if ($ins) {
+      $ins->bind_param("sssiss", $discordId, $code, $ownerId, $enterAmount, $deviceId, $deviceHash);
+      if (!$ins->execute()) aries_rw_fail($mysqli, $discordId, "device");
+    } else {
+      $fallback = $mysqli->prepare("INSERT INTO promo_redemptions (discord_id, code, owner_id, amount) VALUES (?, ?, ?, ?)");
+      if (!$fallback) aries_rw_fail($mysqli, $discordId, "db");
+      $fallback->bind_param("sssi", $discordId, $code, $ownerId, $enterAmount);
+      if (!$fallback->execute()) aries_rw_fail($mysqli, $discordId, "db");
+    }
+    $claim = $mysqli->prepare("INSERT INTO reward_claims (discord_id, kind, amount, status) VALUES (?, ?, ?, 'pending')");
+    if ($claim) {
+      $kind = "promo";
+      $claim->bind_param("ssi", $ownerId, $kind, $ownerAmount);
+      $claim->execute();
+      $kind = "promo-enter";
+      $claim->bind_param("ssi", $discordId, $kind, $enterAmount);
+      $claim->execute();
+    }
+    $next = aries_rw_state($mysqli, $discordId);
+    $next["ok"] = true;
+    json_out($next);
+  }
+
+  json_out(aries_rw_state($mysqli, $discordId));
+}
+
 $action = req_get($data, "action");
+if ($method === "POST" && preg_match("/^(promoGenerate|promoRedeem|rewardsState|rewardsSync|rewardsClaim|rewardsPaid|rewardsDefine|rewardsUndefine|rewardsGrant|rewardsAccounts)$/", $action)) {
+  aries_rw_dispatch($mysqli, $data, $action);
+}
+
 if ($method === "POST" && $action === "setRank") {
   $id = preg_replace("/[^0-9]/", "", req_get($data, "id"));
   $name = req_get($data, "name");

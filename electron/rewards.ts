@@ -22,6 +22,8 @@ const DB = {
 };
 
 const REWARD_URLS = [
+  "https://filipekweb.pl/aries/accounts.php",
+  "https://www.filipekweb.pl/aries/accounts.php",
   "https://filipekweb.pl/aries/rewards.php",
   "https://www.filipekweb.pl/aries/rewards.php",
 ];
@@ -497,7 +499,9 @@ async function withDb<T>(fn: (db: mysql.Connection) => Promise<T>): Promise<T | 
 
 function parseState(payload: unknown): RewardsState | null {
   if (!payload || typeof payload !== "object") return null;
-  const data = payload as Partial<RewardsState> & { ok?: unknown };
+  const data = payload as Partial<RewardsState> & { ok?: unknown; accounts?: unknown; roles?: unknown };
+  if (Array.isArray(data.roles)) return null;
+  if (Array.isArray(data.accounts) && data.ok !== true && !data.code) return null;
   const error = typeof data.error === "string" && data.error ? data.error : undefined;
   if (data.ok !== true && !data.code && !data.stats && !error) return null;
   const stats = { ...emptyStats(), ...(data.stats || {}) };
@@ -525,6 +529,10 @@ export async function getRewardsState(): Promise<RewardsState> {
   const { discordId, name } = caller();
   const remote = parseState(await php("rewardsState", { discordId, name }));
   if (remote) return remote.ok === false ? reportRewards("Stan nagród", remote, false) : remote;
+  const apiCode = lastApiError();
+  if (apiCode === "phpfile" || apiCode === "json") {
+    return reportRewards("Stan nagród", emptyState(phpOrNetwork()), false);
+  }
   const sql = await withDb(async (db) => {
     const state = discordId ? await readState(db, discordId, name) : emptyState("login");
     if (!discordId) state.customTasks = await loadCustom(db);
@@ -547,6 +555,10 @@ export async function generatePromoCode(): Promise<RewardsState> {
       });
     }
     return remote.ok ? remote : reportRewards("Generowanie kodu", remote);
+  }
+  const apiCode = lastApiError();
+  if (apiCode === "phpfile" || apiCode === "json") {
+    return reportRewards("Generowanie kodu", emptyState(phpOrNetwork()));
   }
   const sql = await withDb(async (db) => {
     const [[existing]] = (await db.query("SELECT code FROM promo_codes WHERE discord_id = ? LIMIT 1", [discordId])) as [
@@ -600,6 +612,10 @@ export async function redeemPromoCode(raw: string): Promise<RewardsState> {
     await php("promoRedeem", { discordId, name, code, deviceId: device.id, deviceHash: device.hash }),
   );
   if (remote) return finish(remote.ok ? remote : reportRewards("Wpisanie kodu", remote));
+  const apiCode = lastApiError();
+  if (apiCode === "phpfile" || apiCode === "json") {
+    return finish(reportRewards("Wpisanie kodu", emptyState(phpOrNetwork())));
+  }
   const sql = await withDb(async (db) => {
     const [[mine]] = (await db.query("SELECT code FROM promo_codes WHERE discord_id = ? LIMIT 1", [discordId])) as [
       SqlRow[],
