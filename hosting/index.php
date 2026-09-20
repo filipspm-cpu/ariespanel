@@ -139,7 +139,7 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
       </a>
       <nav class="nav">
         <a href="./#funkcje">Funkcje</a>
-        <a href="?download=1">Pobierz</a>
+        <a href="download.php">Pobierz</a>
         <a href="aries_panel_polityka_prywatnosci.html">Prywatność</a>
       </nav>
     </header>
@@ -151,7 +151,7 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
             ARIES to aplikacja dla administracji GTA RP: makra, nakładka na grę, reporty, osiągnięcia i kody.
           </p>
           <div class="cta">
-            <a class="btn" href="?download=1">Pobierz ARIES na Windows</a>
+            <a class="btn" href="download.php" download="ARIES-Setup.exe">Pobierz ARIES na Windows</a>
             <div class="meta">
               <?php echo $verLabel; ?> · <?php echo htmlspecialchars($sizeLabel, ENT_QUOTES, "UTF-8"); ?> · Windows 10/11<br />
               Plik: <?php echo $fileName; ?>
@@ -211,7 +211,7 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
           <strong>Pobierasz z filipekweb.pl</strong>
           <span>Serwer sam bierze najnowszy plik z GitHuba i od razu go wysyła. Adres w przeglądarce się nie zmienia.</span>
         </div>
-        <a class="btn" href="?download=1">Pobierz teraz</a>
+        <a class="btn" href="download.php" download="ARIES-Setup.exe">Pobierz teraz</a>
       </aside>
     </main>
     <footer>

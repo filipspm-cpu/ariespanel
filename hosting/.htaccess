@@ -39,10 +39,25 @@ AddType application/json .json
   </IfModule>
 </FilesMatch>
 
-<FilesMatch "^(index|polityka-prywatnosci)\.php$">
+SetEnvIf Query_String "(^|&)download(=|&|$)" aries_dl
+
+<FilesMatch "^polityka-prywatnosci\.php$">
   <IfModule mod_headers.c>
     Header set Content-Type "text/html; charset=utf-8"
     Header unset Content-Disposition
+  </IfModule>
+</FilesMatch>
+
+<FilesMatch "^index\.php$">
+  <IfModule mod_headers.c>
+    Header set Content-Type "text/html; charset=utf-8" env=!aries_dl
+    Header unset Content-Disposition env=!aries_dl
+  </IfModule>
+</FilesMatch>
+
+<FilesMatch "^download\.php$">
+  <IfModule mod_headers.c>
+    Header set Content-Type "application/octet-stream"
   </IfModule>
 </FilesMatch>
 
