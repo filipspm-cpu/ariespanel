@@ -1,11 +1,6 @@
 Options -Indexes
 DirectoryIndex index.php index.html
 
-<IfModule mod_rewrite.c>
-  RewriteEngine On
-  RewriteRule ^polityka-prywatnosci\.php$ aries_panel_polityka_prywatnosci.html [L]
-</IfModule>
-
 AddType text/html .html .htm
 AddType application/json .json
 
@@ -18,8 +13,9 @@ AddType application/json .json
     ForceType text/html
   </IfModule>
   <IfModule mod_headers.c>
-    Header set Content-Type "text/html; charset=utf-8"
-    Header unset Content-Disposition
+    Header always set Content-Type "text/html; charset=utf-8"
+    Header always unset Content-Disposition
+    Header always set Content-Disposition "inline"
   </IfModule>
 </FilesMatch>
 
@@ -43,8 +39,9 @@ SetEnvIf Query_String "(^|&)download(=|&|$)" aries_dl
 
 <FilesMatch "^polityka-prywatnosci\.php$">
   <IfModule mod_headers.c>
-    Header set Content-Type "text/html; charset=utf-8"
-    Header unset Content-Disposition
+    Header always set Content-Type "text/html; charset=utf-8"
+    Header always unset Content-Disposition
+    Header always set Content-Disposition "inline"
   </IfModule>
 </FilesMatch>
 

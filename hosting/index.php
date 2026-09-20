@@ -140,7 +140,7 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
       <nav class="nav">
         <a href="./#funkcje">Funkcje</a>
         <a href="download.php">Pobierz</a>
-        <a href="aries_panel_polityka_prywatnosci.html">Prywatność</a>
+        <a href="polityka-prywatnosci.php">Prywatność</a>
       </nav>
     </header>
     <main>
@@ -217,7 +217,7 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
     <footer>
       <div>© <?php echo date("Y"); ?> ARIES · filipekweb.pl</div>
       <div>
-        <a href="aries_panel_polityka_prywatnosci.html">Polityka prywatności</a>
+        <a href="polityka-prywatnosci.php">Polityka prywatności</a>
       </div>
     </footer>
   </div>
