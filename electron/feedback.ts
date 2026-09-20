@@ -114,21 +114,25 @@ function uniqueItems(rows: FeedbackItem[]): FeedbackItem[] {
   const seenId = new Set<number>();
   const byKey = new Map<string, FeedbackItem>();
   const order: string[] = [];
+  const deletedKeys = new Set<string>();
   for (const item of rows) {
     if (seenId.has(item.id)) continue;
     seenId.add(item.id);
     const key = `${item.discordId}|${item.channel}|${item.title}|${item.body}`;
-    const existing = byKey.get(key);
-    if (!existing) {
+    if (item.status === "deleted") {
+      deletedKeys.add(key);
+      continue;
+    }
+    if (!byKey.has(key)) {
       byKey.set(key, item);
       order.push(key);
       continue;
     }
-    if (statusRank(item.status) > statusRank(existing.status)) {
-      existing.status = item.status;
+    if (statusRank(item.status) > statusRank(byKey.get(key)!.status)) {
+      byKey.get(key)!.status = item.status;
     }
   }
-  return order.map((key) => byKey.get(key)!);
+  return order.filter((key) => !deletedKeys.has(key)).map((key) => byKey.get(key)!);
 }
 
 function isDeveloperId(discordId: string) {

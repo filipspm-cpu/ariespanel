@@ -2,8 +2,8 @@ import { RankBadges, useAccountRanks } from "@/components/RankBadge";
 import { FEEDBACK_CHANNELS, feedbackChannelLabel, type FeedbackChannelId } from "@/data/feedbackChannels";
 import { hasDeveloperAccess } from "@/data/testers";
 import { useAppStore } from "@/store/useAppStore";
-import { Bug, Check, Lightbulb, LogIn, RefreshCw, Send, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Bug, Check, Copy, Lightbulb, LogIn, RefreshCw, Send, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type FeedbackKind = "bug" | "suggestion";
 type FeedbackStatus = "open" | "done" | "deleted";
@@ -58,6 +58,15 @@ function normalizeItem(row: FeedbackItem): FeedbackItem {
   return { ...row, status: asStatus(row.status), channel: asChannel(row.channel) };
 }
 
+function sameFeedback(a: FeedbackItem, b: FeedbackItem) {
+  return a.discordId === b.discordId && a.channel === b.channel && a.title === b.title && a.body === b.body;
+}
+
+function copyFeedbackText(item: FeedbackItem) {
+  const kind = item.kind === "suggestion" ? "Sugestia" : "Błąd";
+  return `${kind} · ${feedbackChannelLabel(item.channel)}\n${item.title}\n\n${item.body}`;
+}
+
 function statusRank(status: FeedbackStatus) {
   if (status === "deleted") return 2;
   if (status === "done") return 1;
@@ -68,11 +77,16 @@ function dedupeItems(rows: FeedbackItem[]): FeedbackItem[] {
   const seenId = new Set<number>();
   const byKey = new Map<string, FeedbackItem>();
   const order: string[] = [];
+  const deletedKeys = new Set<string>();
   for (const raw of rows) {
     const item = normalizeItem(raw);
     if (seenId.has(item.id)) continue;
     seenId.add(item.id);
     const key = `${item.discordId}|${item.channel}|${item.title}|${item.body}`;
+    if (item.status === "deleted") {
+      deletedKeys.add(key);
+      continue;
+    }
     const existing = byKey.get(key);
     if (!existing) {
       byKey.set(key, item);
@@ -83,12 +97,11 @@ function dedupeItems(rows: FeedbackItem[]): FeedbackItem[] {
       existing.status = item.status;
     }
   }
-  return order.map((key) => byKey.get(key)!);
+  return order.filter((key) => !deletedKeys.has(key)).map((key) => byKey.get(key)!);
 }
 
 function statusLabel(status: FeedbackStatus) {
   if (status === "done") return "Wykonane";
-  if (status === "deleted") return "Usunięte";
   return "Oczekuje";
 }
 
@@ -103,14 +116,22 @@ function FeedbackCard({
   busyId?: number;
   onStatus?: (id: number, status: FeedbackStatus) => void;
 }) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(copyFeedbackText(item));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  };
+
   return (
     <div
-      className={`rounded-xl border bg-[#070707] p-3.5 ${
-        item.status === "deleted"
-          ? "border-white/[0.04] opacity-70"
-          : item.status === "done"
-            ? "border-emerald-500/20"
-            : "border-white/[0.07]"
+      className={`feedback-copyable rounded-xl border bg-[#070707] p-3.5 ${
+        item.status === "done" ? "border-emerald-500/20" : "border-white/[0.07]"
       }`}
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -123,11 +144,7 @@ function FeedbackCard({
         </span>
         <span
           className={`rounded px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide ${
-            item.status === "done"
-              ? "bg-emerald-500/15 text-emerald-300"
-              : item.status === "deleted"
-                ? "bg-zinc-700 text-zinc-300"
-                : "bg-amber-500/15 text-amber-300"
+            item.status === "done" ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"
           }`}
         >
           {statusLabel(item.status)}
@@ -135,7 +152,15 @@ function FeedbackCard({
         <span className="rounded bg-white/[0.06] px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-zinc-300">
           {feedbackChannelLabel(item.channel)}
         </span>
-        <span className="min-w-0 truncate text-[13px] font-medium text-white">{item.title}</span>
+        <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-white">{item.title}</span>
+        <button
+          type="button"
+          onClick={() => void copy()}
+          className="inline-flex h-7 items-center gap-1 rounded-md border border-white/[0.08] bg-[#050505] px-2 text-[11px] text-zinc-400 hover:text-white"
+        >
+          {copied ? <Check size={12} /> : <Copy size={12} />}
+          {copied ? "Skopiowano" : "Kopiuj"}
+        </button>
       </div>
       <div className="mt-1 text-[11px] text-zinc-500">
         {item.name || "Konto"}
@@ -160,12 +185,8 @@ function FeedbackCard({
           <button
             type="button"
             disabled={busyId === item.id}
-            onClick={() => onStatus(item.id, item.status === "deleted" ? "open" : "deleted")}
-            className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-[11px] ${
-              item.status === "deleted"
-                ? "border-rose-500/40 bg-rose-500/15 text-rose-300"
-                : "border-white/[0.08] bg-[#050505] text-zinc-400 hover:text-white"
-            }`}
+            onClick={() => onStatus(item.id, "deleted")}
+            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-white/[0.08] bg-[#050505] px-2.5 text-[11px] text-zinc-400 hover:text-white"
           >
             <Trash2 size={13} />
             Usuń
@@ -204,27 +225,36 @@ export function FeedbackPage() {
     return rows.filter((item) => item.channel === channelFilter);
   }, [items, channelFilter]);
 
+  const ranksRef = useRef(ranks);
+  ranksRef.current = ranks;
+
   const load = useCallback(async () => {
     if (!window.synvity?.feedbackList) return;
-    setLoading(true);
     try {
       const result = (await window.synvity.feedbackList()) as FeedbackList;
       setItems(dedupeItems(result?.items ?? []));
-      setDeveloper(Boolean(result?.developer) || hasDeveloperAccess(ranks));
+      setDeveloper(Boolean(result?.developer) || hasDeveloperAccess(ranksRef.current));
       if (result?.error === "network" || result?.error === "server") {
         setMessage("Nie udało się pobrać zgłoszeń.");
       }
     } catch {
       setMessage("Nie udało się pobrać zgłoszeń.");
-    } finally {
-      setLoading(false);
     }
-  }, [ranks]);
+  }, []);
 
   useEffect(() => {
     if (!loggedIn) return;
     void load();
   }, [loggedIn, load]);
+
+  const refresh = async () => {
+    setLoading(true);
+    try {
+      await load();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const connectDiscord = async () => {
     setDiscordBusy(true);
@@ -290,29 +320,31 @@ export function FeedbackPage() {
 
   const setStatus = async (id: number, status: FeedbackStatus) => {
     const current = items.find((item) => item.id === id);
+    const previous = items;
     setBusyId(id);
     setMessage("");
-    setItems((prev) =>
-      prev.map((item) => {
-        if (item.id === id) return { ...item, status };
-        if (
-          current &&
-          item.discordId === current.discordId &&
-          item.channel === current.channel &&
-          item.title === current.title &&
-          item.body === current.body
-        ) {
-          return { ...item, status };
-        }
+    setItems((prev) => {
+      if (status === "deleted") {
+        return prev.filter((item) => {
+          if (item.id === id) return false;
+          return !(current && sameFeedback(item, current));
+        });
+      }
+      return prev.map((item) => {
+        if (item.id === id || (current && sameFeedback(item, current))) return { ...item, status };
         return item;
-      }),
-    );
+      });
+    });
     try {
       const result = (await window.synvity?.feedbackUpdate?.({ id, status })) as FeedbackList | undefined;
       if (result?.items) setItems(dedupeItems(result.items));
-      if (!result?.ok) setMessage("Nie udało się zmienić statusu zgłoszenia.");
+      if (!result?.ok) {
+        setItems(previous);
+        setMessage(status === "deleted" ? "Nie udało się usunąć zgłoszenia." : "Nie udało się zmienić statusu zgłoszenia.");
+      }
     } catch {
-      setMessage("Nie udało się zmienić statusu zgłoszenia.");
+      setItems(previous);
+      setMessage(status === "deleted" ? "Nie udało się usunąć zgłoszenia." : "Nie udało się zmienić statusu zgłoszenia.");
     } finally {
       setBusyId(null);
     }
@@ -436,10 +468,10 @@ export function FeedbackPage() {
               <div>
                 <div className="text-[14px] font-medium text-white">Twoje zgłoszenia</div>
                 <p className="mt-1 text-[12px] text-zinc-500">
-                  To, co sam tu wysłałeś. Status od developera: Oczekuje, Wykonane albo Usunięte.
+                  To, co sam tu wysłałeś. Status od developera: Oczekuje albo Wykonane. Usunięte znikają z listy.
                 </p>
               </div>
-              <button type="button" onClick={() => void load()} className="ink-btn" disabled={loading}>
+              <button type="button" onClick={() => void refresh()} className="ink-btn" disabled={loading}>
                 <RefreshCw size={13} className={loading ? "animate-spin" : undefined} />
                 Odśwież
               </button>
@@ -463,7 +495,7 @@ export function FeedbackPage() {
               <div className="mt-6 border-t border-white/[0.06] pt-5">
                 <div className="text-[14px] font-medium text-white">Wszystkie zgłoszenia</div>
                 <p className="mt-1 text-[12px] text-zinc-500">
-                  Widoczne tylko dla developerów. Wykonane i Usuń widać też u osoby, która to zgłosiła.
+                  Widoczne tylko dla developerów. Usuń kasuje zgłoszenie z listy u wszystkich.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   <button

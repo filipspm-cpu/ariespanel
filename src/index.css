@@ -634,6 +634,18 @@ textarea {
   opacity: 0.55;
 }
 
+.feedback-copyable {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+.feedback-copyable button {
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+
 .studio-body {
   position: relative;
   display: block;

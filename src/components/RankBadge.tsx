@@ -1,5 +1,6 @@
 import { accountRank, accountRanks, type AccountRank } from "@/data/testers";
 import { useAppStore } from "@/store/useAppStore";
+import { useMemo } from "react";
 
 export function useAccountRank(discordId: string | undefined): AccountRank | null {
   const testers = useAppStore((s) => s.testers);
@@ -8,7 +9,7 @@ export function useAccountRank(discordId: string | undefined): AccountRank | nul
 
 export function useAccountRanks(discordId: string | undefined): AccountRank[] {
   const testers = useAppStore((s) => s.testers);
-  return accountRanks(discordId, testers);
+  return useMemo(() => accountRanks(discordId, testers), [discordId, testers]);
 }
 
 export function RankBadge({
