@@ -1,5 +1,5 @@
 <?php
-// aries-accounts-1.0.96
+// aries-accounts-1.0.97
 if (function_exists("ob_start")) {
   @ob_start();
 }
@@ -369,11 +369,16 @@ function unique_feedback_items($items) {
   $seenId = array();
   $byKey = array();
   $order = array();
+  $deletedKeys = array();
   foreach ($items as $item) {
     $id = (int) $item["id"];
     if (isset($seenId[$id])) continue;
     $seenId[$id] = true;
     $key = $item["discordId"] . "|" . $item["channel"] . "|" . $item["title"] . "|" . $item["body"];
+    if (isset($item["status"]) && $item["status"] === "deleted") {
+      $deletedKeys[$key] = true;
+      continue;
+    }
     if (!isset($byKey[$key])) {
       $byKey[$key] = $item;
       $order[] = $key;
@@ -384,11 +389,18 @@ function unique_feedback_items($items) {
     }
   }
   $out = array();
-  foreach ($order as $key) $out[] = $byKey[$key];
+  foreach ($order as $key) {
+    if (isset($deletedKeys[$key])) continue;
+    $out[] = $byKey[$key];
+  }
   return $out;
 }
 
 function update_feedback_status($mysqli, $itemId, $status) {
+  if ($status === "deleted") {
+    delete_feedback($mysqli, $itemId);
+    return;
+  }
   $stmt = $mysqli->prepare("UPDATE feedback SET status = ? WHERE id = ?");
   if ($stmt) {
     $stmt->bind_param("si", $status, $itemId);
@@ -404,6 +416,29 @@ function update_feedback_status($mysqli, $itemId, $status) {
   if ($dup) {
     $dup->bind_param("si", $status, $itemId);
     $dup->execute();
+  }
+}
+
+function delete_feedback($mysqli, $itemId) {
+  $row = null;
+  $stmt = $mysqli->prepare("SELECT discord_id, channel, title, body FROM feedback WHERE id = ? LIMIT 1");
+  if ($stmt) {
+    $stmt->bind_param("i", $itemId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res ? $res->fetch_assoc() : null;
+  }
+  if ($row) {
+    $dup = $mysqli->prepare("DELETE FROM feedback WHERE discord_id = ? AND channel = ? AND title = ? AND body = ?");
+    if ($dup) {
+      $dup->bind_param("ssss", $row["discord_id"], $row["channel"], $row["title"], $row["body"]);
+      $dup->execute();
+    }
+  }
+  $byId = $mysqli->prepare("DELETE FROM feedback WHERE id = ?");
+  if ($byId) {
+    $byId->bind_param("i", $itemId);
+    $byId->execute();
   }
 }
 
@@ -430,11 +465,11 @@ function list_feedback($mysqli, $discordId, $developer) {
   $out = array();
   if ($developer) {
     $result = $mysqli->query(
-      "SELECT id, discord_id, name, kind, title, body, status, channel, created_at FROM feedback ORDER BY created_at DESC, id DESC LIMIT 250"
+      "SELECT id, discord_id, name, kind, title, body, status, channel, created_at FROM feedback WHERE status <> 'deleted' ORDER BY created_at DESC, id DESC LIMIT 250"
     );
   } else {
     $stmt = $mysqli->prepare(
-      "SELECT id, discord_id, name, kind, title, body, status, channel, created_at FROM feedback WHERE discord_id = ? ORDER BY created_at DESC, id DESC LIMIT 80"
+      "SELECT id, discord_id, name, kind, title, body, status, channel, created_at FROM feedback WHERE discord_id = ? AND status <> 'deleted' ORDER BY created_at DESC, id DESC LIMIT 80"
     );
     if (!$stmt) return $out;
     $stmt->bind_param("s", $discordId);
