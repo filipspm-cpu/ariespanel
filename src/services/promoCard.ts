@@ -120,7 +120,8 @@ function saveBlob(blob: Blob, filename: string) {
 }
 
 function fileBase(code: string) {
-  return `ARIES-${code.replace(/[^A-Z0-9-]/g, "")}`;
+  const clean = code.replace(/[^A-Z0-9-]/g, "");
+  return clean.startsWith("ARIES") ? clean : `ARIES-${clean}`;
 }
 
 export async function downloadPromoPng(code: string, name?: string) {
@@ -139,7 +140,9 @@ export async function downloadPromoGif(code: string, name?: string) {
     const pulse = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin((i / frames) * Math.PI * 2));
     await drawPromoCard(ctx, { code, name, pulse });
     indexed.push(quantizeToPalette(ctx.getImageData(0, 0, canvas.width, canvas.height).data, PALETTE));
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, 0);
+    });
   }
   const blob = encodeGif(indexed, canvas.width, canvas.height, PALETTE, 14);
   saveBlob(blob, `${fileBase(code)}.gif`);
