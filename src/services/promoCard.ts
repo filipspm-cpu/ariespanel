@@ -68,7 +68,7 @@ export async function drawPromoCard(
 
   ctx.fillStyle = "#d4d4d8";
   ctx.font = "16px Inter, sans-serif";
-  ctx.fillText("Wpisz kod", w / 2, 228);
+  ctx.fillText("Wpisz kod w zakładce ustawienia", w / 2, 228);
 
   const chipX = w / 2 - 250;
   const chipY = 246;
