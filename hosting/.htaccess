@@ -1,4 +1,5 @@
 Options -Indexes
+DirectoryIndex index.php index.html
 
 AddType text/html .html .htm
 AddType application/json .json
@@ -17,7 +18,7 @@ AddType application/json .json
   </IfModule>
 </FilesMatch>
 
-<FilesMatch "^(rewards|accounts|feedback)\.php$">
+<FilesMatch "^(rewards|accounts|feedback|index|download|polityka-prywatnosci)\.php$">
   <IfModule mod_mime.c>
     AddHandler application/x-httpd-php .php
     AddType application/x-httpd-php .php
@@ -25,17 +26,20 @@ AddType application/json .json
   <IfModule mod_php.c>
     SetHandler application/x-httpd-php
   </IfModule>
+</FilesMatch>
+
+<FilesMatch "^(rewards|accounts|feedback)\.php$">
   <IfModule mod_headers.c>
     Header unset Content-Disposition
   </IfModule>
 </FilesMatch>
 
-<Files "polityka-prywatnosci.php">
+<FilesMatch "^(index|polityka-prywatnosci)\.php$">
   <IfModule mod_headers.c>
     Header set Content-Type "text/html; charset=utf-8"
     Header unset Content-Disposition
   </IfModule>
-</Files>
+</FilesMatch>
 
 <FilesMatch "\.(sql|bak|old|log|inc|json)$">
   <IfModule mod_authz_core.c>
@@ -47,7 +51,7 @@ AddType application/json .json
   </IfModule>
 </FilesMatch>
 
-<FilesMatch "^(config|aries_lib)\.php$">
+<FilesMatch "^(config|aries_lib|aries-latest)\.php$">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
