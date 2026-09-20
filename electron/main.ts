@@ -96,6 +96,17 @@ function rendererUrl(file: "index" | "overlay") {
   return path.join(__dirname, "..", "dist", file === "index" ? "index.html" : "overlay.html");
 }
 
+function bindPanelConsole(win: BrowserWindow) {
+  win.webContents.on("before-input-event", (event, input) => {
+    if (input.type !== "keyDown" || input.isAutoRepeat) return;
+    const f11 = input.key === "F11" || input.code === "F11";
+    if (!f11 || !input.shift || input.control || input.alt || input.meta) return;
+    event.preventDefault();
+    if (win.webContents.isDevToolsOpened()) win.webContents.closeDevTools();
+    else win.webContents.openDevTools({ mode: "bottom", activate: true });
+  });
+}
+
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1440,
@@ -117,6 +128,7 @@ function createMainWindow() {
       v8CacheOptions: "code",
     },
   });
+  bindPanelConsole(mainWindow);
 
   if (isDev) {
     void mainWindow.loadURL(rendererUrl("index"));
