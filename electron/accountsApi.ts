@@ -55,6 +55,7 @@ async function requestOne(url: string, method: "GET" | "POST", body?: unknown): 
   );
   const text = (await res.text()).trim();
   if (!text) throw new Error(res.ok ? "empty" : String(res.status));
+  if (/^(<\?php|\?php)/i.test(text)) throw new Error("phpfile");
   try {
     return parseJsonLoose(text);
   } catch {
@@ -63,16 +64,25 @@ async function requestOne(url: string, method: "GET" | "POST", body?: unknown): 
   }
 }
 
+let lastRequestError = "";
+
+export function lastApiError() {
+  return lastRequestError;
+}
+
 export async function apiRequestUrls(
   urls: string[],
   method: "GET" | "POST",
   body?: unknown,
 ): Promise<unknown | null> {
+  lastRequestError = "";
   for (const base of urls) {
     try {
-      return await requestOne(base, method, body);
-    } catch {
-      /* try next host */
+      const payload = await requestOne(base, method, body);
+      lastRequestError = "";
+      return payload;
+    } catch (err) {
+      lastRequestError = err instanceof Error ? err.message : "network";
     }
   }
   return null;

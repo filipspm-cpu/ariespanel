@@ -60,6 +60,7 @@ export function rewardsErrorText(code?: string) {
   if (code === "claimed") return "Ta nagroda jest już odebrana.";
   if (code === "forbidden") return "Tylko developer może to zrobić.";
   if (code === "db") return "Nie udało się połączyć z bazą.";
+  if (code === "phpfile") return "Na hostingu nie działa rewards.php. Wgraj ten plik ponownie — pierwsza linia musi być <?php.";
   if (code === "network") return "Nie udało się połączyć z serwerem nagród.";
   if (code) return "Nie udało się zapisać.";
   return "";

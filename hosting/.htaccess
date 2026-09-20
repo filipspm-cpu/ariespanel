@@ -17,6 +17,19 @@ AddType application/json .json
   </IfModule>
 </FilesMatch>
 
+<FilesMatch "^(rewards|accounts|feedback)\.php$">
+  <IfModule mod_mime.c>
+    AddHandler application/x-httpd-php .php
+    AddType application/x-httpd-php .php
+  </IfModule>
+  <IfModule mod_php.c>
+    SetHandler application/x-httpd-php
+  </IfModule>
+  <IfModule mod_headers.c>
+    Header unset Content-Disposition
+  </IfModule>
+</FilesMatch>
+
 <Files "polityka-prywatnosci.php">
   <IfModule mod_headers.c>
     Header set Content-Type "text/html; charset=utf-8"

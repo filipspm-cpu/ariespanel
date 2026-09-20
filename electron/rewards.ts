@@ -1,5 +1,5 @@
 import mysql from "mysql2/promise";
-import { apiRequestUrls } from "./accountsApi";
+import { apiRequestUrls, lastApiError } from "./accountsApi";
 import { loadPromoDevice, markPromoDeviceRedeemed } from "./promoDevice";
 import { loadState } from "./storage";
 import { loadTesters, setAccountRank } from "./testers";
@@ -260,6 +260,10 @@ async function ensure(db: mysql.Connection) {
 
 type SqlRow = Record<string, unknown>;
 
+function phpOrNetwork() {
+  return lastApiError() === "phpfile" ? "phpfile" : "network";
+}
+
 async function php(action: string, extra: Record<string, unknown>) {
   return apiRequestUrls(REWARD_URLS, "POST", { action, ...extra });
 }
@@ -445,7 +449,7 @@ export async function getRewardsState(): Promise<RewardsState> {
     state.leaderboard = await boardFrom(db);
     return state;
   });
-  return sql || emptyState("network");
+  return sql || emptyState(phpOrNetwork());
 }
 
 export async function generatePromoCode(): Promise<RewardsState> {
@@ -470,7 +474,7 @@ export async function generatePromoCode(): Promise<RewardsState> {
     }
     return readState(db, discordId, name);
   });
-  return sql || emptyState("network");
+  return sql || emptyState(phpOrNetwork());
 }
 
 export async function redeemPromoCode(raw: string): Promise<RewardsState> {
@@ -484,7 +488,7 @@ export async function redeemPromoCode(raw: string): Promise<RewardsState> {
   const device = loadPromoDevice();
   if (device.redeemed) {
     const state = await getRewardsState();
-    if (!state.redeemed) return { ...state, ok: false, error: "device" };
+    return { ...state, ok: false, error: state.redeemed ? "used" : "device", deviceLocked: true };
   }
   const finish = (state: RewardsState) => {
     if (state.ok && state.redeemed) markPromoDeviceRedeemed();
@@ -554,7 +558,7 @@ export async function redeemPromoCode(raw: string): Promise<RewardsState> {
     const state = await readState(db, discordId, name);
     return { ...state, ok: true };
   });
-  return finish(sql || emptyState("network"));
+  return finish(sql || emptyState(phpOrNetwork()));
 }
 
 export async function syncRewardStats(input: {
@@ -598,7 +602,7 @@ export async function syncRewardStats(input: {
     );
     return readState(db, discordId, name);
   });
-  return sql || emptyState("network");
+  return sql || emptyState(phpOrNetwork());
 }
 
 export async function claimMoneyTier(tierId: string): Promise<RewardsState> {
@@ -630,7 +634,7 @@ export async function claimMoneyTier(tierId: string): Promise<RewardsState> {
     next.leaderboard = await boardFrom(db);
     return { ...next, ok: true };
   });
-  return sql || emptyState("network");
+  return sql || emptyState(phpOrNetwork());
 }
 
 export async function markRewardsPaid(targetId: string): Promise<AccountRewards[]> {
@@ -743,7 +747,7 @@ export async function createCustomAchievement(input: CustomAchievementInput): Pr
     state.leaderboard = await boardFrom(db);
     return { ...state, ok: true };
   });
-  return sql || emptyState("network");
+  return sql || emptyState(phpOrNetwork());
 }
 
 export async function deleteCustomAchievement(id: string): Promise<RewardsState> {
@@ -766,7 +770,7 @@ export async function deleteCustomAchievement(id: string): Promise<RewardsState>
     state.leaderboard = await boardFrom(db);
     return { ...state, ok: true };
   });
-  return sql || emptyState("network");
+  return sql || emptyState(phpOrNetwork());
 }
 
 export async function grantAchievement(taskId: string): Promise<RewardsState> {
@@ -791,5 +795,5 @@ export async function grantAchievement(taskId: string): Promise<RewardsState> {
     next.leaderboard = await boardFrom(db);
     return { ...next, ok: true };
   });
-  return sql || emptyState("network");
+  return sql || emptyState(phpOrNetwork());
 }

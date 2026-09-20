@@ -100,7 +100,11 @@ export function SettingsPage() {
         setPromoMsg(rewardsErrorText("network"));
       } else {
         setPromo(next);
-        if (next.ok === false) setPromoMsg(rewardsErrorText(next.error));
+        if (next.ok === false) {
+          const text = rewardsErrorText(next.error);
+          if (next.error === "device" && next.deviceLocked) setPromoMsg("");
+          else setPromoMsg(text);
+        }
         else setPromoMsg(`Kod gotowy. Kto go wpisze, dostanie ${formatCash(PROMO_ENTER_CASH)} w grze, a Ty ${formatCash(PROMO_OWNER_CASH)}.`);
       }
     } catch {
@@ -144,7 +148,11 @@ export function SettingsPage() {
         setPromoMsg(rewardsErrorText("network"));
       } else {
         setPromo(next);
-        if (next.ok === false) setPromoMsg(rewardsErrorText(next.error));
+        if (next.ok === false) {
+          const text = rewardsErrorText(next.error);
+          if (next.error === "device" && next.deviceLocked) setPromoMsg("");
+          else setPromoMsg(text);
+        }
         else {
           setPromoInput("");
           setPromoMsg(
