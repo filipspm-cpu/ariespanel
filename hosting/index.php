@@ -46,34 +46,62 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
       inset: -18% 8% auto;
       height: 520px;
       background: radial-gradient(ellipse at 50% 0%, rgba(240, 45, 94, 0.28), transparent 62%);
+      animation: glow-breathe 6.5s ease-in-out infinite;
     }
     .glow2 {
       right: -12%; top: 28%;
       width: 420px; height: 420px;
       background: radial-gradient(circle, rgba(240, 45, 94, 0.12), transparent 70%);
+      animation: glow-drift 11s ease-in-out infinite;
     }
     header, main, footer { position: relative; z-index: 1; width: min(1160px, calc(100% - 32px)); margin: 0 auto; }
-    header { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
+    header {
+      display: flex; align-items: center; justify-content: space-between; padding: 22px 0;
+      animation: fade-down 0.7s ease both;
+    }
     .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
     .brand img { width: 42px; height: 42px; }
     .brand b { font-family: Orbitron, Inter, sans-serif; letter-spacing: 0.22em; font-size: 15px; }
     .brand span { display: block; font-size: 11px; color: #a1a1aa; letter-spacing: 0.2em; text-transform: uppercase; }
     .nav { display: flex; gap: 18px; font-size: 13px; color: #a1a1aa; }
+    .nav a { position: relative; text-decoration: none; transition: color 0.2s ease; }
+    .nav a::after {
+      content: ""; position: absolute; left: 0; right: 0; bottom: -4px; height: 1px;
+      background: #f02d5e; transform: scaleX(0); transform-origin: left; transition: transform 0.22s ease;
+    }
     .nav a:hover { color: #fff; }
+    .nav a:hover::after { transform: scaleX(1); }
     .hero { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 44px; align-items: center; padding: 28px 0 52px; }
-    h1 { margin: 0; font-size: clamp(38px, 6.2vw, 72px); line-height: 0.92; letter-spacing: -0.045em; }
+    h1 {
+      margin: 0; font-size: clamp(38px, 6.2vw, 72px); line-height: 0.92; letter-spacing: -0.045em;
+      animation: fade-up 0.7s ease 0.08s both;
+    }
     h1 em { font-style: normal; color: #f02d5e; white-space: nowrap; }
-    .lead { margin: 18px 0 0; max-width: 540px; color: #a1a1aa; font-size: 17px; line-height: 1.55; }
-    .cta { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-top: 28px; }
+    .lead {
+      margin: 18px 0 0; max-width: 540px; color: #a1a1aa; font-size: 17px; line-height: 1.55;
+      animation: fade-up 0.7s ease 0.16s both;
+    }
+    .cta {
+      display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-top: 28px;
+      animation: fade-up 0.7s ease 0.24s both;
+    }
     .btn {
+      position: relative; overflow: hidden;
       display: inline-flex; align-items: center; justify-content: center; gap: 10px;
       height: 54px; padding: 0 24px; border-radius: 14px; background: #f02d5e; color: #fff;
       font-size: 15px; font-weight: 700; text-decoration: none; box-shadow: 0 14px 36px rgba(240, 45, 94, 0.32);
+      transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
     }
-    .btn:hover { filter: brightness(1.08); }
+    .btn::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.28) 50%, transparent 70%);
+      transform: translateX(-130%);
+      animation: btn-shine 2.8s ease-in-out 0.8s infinite;
+    }
+    .btn:hover { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 18px 40px rgba(240, 45, 94, 0.42); }
     .btn small { display: block; font-size: 11px; font-weight: 600; opacity: 0.86; }
     .meta { font-size: 13px; color: #71717a; line-height: 1.5; }
-    .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; animation: fade-up 0.7s ease 0.32s both; }
     .pill {
       padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.08);
       background: rgba(255,255,255,0.03); color: #d4d4d8; font-size: 12px;
@@ -87,6 +115,7 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
         linear-gradient(180deg, #151515, #070707);
       box-shadow: 0 30px 80px rgba(0,0,0,0.5);
       overflow: hidden;
+      animation: shot-in 0.9s cubic-bezier(.2,.8,.2,1) 0.18s both;
     }
     .chrome { display: flex; gap: 6px; margin-bottom: 18px; }
     .chrome i { width: 10px; height: 10px; border-radius: 50%; background: #3f3f46; display: block; }
@@ -95,9 +124,13 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
     .side { display: flex; flex-direction: column; align-items: center; gap: 10px; padding-top: 8px; }
     .side img { width: 54px; height: 54px; }
     .dot { width: 28px; height: 28px; border-radius: 8px; background: rgba(255,255,255,0.06); }
-    .dot.on { background: rgba(240, 45, 94, 0.35); }
+    .dot.on { background: rgba(240, 45, 94, 0.35); animation: dot-pulse 1.8s ease-in-out infinite; }
     .panel { padding: 22px 18px 18px; border-radius: 18px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.05); }
-    .panel img { display: block; width: min(180px, 55%); margin: 8px auto 12px; filter: drop-shadow(0 18px 40px rgba(240, 45, 94, 0.22)); }
+    .panel img {
+      display: block; width: min(180px, 55%); margin: 8px auto 12px;
+      filter: drop-shadow(0 18px 40px rgba(240, 45, 94, 0.22));
+      animation: logo-float 4.6s ease-in-out infinite;
+    }
     .word { font-family: Orbitron, Inter, sans-serif; text-align: center; letter-spacing: 0.34em; font-size: 18px; }
     .sub { text-align: center; color: #71717a; font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; margin-top: 6px; }
     .ver { text-align: center; margin-top: 14px; color: #f02d5e; font-size: 13px; font-weight: 700; }
@@ -105,14 +138,21 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
     .card {
       padding: 20px; border: 1px solid rgba(255,255,255,0.07); border-radius: 18px;
       background: linear-gradient(180deg, rgba(16,16,16,.98), rgba(6,6,6,.97));
+      opacity: 0; transform: translateY(22px);
+      transition: opacity 0.55s ease var(--d, 0ms), transform 0.55s ease var(--d, 0ms), border-color 0.2s ease;
     }
+    .card.in { opacity: 1; transform: none; }
+    .card:hover { border-color: rgba(240, 45, 94, 0.35); }
     .card b { display: block; font-size: 15px; margin-bottom: 8px; }
     .card p { margin: 0; color: #a1a1aa; font-size: 13px; line-height: 1.5; }
     .adbar {
       display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center;
       margin: 0 0 56px; padding: 18px 22px; border-radius: 18px;
       border: 1px solid rgba(240, 45, 94, 0.22); background: rgba(240, 45, 94, 0.07);
+      opacity: 0; transform: translateY(18px);
+      transition: opacity 0.55s ease, transform 0.55s ease;
     }
+    .adbar.in { opacity: 1; transform: none; }
     .adbar strong { display: block; font-size: 15px; }
     .adbar span { color: #a1a1aa; font-size: 13px; }
     footer { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 24px 0 40px; color: #52525b; font-size: 12px; border-top: 1px solid rgba(255,255,255,0.06); }
@@ -123,7 +163,47 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
       .side { flex-direction: row; justify-content: center; }
       .nav { display: none; }
     }
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(18px); filter: blur(6px); }
+      to { opacity: 1; transform: none; filter: none; }
+    }
+    @keyframes fade-down {
+      from { opacity: 0; transform: translateY(-12px); }
+      to { opacity: 1; transform: none; }
+    }
+    @keyframes shot-in {
+      from { opacity: 0; transform: translateX(36px) scale(0.96); filter: blur(8px); }
+      to { opacity: 1; transform: none; filter: none; }
+    }
+    @keyframes glow-breathe {
+      0%, 100% { opacity: 0.72; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.08); }
+    }
+    @keyframes glow-drift {
+      0%, 100% { transform: translate(0, 0); opacity: 0.7; }
+      50% { transform: translate(-40px, 24px); opacity: 1; }
+    }
+    @keyframes logo-float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    @keyframes dot-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(240, 45, 94, 0.35); }
+      50% { box-shadow: 0 0 0 7px rgba(240, 45, 94, 0); }
+    }
+    @keyframes btn-shine {
+      0%, 55% { transform: translateX(-130%); }
+      75%, 100% { transform: translateX(130%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+      .card, .adbar { opacity: 1; transform: none; }
+    }
   </style>
+  <noscript><style>.card,.adbar{opacity:1;transform:none}</style></noscript>
 </head>
 <body>
   <div class="wrap">
@@ -221,5 +301,26 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
       </div>
     </footer>
   </div>
+  <script>
+    (function () {
+      var nodes = document.querySelectorAll(".card, .adbar");
+      if (!("IntersectionObserver" in window)) {
+        for (var i = 0; i < nodes.length; i++) nodes[i].classList.add("in");
+        return;
+      }
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("in");
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.16, rootMargin: "0px 0px -40px 0px" });
+      for (var j = 0; j < nodes.length; j++) {
+        nodes[j].style.setProperty("--d", (j % 3) * 80 + "ms");
+        io.observe(nodes[j]);
+      }
+    })();
+  </script>
 </body>
 </html>
