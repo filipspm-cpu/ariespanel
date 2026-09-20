@@ -8,7 +8,8 @@ import { mergeImportedMacros, parseMacroFile } from "@/services/macroPack";
 import type { UpdateStatus } from "@/types";
 import type { RewardsState } from "@/types/rewards";
 import { Toggle } from "@/components/ui/Toggle";
-import { Copy, Download, FileUp, RefreshCw, Unplug } from "lucide-react";
+import { downloadPromoGif, downloadPromoPng } from "@/services/promoCard";
+import { Copy, Download, FileImage, FileUp, ImagePlay, RefreshCw, Unplug } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 export function SettingsPage() {
@@ -25,6 +26,7 @@ export function SettingsPage() {
   const [promoInput, setPromoInput] = useState("");
   const [promoMsg, setPromoMsg] = useState("");
   const [promoBusy, setPromoBusy] = useState(false);
+  const [cardBusy, setCardBusy] = useState<"png" | "gif" | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -115,6 +117,21 @@ export function SettingsPage() {
       setPromoMsg("Skopiowano kod.");
     } catch {
       setPromoMsg(promo.code);
+    }
+  };
+
+  const savePromoCard = async (kind: "png" | "gif") => {
+    if (!promo?.code) return;
+    setCardBusy(kind);
+    setPromoMsg("");
+    try {
+      if (kind === "gif") await downloadPromoGif(promo.code, displayName);
+      else await downloadPromoPng(promo.code, displayName);
+      setPromoMsg(kind === "gif" ? "Zapisano GIF z kodem." : "Zapisano PNG z kodem.");
+    } catch {
+      setPromoMsg("Nie udało się zapisać obrazka.");
+    } finally {
+      setCardBusy(null);
     }
   };
 
@@ -334,10 +351,30 @@ export function SettingsPage() {
               <div className="settings-promo-row">
                 <div className="settings-promo-code">{promo?.code || "Brak kodu"}</div>
                 {promo?.code ? (
-                  <button type="button" className="settings-btn" onClick={() => void copyPromo()}>
-                    <Copy size={14} />
-                    Kopiuj
-                  </button>
+                  <>
+                    <button type="button" className="settings-btn" onClick={() => void copyPromo()}>
+                      <Copy size={14} />
+                      Kopiuj
+                    </button>
+                    <button
+                      type="button"
+                      className="settings-btn"
+                      disabled={Boolean(cardBusy)}
+                      onClick={() => void savePromoCard("png")}
+                    >
+                      <FileImage size={14} />
+                      {cardBusy === "png" ? "PNG…" : "PNG"}
+                    </button>
+                    <button
+                      type="button"
+                      className="settings-btn"
+                      disabled={Boolean(cardBusy)}
+                      onClick={() => void savePromoCard("gif")}
+                    >
+                      <ImagePlay size={14} />
+                      {cardBusy === "gif" ? "GIF…" : "GIF"}
+                    </button>
+                  </>
                 ) : (
                   <button
                     type="button"
@@ -351,7 +388,8 @@ export function SettingsPage() {
               </div>
               {promo?.code ? (
                 <div className="mt-2 text-[12px] text-zinc-500">
-                  Każdy, kto wpisze Twój kod, dodaje Ci {formatCash(PROMO_CASH)} do wypłaty w grze.
+                  Każdy, kto wpisze Twój kod, dodaje Ci {formatCash(PROMO_CASH)} do wypłaty w grze. PNG i GIF to karta
+                  z kodem do wrzucenia na Discorda.
                 </div>
               ) : null}
               {promo?.referrals ? (
