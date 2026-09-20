@@ -61,6 +61,10 @@ export function rewardsErrorText(code?: string) {
   if (code === "forbidden") return "Tylko developer może to zrobić.";
   if (code === "db") return "Nie udało się połączyć z bazą.";
   if (code === "phpfile") return "Na hostingu nie działa rewards.php. Wgraj ten plik ponownie — pierwsza linia musi być <?php.";
+  if (code === "timeout") return "Serwer nagród nie odpowiedział (timeout 12s).";
+  if (code === "json") return "Serwer nagród oddał HTML lub tekst zamiast JSON.";
+  if (code === "empty") return "Serwer nagród oddał pustą odpowiedź.";
+  if (code === "http") return "Serwer nagród zwrócił błąd HTTP.";
   if (code === "network") return "Nie udało się połączyć z serwerem nagród.";
   if (code) return "Nie udało się zapisać.";
   return "";

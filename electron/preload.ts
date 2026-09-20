@@ -58,6 +58,17 @@ const api = {
     ipcRenderer.on("ui:openSettings", listener);
     return () => ipcRenderer.removeListener("ui:openSettings", listener);
   },
+  onToggleConsole: (cb: (open?: boolean) => void) => {
+    const listener = (_: unknown, open?: boolean) => cb(open);
+    ipcRenderer.on("ui:toggleConsole", listener);
+    return () => ipcRenderer.removeListener("ui:toggleConsole", listener);
+  },
+  onConsoleEntry: (cb: (entry: unknown) => void) => {
+    const listener = (_: unknown, entry: unknown) => cb(entry);
+    ipcRenderer.on("console:entry", listener);
+    return () => ipcRenderer.removeListener("console:entry", listener);
+  },
+  consoleHistory: () => ipcRenderer.invoke("console:history"),
   onMacroFired: (cb: (data: { id: string }) => void) => {
     const listener = (_: unknown, data: { id: string }) => cb(data);
     ipcRenderer.on("macro:fired", listener);

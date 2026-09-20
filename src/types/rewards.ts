@@ -23,6 +23,7 @@ export type AccountRewards = {
 export type RewardsState = {
   ok: boolean;
   error?: string;
+  detail?: string;
   code: string;
   redeemed: boolean;
   redeemedCode: string;

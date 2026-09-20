@@ -1,5 +1,15 @@
 import type { OverlaySettings, UpdateNotice, UpdateStatus } from "./index";
 
+export type PanelLogEntry = {
+  id: number;
+  at: number;
+  level: "info" | "warn" | "error";
+  source: string;
+  message: string;
+  detail?: string;
+  open?: boolean;
+};
+
 export interface FeedbackApiItem {
   id: number;
   discordId: string;
@@ -58,6 +68,9 @@ export interface SynvityApi {
   onCmdDone: (cb: (data: { aborted: boolean }) => void) => () => void;
   onCommandPalette: (cb: () => void) => () => void;
   onOpenSettings: (cb: () => void) => () => void;
+  onToggleConsole: (cb: (open?: boolean) => void) => () => void;
+  onConsoleEntry: (cb: (entry: PanelLogEntry) => void) => () => void;
+  consoleHistory: () => Promise<PanelLogEntry[]>;
   onMacroFired: (cb: (data: { id: string }) => void) => () => void;
   onCountersChanged: (cb: (counters: import("./index").Counter[]) => void) => () => void;
   feedbackList: () => Promise<FeedbackApiResult>;

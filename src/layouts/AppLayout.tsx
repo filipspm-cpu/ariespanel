@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import { TitleBar } from "@/components/TitleBar";
 import { Sidebar } from "@/components/Sidebar";
 import { CommandPalette } from "@/components/CommandPalette";
+import { AriesConsole } from "@/components/AriesConsole";
 import { HomePage } from "@/pages/HomePage";
 import { CmdPage } from "@/pages/CmdPage";
 import { OverlayPage } from "@/pages/OverlayPage";
@@ -60,6 +61,7 @@ export function AppLayout() {
           <Page />
         </main>
       </div>
+      <AriesConsole />
       <CommandPalette />
     </div>
   );

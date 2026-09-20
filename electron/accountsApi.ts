@@ -64,10 +64,61 @@ async function requestOne(url: string, method: "GET" | "POST", body?: unknown): 
   }
 }
 
-let lastRequestError = "";
+export type ApiFailure = {
+  code: string;
+  hint: string;
+  url: string;
+};
+
+let lastFailure: ApiFailure | null = null;
 
 export function lastApiError() {
-  return lastRequestError;
+  return lastFailure?.code || "";
+}
+
+export function lastApiFailure() {
+  return lastFailure;
+}
+
+export function classifyApiError(err: unknown, url: string): ApiFailure {
+  const raw = err instanceof Error ? err.message : String(err || "network");
+  const extra = err instanceof Error && err.cause ? ` ${String(err.cause)}` : "";
+  const lower = `${raw} ${extra}`.toLowerCase();
+  if (raw === "phpfile" || /^(<\?php|\?php)/i.test(raw)) {
+    return {
+      code: "phpfile",
+      hint: "Hosting nie uruchamia PHP — oddaje źródło pliku. Wgraj plik ponownie, pierwsza linia musi być <?php.",
+      url,
+    };
+  }
+  if (raw === "timeout" || lower.includes("etimedout") || lower.includes("timeout")) {
+    return { code: "timeout", hint: "Serwer nie odpowiedział w 12 sekund (timeout).", url };
+  }
+  if (raw === "empty") {
+    return { code: "empty", hint: "Serwer oddał pustą odpowiedź.", url };
+  }
+  if (raw === "invalid json") {
+    return { code: "json", hint: "Serwer oddał HTML lub tekst zamiast JSON.", url };
+  }
+  if (/^\d+$/.test(raw.trim())) {
+    return { code: "http", hint: `Serwer zwrócił HTTP ${raw}.`, url };
+  }
+  if (lower.includes("enotfound") || lower.includes("getaddrinfo")) {
+    return { code: "network", hint: "Nie znaleziono hosta (DNS).", url };
+  }
+  if (lower.includes("econnrefused")) {
+    return { code: "network", hint: "Serwer odrzucił połączenie.", url };
+  }
+  if (lower.includes("econnreset") || lower.includes("socket")) {
+    return { code: "network", hint: "Połączenie z serwerem się zerwało.", url };
+  }
+  if (lower.includes("cert") || lower.includes("ssl") || lower.includes("tls")) {
+    return { code: "network", hint: "Błąd certyfikatu SSL.", url };
+  }
+  if (lower.includes("fetch") || lower.includes("network") || lower.includes("offline")) {
+    return { code: "network", hint: "Brak połączenia z serwerem (sieć).", url };
+  }
+  return { code: "network", hint: `Błąd sieci: ${raw.slice(0, 180)}`, url };
 }
 
 export async function apiRequestUrls(
@@ -75,14 +126,14 @@ export async function apiRequestUrls(
   method: "GET" | "POST",
   body?: unknown,
 ): Promise<unknown | null> {
-  lastRequestError = "";
+  lastFailure = null;
   for (const base of urls) {
     try {
       const payload = await requestOne(base, method, body);
-      lastRequestError = "";
+      lastFailure = null;
       return payload;
     } catch (err) {
-      lastRequestError = err instanceof Error ? err.message : "network";
+      lastFailure = classifyApiError(err, base);
     }
   }
   return null;

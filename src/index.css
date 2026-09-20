@@ -2880,3 +2880,132 @@ textarea {
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
+
+.aries-console {
+  z-index: 40;
+  display: flex;
+  height: 248px;
+  flex-shrink: 0;
+  flex-direction: column;
+  border-top: 1px solid rgba(240, 45, 94, 0.28);
+  background:
+    linear-gradient(180deg, rgba(240, 45, 94, 0.06), transparent 28%),
+    #050505;
+  color: #e4e4e7;
+  user-select: text;
+}
+
+.aries-console-bar {
+  display: flex;
+  height: 36px;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0 10px 0 12px;
+}
+
+.aries-console-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #f02d5e;
+}
+
+.aries-console-name {
+  font-family: Ethnocentric, Inter, sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+
+.aries-console-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #a1a1aa;
+}
+
+.aries-console-hint {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #52525b;
+}
+
+.aries-console-icon {
+  display: flex;
+  height: 26px;
+  width: 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: #a1a1aa;
+}
+
+.aries-console-icon:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.aries-console-log {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 8px 12px 12px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.aries-console-row + .aries-console-row {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.aries-console-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #71717a;
+}
+
+.aries-console-level {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.aries-console-row.is-error .aries-console-level {
+  color: #f02d5e;
+}
+
+.aries-console-row.is-warn .aries-console-level {
+  color: #fbbf24;
+}
+
+.aries-console-row.is-info .aries-console-level {
+  color: #67e8f9;
+}
+
+.aries-console-source {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #a1a1aa;
+}
+
+.aries-console-msg {
+  margin-top: 2px;
+  color: #fafafa;
+}
+
+.aries-console-detail {
+  color: #a1a1aa;
+}
+
+.aries-console-empty {
+  padding-top: 18px;
+  color: #52525b;
+}

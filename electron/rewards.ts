@@ -1,5 +1,6 @@
 import mysql from "mysql2/promise";
-import { apiRequestUrls, lastApiError } from "./accountsApi";
+import { apiRequestUrls, lastApiError, lastApiFailure } from "./accountsApi";
+import { panelLog } from "./panelLog";
 import { loadPromoDevice, markPromoDeviceRedeemed } from "./promoDevice";
 import { loadState } from "./storage";
 import { loadTesters, setAccountRank } from "./testers";
@@ -48,6 +49,7 @@ export type CustomAchievement = {
 export type RewardsState = {
   ok: boolean;
   error?: string;
+  detail?: string;
   code: string;
   redeemed: boolean;
   redeemedCode: string;
@@ -94,10 +96,11 @@ const emptyStats = (): AchievementStats => ({
   referrals: 0,
 });
 
-function emptyState(error?: string): RewardsState {
+function emptyState(error?: string, detail?: string): RewardsState {
   return {
     ok: !error,
     error,
+    detail,
     code: "",
     redeemed: false,
     redeemedCode: "",
@@ -261,7 +264,83 @@ async function ensure(db: mysql.Connection) {
 type SqlRow = Record<string, unknown>;
 
 function phpOrNetwork() {
-  return lastApiError() === "phpfile" ? "phpfile" : "network";
+  const code = lastApiError();
+  if (code === "phpfile" || code === "timeout" || code === "json" || code === "empty" || code === "http") return code;
+  if (code) return "network";
+  return lastDbFailure() ? "db" : "network";
+}
+
+const TECH_ERRORS = new Set(["network", "phpfile", "timeout", "json", "empty", "http", "db"]);
+
+function shortRewardsError(code?: string) {
+  if (code === "login") return "Najpierw połącz Discord w ustawieniach.";
+  if (code === "own") return "Nie możesz wpisać własnego kodu.";
+  if (code === "used") return "Ten użytkownik już wpisał promokod.";
+  if (code === "device" || code === "ip") return "Na tym komputerze kod promocyjny został już użyty.";
+  if (code === "missing") return "Nie ma takiego kodu.";
+  if (code === "invalid") return "Niepoprawny kod.";
+  if (code === "points") return "Za mało punktów, żeby to odebrać.";
+  if (code === "claimed") return "Ta nagroda jest już odebrana.";
+  if (code === "forbidden") return "Tylko developer może to zrobić.";
+  if (code === "db") return "Nie udało się połączyć z bazą.";
+  if (code === "phpfile") return "Na hostingu nie działa PHP.";
+  if (code === "timeout") return "Serwer nagród nie odpowiedział (timeout).";
+  if (code === "json" || code === "empty" || code === "http") return "Serwer nagród oddał złą odpowiedź.";
+  if (code === "network") return "Nie udało się połączyć z serwerem nagród.";
+  if (code) return "Nie udało się zapisać.";
+  return "";
+}
+
+function failDetail(error?: string, extra?: string) {
+  const lines: string[] = [];
+  const push = (line?: string) => {
+    const text = String(line || "").trim();
+    if (text && !lines.includes(text)) lines.push(text);
+  };
+  push(shortRewardsError(error));
+  push(extra);
+  if (TECH_ERRORS.has(String(error || ""))) {
+    const api = lastApiFailure();
+    push(api?.hint);
+    push(api?.url);
+    const db = lastDbFailure();
+    if (db?.hint) push(`MySQL: ${db.hint}`);
+  }
+  return lines.join("\n");
+}
+
+function reportRewards(action: string, state: RewardsState, openOnTech = true): RewardsState {
+  if (state.ok) return state;
+  const tech = TECH_ERRORS.has(String(state.error || ""));
+  const detail = failDetail(state.error, state.detail);
+  panelLog({
+    level: tech ? "error" : "warn",
+    source: "nagrody",
+    message: `${action} nie udało się`,
+    detail,
+    open: Boolean(tech && openOnTech),
+  });
+  return { ...state, detail };
+}
+
+type DbFailure = { hint: string };
+let lastDb: DbFailure | null = null;
+
+function lastDbFailure() {
+  return lastDb;
+}
+
+function classifyDb(err: unknown): DbFailure {
+  const raw = err instanceof Error ? err.message : String(err || "db");
+  const lower = raw.toLowerCase();
+  if (raw === "timeout" || lower.includes("etimedout") || lower.includes("timeout")) {
+    return { hint: "Baza MySQL nie odpowiedziała (timeout)." };
+  }
+  if (lower.includes("econnrefused")) return { hint: "Baza odrzuciła połączenie (port 3306)." };
+  if (lower.includes("enotfound") || lower.includes("getaddrinfo")) return { hint: "Nie znaleziono hosta bazy (DNS)." };
+  if (lower.includes("access denied")) return { hint: "Baza odrzuciła login (access denied)." };
+  if (lower.includes("ssl") || lower.includes("tls")) return { hint: "Błąd SSL przy połączeniu z bazą." };
+  return { hint: raw.slice(0, 180) };
 }
 
 async function php(action: string, extra: Record<string, unknown>) {
@@ -403,11 +482,13 @@ async function readState(db: mysql.Connection, discordId: string, name: string):
 
 async function withDb<T>(fn: (db: mysql.Connection) => Promise<T>): Promise<T | null> {
   let db: mysql.Connection | undefined;
+  lastDb = null;
   try {
     db = await withTimeout(conn(), 6000);
     await ensure(db);
     return await fn(db);
-  } catch {
+  } catch (err) {
+    lastDb = classifyDb(err);
     return null;
   } finally {
     await db?.end().catch(() => undefined);
@@ -423,6 +504,7 @@ function parseState(payload: unknown): RewardsState | null {
   return {
     ok: data.ok === true,
     error,
+    detail: typeof data.detail === "string" && data.detail ? data.detail : undefined,
     code: String(data.code || ""),
     redeemed: Boolean(data.redeemed),
     redeemedCode: String(data.redeemedCode || ""),
@@ -442,21 +524,30 @@ function parseState(payload: unknown): RewardsState | null {
 export async function getRewardsState(): Promise<RewardsState> {
   const { discordId, name } = caller();
   const remote = parseState(await php("rewardsState", { discordId, name }));
-  if (remote) return remote;
+  if (remote) return remote.ok === false ? reportRewards("Stan nagród", remote, false) : remote;
   const sql = await withDb(async (db) => {
     const state = discordId ? await readState(db, discordId, name) : emptyState("login");
     if (!discordId) state.customTasks = await loadCustom(db);
     state.leaderboard = await boardFrom(db);
     return state;
   });
-  return sql || emptyState(phpOrNetwork());
+  return sql || reportRewards("Stan nagród", emptyState(phpOrNetwork()), false);
 }
 
 export async function generatePromoCode(): Promise<RewardsState> {
   const { discordId, name } = caller();
-  if (!discordId) return emptyState("login");
+  if (!discordId) return reportRewards("Generowanie kodu", emptyState("login"));
   const remote = parseState(await php("promoGenerate", { discordId, name }));
-  if (remote) return remote;
+  if (remote) {
+    if (remote.ok && remote.code) {
+      panelLog({
+        level: "info",
+        source: "nagrody",
+        message: `Kod gotowy: ${remote.code}`,
+      });
+    }
+    return remote.ok ? remote : reportRewards("Generowanie kodu", remote);
+  }
   const sql = await withDb(async (db) => {
     const [[existing]] = (await db.query("SELECT code FROM promo_codes WHERE discord_id = ? LIMIT 1", [discordId])) as [
       SqlRow[],
@@ -474,21 +565,31 @@ export async function generatePromoCode(): Promise<RewardsState> {
     }
     return readState(db, discordId, name);
   });
-  return sql || emptyState(phpOrNetwork());
+  if (sql?.code) {
+    const api = lastApiFailure();
+    panelLog({
+      level: "warn",
+      source: "nagrody",
+      message: `Kod ${sql.code} zrobiony przez MySQL, bo PHP nie odpowiedziało`,
+      detail: api ? `${api.hint}\n${api.url}` : undefined,
+    });
+    return sql;
+  }
+  return reportRewards("Generowanie kodu", emptyState(phpOrNetwork()));
 }
 
 export async function redeemPromoCode(raw: string): Promise<RewardsState> {
   const { discordId, name } = caller();
-  if (!discordId) return emptyState("login");
+  if (!discordId) return reportRewards("Wpisanie kodu", emptyState("login"));
   const code = normalizeCode(raw);
   if (!/^ARIES-[A-Z0-9]{6}$/.test(code)) {
     const state = await getRewardsState();
-    return { ...state, ok: false, error: "invalid" };
+    return reportRewards("Wpisanie kodu", { ...state, ok: false, error: "invalid" });
   }
   const device = loadPromoDevice();
   if (device.redeemed) {
     const state = await getRewardsState();
-    return { ...state, ok: false, error: state.redeemed ? "used" : "device", deviceLocked: true };
+    return reportRewards("Wpisanie kodu", { ...state, ok: false, error: state.redeemed ? "used" : "device", deviceLocked: true });
   }
   const finish = (state: RewardsState) => {
     if (state.ok && state.redeemed) markPromoDeviceRedeemed();
@@ -498,7 +599,7 @@ export async function redeemPromoCode(raw: string): Promise<RewardsState> {
   const remote = parseState(
     await php("promoRedeem", { discordId, name, code, deviceId: device.id, deviceHash: device.hash }),
   );
-  if (remote) return finish(remote);
+  if (remote) return finish(remote.ok ? remote : reportRewards("Wpisanie kodu", remote));
   const sql = await withDb(async (db) => {
     const [[mine]] = (await db.query("SELECT code FROM promo_codes WHERE discord_id = ? LIMIT 1", [discordId])) as [
       SqlRow[],
@@ -558,7 +659,7 @@ export async function redeemPromoCode(raw: string): Promise<RewardsState> {
     const state = await readState(db, discordId, name);
     return { ...state, ok: true };
   });
-  return finish(sql || emptyState(phpOrNetwork()));
+  return finish(reportRewards("Wpisanie kodu", sql || emptyState(phpOrNetwork())));
 }
 
 export async function syncRewardStats(input: {
@@ -607,16 +708,16 @@ export async function syncRewardStats(input: {
 
 export async function claimMoneyTier(tierId: string): Promise<RewardsState> {
   const { discordId, name } = caller();
-  if (!discordId) return emptyState("login");
+  if (!discordId) return reportRewards("Odbiór nagrody", emptyState("login"));
   const tier = MONEY_TIERS.find((row) => row.id === tierId);
   if (!tier) {
     const state = await getRewardsState();
-    return { ...state, ok: false, error: "invalid" };
+    return reportRewards("Odbiór nagrody", { ...state, ok: false, error: "invalid" });
   }
   const remote = parseState(await php("rewardsClaim", { discordId, name, kind: tier.id }));
   if (remote) {
     if (remote.ok && tier.prize === "vip") await grantVipRank(discordId, name);
-    return remote;
+    return remote.ok ? remote : reportRewards("Odbiór nagrody", remote);
   }
   const sql = await withDb(async (db) => {
     const state = await readState(db, discordId, name);
@@ -634,7 +735,7 @@ export async function claimMoneyTier(tierId: string): Promise<RewardsState> {
     next.leaderboard = await boardFrom(db);
     return { ...next, ok: true };
   });
-  return sql || emptyState(phpOrNetwork());
+  return sql || reportRewards("Odbiór nagrody", emptyState(phpOrNetwork()));
 }
 
 export async function markRewardsPaid(targetId: string): Promise<AccountRewards[]> {

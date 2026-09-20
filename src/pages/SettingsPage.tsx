@@ -101,9 +101,8 @@ export function SettingsPage() {
       } else {
         setPromo(next);
         if (next.ok === false) {
-          const text = rewardsErrorText(next.error);
           if (next.error === "device" && next.deviceLocked) setPromoMsg("");
-          else setPromoMsg(text);
+          else setPromoMsg(next.detail || rewardsErrorText(next.error));
         }
         else setPromoMsg(`Kod gotowy. Kto go wpisze, dostanie ${formatCash(PROMO_ENTER_CASH)} w grze, a Ty ${formatCash(PROMO_OWNER_CASH)}.`);
       }
@@ -149,9 +148,8 @@ export function SettingsPage() {
       } else {
         setPromo(next);
         if (next.ok === false) {
-          const text = rewardsErrorText(next.error);
           if (next.error === "device" && next.deviceLocked) setPromoMsg("");
-          else setPromoMsg(text);
+          else setPromoMsg(next.detail || rewardsErrorText(next.error));
         }
         else {
           setPromoInput("");
@@ -436,7 +434,11 @@ export function SettingsPage() {
               ) : null}
             </>
           )}
-          {promoMsg ? <div className="mt-3 text-[12px] text-zinc-300">{promoMsg}</div> : null}
+          {promoMsg ? (
+            <div className={`mt-3 whitespace-pre-line text-[12px] ${promo?.ok === false ? "text-rose-300" : "text-zinc-300"}`}>
+              {promoMsg}
+            </div>
+          ) : null}
         </div>
 
         <Copyright className="settings-copyright" />

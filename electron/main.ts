@@ -26,6 +26,7 @@ import { registerUpdater, overlayUpdateNotice } from "./updater";
 import { fetchMajesticServerStatuses } from "./majesticStatus";
 import { trustPublisherCert } from "./trustPublisher";
 import { todayCount } from "./todayStats";
+import { attachPanelLog, panelLog, panelLogHistory } from "./panelLog";
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 let mainWindow: BrowserWindow | null = null;
@@ -96,14 +97,30 @@ function rendererUrl(file: "index" | "overlay") {
   return path.join(__dirname, "..", "dist", file === "index" ? "index.html" : "overlay.html");
 }
 
+function isAriesConsoleHotkey(input: Electron.Input) {
+  if (input.type !== "keyDown" || input.isAutoRepeat) return false;
+  const f11 = input.key === "F11" || input.code === "F11";
+  const f12 = input.key === "F12" || input.code === "F12";
+  const inspect = (input.key === "I" || input.key === "i") && input.control && input.shift;
+  if (f11 && input.shift && !input.control && !input.alt && !input.meta) return true;
+  if (f12 && !input.control && !input.alt && !input.meta) return true;
+  if (inspect && !input.alt && !input.meta) return true;
+  return false;
+}
+
 function bindPanelConsole(win: BrowserWindow) {
+  attachPanelLog((entry) => {
+    if (!win.isDestroyed()) win.webContents.send("console:entry", entry);
+  });
   win.webContents.on("before-input-event", (event, input) => {
-    if (input.type !== "keyDown" || input.isAutoRepeat) return;
-    const f11 = input.key === "F11" || input.code === "F11";
-    if (!f11 || !input.shift || input.control || input.alt || input.meta) return;
+    if (!isAriesConsoleHotkey(input)) return;
     event.preventDefault();
     if (win.webContents.isDevToolsOpened()) win.webContents.closeDevTools();
-    else win.webContents.openDevTools({ mode: "bottom", activate: true });
+    win.webContents.send("ui:toggleConsole");
+  });
+  win.webContents.on("devtools-opened", () => {
+    win.webContents.closeDevTools();
+    win.webContents.send("ui:toggleConsole", true);
   });
 }
 
@@ -140,6 +157,11 @@ function createMainWindow() {
     const icon = appIcon();
     if (!icon.isEmpty()) mainWindow?.setIcon(icon);
     mainWindow?.show();
+    panelLog({
+      level: "info",
+      source: "aries",
+      message: `Konsola ARIES ${app.getVersion()}. Shift+F11 pokazuje diagnostykę zamiast Chrome.`,
+    });
   });
   mainWindow.on("hide", () => {
     mainWindow?.webContents.setBackgroundThrottling(true);
@@ -310,6 +332,7 @@ function createTray() {
 }
 
 function registerIpc() {
+  ipcMain.handle("console:history", () => panelLogHistory());
   ipcMain.handle("window:minimize", () => mainWindow?.minimize());
   ipcMain.handle("window:maximize", () => {
     if (!mainWindow) return;
@@ -355,9 +378,26 @@ function registerIpc() {
   ipcMain.handle("spotify:now", () => getSpotifyTrack());
   ipcMain.handle("majestic:servers", (_e, force?: boolean) => fetchMajesticServerStatuses(Boolean(force)));
   ipcMain.handle("discord:connect", async () => {
-    const profile = await connectDiscord();
-    void recordDiscordAccount(profile, { login: true });
-    return profile;
+    try {
+      const profile = await connectDiscord();
+      panelLog({
+        level: "info",
+        source: "discord",
+        message: `Połączono jako ${profile.globalName || profile.username}`,
+      });
+      void recordDiscordAccount(profile, { login: true });
+      return profile;
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      panelLog({
+        level: "error",
+        source: "discord",
+        message: "Nie udało się połączyć z Discordem",
+        detail,
+        open: true,
+      });
+      throw err;
+    }
   });
   ipcMain.handle("accounts:list", () => listDiscordAccounts());
   ipcMain.handle("ranks:list", () => refreshAccountRoles());
