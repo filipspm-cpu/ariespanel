@@ -171,6 +171,9 @@ export interface AppStats {
   appOnlineMs: number;
   sessionStartedAt: number;
   onlineDay: string;
+  rewardOnlineMs: number;
+  rewardActiveDays: number;
+  rewardActiveDay: string;
 }
 
 export interface SpotifyTrack {

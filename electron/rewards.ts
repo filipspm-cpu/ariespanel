@@ -65,6 +65,7 @@ export type RewardsState = {
   customTasks: CustomAchievement[];
   leaderboard: AccountRewards[];
   deviceLocked?: boolean;
+  statsReady?: boolean;
 };
 
 export type AccountRewards = {
@@ -116,6 +117,7 @@ function emptyState(error?: string, detail?: string): RewardsState {
     customTasks: [],
     leaderboard: [],
     deviceLocked: loadPromoDevice().redeemed,
+    statsReady: false,
   };
 }
 
@@ -222,6 +224,7 @@ async function ensure(db: mysql.Connection) {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
   await db.query("ALTER TABLE reward_stats ADD COLUMN referrals INT NOT NULL DEFAULT 0").catch(() => undefined);
+  await db.query("ALTER TABLE reward_stats ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP").catch(() => undefined);
   await db.query(`
     CREATE TABLE IF NOT EXISTS reward_claims (
       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -346,7 +349,43 @@ function classifyDb(err: unknown): DbFailure {
 }
 
 async function php(action: string, extra: Record<string, unknown>) {
-  return apiRequestUrls(REWARD_URLS, "POST", { action, ...extra });
+  return apiRequestUrls(REWARD_URLS, "POST", { action, ...extra }, (payload) => {
+    if (isStubRewards(payload, action)) return false;
+    if (action !== "rewardsSync") return true;
+    const state = parseState(payload);
+    if (!state) return false;
+    const days = Number(extra.activeDays || 0);
+    const hours = Math.floor(Number(extra.onlineMs || 0) / 3_600_000);
+    const reports = Number(extra.reports || 0);
+    if (days > 0 && state.stats.activeDays < days) return false;
+    if (hours > 0 && state.stats.onlineHours < hours) return false;
+    if (reports > 0 && state.stats.reports < reports) return false;
+    return true;
+  });
+}
+
+function isStubRewards(payload: unknown, action: string) {
+  if (!payload || typeof payload !== "object") return true;
+  const data = payload as Record<string, unknown>;
+  if (Array.isArray(data.roles)) return true;
+  if (data.statsReady === true) return false;
+  if (action === "promoGenerate" || action === "promoRedeem") return false;
+  if (action === "rewardsAccounts") {
+    return !Array.isArray(data.accounts) || (data.accounts as unknown[]).length === 0;
+  }
+  if (data.ok === false && data.error && data.error !== "php") return false;
+  const stats = data.stats && typeof data.stats === "object" ? (data.stats as Record<string, unknown>) : null;
+  const score = stats
+    ? Number(stats.reports || 0) +
+      Number(stats.events || 0) +
+      Number(stats.onlineHours || 0) +
+      Number(stats.nightReports || 0) +
+      Number(stats.activeDays || 0) +
+      Number(stats.referrals || 0)
+    : 0;
+  if (score > 0 || Number(data.points || 0) > 0) return false;
+  if (Array.isArray(data.customTasks) && data.customTasks.length) return false;
+  return true;
 }
 
 const STATS: AchievementStat[] = ["reports", "events", "onlineHours", "nightReports", "activeDays", "referrals"];
@@ -479,6 +518,7 @@ async function readState(db: mysql.Connection, discordId: string, name: string):
     customTasks,
     leaderboard: [],
     deviceLocked: loadPromoDevice().redeemed,
+    statsReady: true,
   };
 }
 
@@ -522,16 +562,15 @@ function parseState(payload: unknown): RewardsState | null {
     customTasks: Array.isArray(data.customTasks) ? data.customTasks : [],
     leaderboard: Array.isArray(data.leaderboard) ? data.leaderboard : [],
     deviceLocked: Boolean(data.deviceLocked) || loadPromoDevice().redeemed,
+    statsReady: data.statsReady === true,
   };
 }
 
 export async function getRewardsState(): Promise<RewardsState> {
   const { discordId, name } = caller();
   const remote = parseState(await php("rewardsState", { discordId, name }));
-  if (remote) return remote.ok === false ? reportRewards("Stan nagród", remote, false) : remote;
-  const apiCode = lastApiError();
-  if (apiCode === "phpfile" || apiCode === "json") {
-    return reportRewards("Stan nagród", emptyState(phpOrNetwork()), false);
+  if (remote?.statsReady || (remote && (remote.points > 0 || remote.stats.onlineHours > 0 || remote.stats.activeDays > 0 || remote.customTasks.length))) {
+    return remote.ok === false ? reportRewards("Stan nagród", remote, false) : remote;
   }
   const sql = await withDb(async (db) => {
     const state = discordId ? await readState(db, discordId, name) : emptyState("login");
@@ -539,7 +578,9 @@ export async function getRewardsState(): Promise<RewardsState> {
     state.leaderboard = await boardFrom(db);
     return state;
   });
-  return sql || reportRewards("Stan nagród", emptyState(phpOrNetwork()), false);
+  if (sql) return sql;
+  if (remote) return remote.ok === false ? reportRewards("Stan nagród", remote, false) : remote;
+  return reportRewards("Stan nagród", emptyState(phpOrNetwork()), false);
 }
 
 export async function generatePromoCode(): Promise<RewardsState> {
@@ -714,7 +755,7 @@ export async function syncRewardStats(input: {
          events = GREATEST(events, VALUES(events)),
          online_ms = GREATEST(online_ms, VALUES(online_ms)),
          night_reports = GREATEST(night_reports, VALUES(night_reports)),
-         active_days = GREATEST(active_days, VALUES(active_days))`,
+         active_days = GREATEST(active_days + IF(IFNULL(DATE(updated_at), '1970-01-01') < CURDATE(), 1, 0), VALUES(active_days))`,
       [discordId, name, reports, events, onlineMs, nightReports, activeDays],
     );
     return readState(db, discordId, name);
@@ -822,9 +863,12 @@ async function boardFrom(db: mysql.Connection): Promise<AccountRewards[]> {
 export async function listAccountRewards(): Promise<AccountRewards[]> {
   const payload = await php("rewardsAccounts", { discordId: caller().discordId });
   if (payload && typeof payload === "object" && Array.isArray((payload as { accounts?: unknown }).accounts)) {
-    return (payload as { accounts: AccountRewards[] }).accounts.sort(
-      (a, b) => b.points - a.points || String(a.name || a.id).localeCompare(String(b.name || b.id), "pl"),
-    );
+    const accounts = (payload as { accounts: AccountRewards[] }).accounts;
+    if (accounts.length || (payload as { statsReady?: unknown }).statsReady === true) {
+      return accounts.sort(
+        (a, b) => b.points - a.points || String(a.name || a.id).localeCompare(String(b.name || b.id), "pl"),
+      );
+    }
   }
   return (await withDb((db) => boardFrom(db))) || [];
 }

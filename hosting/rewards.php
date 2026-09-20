@@ -1,5 +1,4 @@
-<?php
-// aries-rewards-1.0.95
+<?php // aries-rewards-1.0.96
 if (function_exists("ob_start")) {
   @ob_start();
 }
@@ -113,6 +112,7 @@ $mysqli->query("CREATE TABLE IF NOT EXISTS reward_stats (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 $mysqli->query("ALTER TABLE reward_stats ADD COLUMN referrals INT NOT NULL DEFAULT 0");
+$mysqli->query("ALTER TABLE reward_stats ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
 $mysqli->query("CREATE TABLE IF NOT EXISTS reward_claims (
   id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
   discord_id VARCHAR(32) NOT NULL,
@@ -219,6 +219,16 @@ function make_code() {
 
 function normalize_code($raw) {
   return strtoupper(preg_replace("/\s+/", "", trim((string) $raw)));
+}
+
+function uint_str($value) {
+  if (is_int($value) || is_float($value)) {
+    if ($value < 0) return "0";
+    return sprintf("%.0f", $value);
+  }
+  $text = preg_replace("/[^0-9]/", "", (string) $value);
+  if ($text === "" || strlen($text) > 18) return "0";
+  return $text;
 }
 
 function extra_tasks($mysqli) {
@@ -397,7 +407,7 @@ function read_state($mysqli, $discordId) {
     if ($row) {
       $stats["reports"] = (int) $row["reports"];
       $stats["events"] = (int) $row["events"];
-      $stats["onlineHours"] = (int) floor(((int) $row["online_ms"]) / 3600000);
+      $stats["onlineHours"] = (int) floor(((float) $row["online_ms"]) / 3600000);
       $stats["nightReports"] = (int) $row["night_reports"];
       $stats["activeDays"] = (int) $row["active_days"];
       $grantedRefs = isset($row["referrals"]) ? (int) $row["referrals"] : 0;
@@ -435,6 +445,7 @@ function read_state($mysqli, $discordId) {
   }
   return array(
     "ok" => true,
+    "statsReady" => true,
     "code" => $code,
     "redeemed" => $redeemedCode !== "",
     "redeemedCode" => $redeemedCode,
@@ -492,7 +503,7 @@ if ($action === "rewardsAccounts") {
     if ($a["points"] === $b["points"]) return strcasecmp($a["name"], $b["name"]);
     return $b["points"] - $a["points"];
   });
-  json_out(array("ok" => true, "accounts" => $accounts));
+  json_out(array("ok" => true, "statsReady" => true, "accounts" => $accounts));
 }
 
 if ($discordId === "") {
@@ -570,7 +581,7 @@ if ($action === "promoRedeem") {
 if ($action === "rewardsSync") {
   $reports = max(0, (int) req_get($data, "reports"));
   $events = max(0, (int) req_get($data, "events"));
-  $onlineMs = max(0, (int) req_get($data, "onlineMs"));
+  $onlineMsStr = uint_str(isset($data["onlineMs"]) ? $data["onlineMs"] : 0);
   $night = max(0, (int) req_get($data, "nightReports"));
   $days = max(0, (int) req_get($data, "activeDays"));
   $stmt = $mysqli->prepare(
@@ -582,9 +593,8 @@ if ($action === "rewardsSync") {
        events = GREATEST(events, VALUES(events)),
        online_ms = GREATEST(online_ms, VALUES(online_ms)),
        night_reports = GREATEST(night_reports, VALUES(night_reports)),
-       active_days = GREATEST(active_days, VALUES(active_days))"
+       active_days = GREATEST(active_days + IF(IFNULL(DATE(updated_at), '1970-01-01') < CURDATE(), 1, 0), VALUES(active_days))"
   );
-  $onlineMsStr = (string) $onlineMs;
   $stmt->bind_param("ssiisii", $discordId, $name, $reports, $events, $onlineMsStr, $night, $days);
   $stmt->execute();
 }

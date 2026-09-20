@@ -118,6 +118,9 @@ export interface AppState {
     appOnlineMs: number;
     sessionStartedAt: number;
     onlineDay?: string;
+    rewardOnlineMs?: number;
+    rewardActiveDays?: number;
+    rewardActiveDay?: string;
   };
 }
 
@@ -201,6 +204,9 @@ const defaultState = (): AppState => ({
     appOnlineMs: 0,
     sessionStartedAt: Date.now(),
     onlineDay: undefined,
+    rewardOnlineMs: 0,
+    rewardActiveDays: 0,
+    rewardActiveDay: undefined,
   },
 });
 
