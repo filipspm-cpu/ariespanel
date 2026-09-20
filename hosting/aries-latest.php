@@ -94,6 +94,25 @@ function aries_latest_release() {
   return $out;
 }
 
+function aries_want_download() {
+  if (isset($_GET["download"])) return true;
+  $script = strtolower(basename(str_replace("\\", "/", (string) ($_SERVER["SCRIPT_FILENAME"] ?? $_SERVER["SCRIPT_NAME"] ?? ""))));
+  $uri = strtolower(basename((string) parse_url($_SERVER["REQUEST_URI"] ?? "", PHP_URL_PATH)));
+  return $script === "download.php" || $uri === "download.php";
+}
+
+function aries_send_installer() {
+  $latest = aries_latest_release();
+  if (!$latest || !aries_github_ok($latest["url"]) || !preg_match("/^ARIES-Setup-.+\\.exe$/i", $latest["name"])) {
+    http_response_code(502);
+    header("Content-Type: text/html; charset=utf-8");
+    echo "<!DOCTYPE html><html lang=\"pl\"><head><meta charset=\"utf-8\"><title>ARIES</title></head><body style=\"background:#050505;color:#fff;font-family:Inter,sans-serif;padding:48px\"><p>Nie udało się pobrać instalatora. Spróbuj za chwilę.</p><p><a href=\"./\" style=\"color:#f02d5e\">Wróć na stronę ARIES</a></p></body></html>";
+    exit;
+  }
+  aries_stream_github($latest["url"], $latest["name"], $latest["size"]);
+  exit;
+}
+
 function aries_stream_github($url, $filename, $size) {
   set_time_limit(0);
   if (function_exists("ignore_user_abort")) @ignore_user_abort(true);

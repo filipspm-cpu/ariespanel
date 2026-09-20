@@ -1,8 +1,12 @@
 <?php
 define("ARIES_OK", 1);
 require __DIR__ . "/aries-latest.php";
+if (aries_want_download()) {
+  aries_send_installer();
+}
 header_remove("Content-Disposition");
 header("Content-Type: text/html; charset=utf-8");
+header("Cache-Control: no-store");
 header("X-Content-Type-Options: nosniff");
 
 $latest = aries_latest_release();
@@ -134,8 +138,8 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
         </div>
       </a>
       <nav class="nav">
-        <a href="#funkcje">Funkcje</a>
-        <a href="download.php">Pobierz</a>
+        <a href="./#funkcje">Funkcje</a>
+        <a href="?download=1">Pobierz</a>
         <a href="polityka-prywatnosci.php">Prywatność</a>
       </nav>
     </header>
@@ -147,7 +151,7 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
             ARIES to aplikacja dla administracji GTA RP: makra, nakładka na grę, reporty, osiągnięcia i kody.
           </p>
           <div class="cta">
-            <a class="btn" href="download.php">Pobierz ARIES na Windows</a>
+            <a class="btn" href="?download=1">Pobierz ARIES na Windows</a>
             <div class="meta">
               <?php echo $verLabel; ?> · <?php echo htmlspecialchars($sizeLabel, ENT_QUOTES, "UTF-8"); ?> · Windows 10/11<br />
               Plik: <?php echo $fileName; ?>
@@ -207,7 +211,7 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
           <strong>Pobierasz z filipekweb.pl</strong>
           <span>Serwer sam bierze najnowszy plik z GitHuba i od razu go wysyła. Adres w przeglądarce się nie zmienia.</span>
         </div>
-        <a class="btn" href="download.php">Pobierz teraz</a>
+        <a class="btn" href="?download=1">Pobierz teraz</a>
       </aside>
     </main>
     <footer>
