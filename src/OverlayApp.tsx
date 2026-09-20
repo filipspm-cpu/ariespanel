@@ -87,6 +87,10 @@ export function OverlayApp() {
   useEffect(() => {
     if (typeof window === "undefined" || window.synvityOverlay) return;
     if (new URLSearchParams(window.location.search).get("preview") !== "update") return;
+    document.documentElement.style.background = "#111";
+    document.body.style.background = "#111";
+    const root = document.getElementById("root");
+    if (root) root.style.background = "#111";
     setPayload((p) => ({
       ...p,
       overlay: {
