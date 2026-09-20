@@ -1,0 +1,79 @@
+Options -Indexes
+DirectoryIndex index.php index.html
+
+AddType text/html .html .htm
+AddType application/json .json
+
+<IfModule mod_mime.c>
+  AddType text/html .html .htm
+</IfModule>
+
+<FilesMatch "\.(html|htm)$">
+  <IfModule mod_mime.c>
+    ForceType text/html
+  </IfModule>
+  <IfModule mod_headers.c>
+    Header always set Content-Type "text/html; charset=utf-8"
+    Header always unset Content-Disposition
+    Header always set Content-Disposition "inline"
+  </IfModule>
+</FilesMatch>
+
+<FilesMatch "^(rewards|accounts|feedback|index|download|polityka-prywatnosci)\.php$">
+  <IfModule mod_mime.c>
+    AddHandler application/x-httpd-php .php
+    AddType application/x-httpd-php .php
+  </IfModule>
+  <IfModule mod_php.c>
+    SetHandler application/x-httpd-php
+  </IfModule>
+</FilesMatch>
+
+<FilesMatch "^(rewards|accounts|feedback)\.php$">
+  <IfModule mod_headers.c>
+    Header unset Content-Disposition
+  </IfModule>
+</FilesMatch>
+
+SetEnvIf Query_String "(^|&)download(=|&|$)" aries_dl
+
+<FilesMatch "^polityka-prywatnosci\.php$">
+  <IfModule mod_headers.c>
+    Header always set Content-Type "text/html; charset=utf-8"
+    Header always unset Content-Disposition
+    Header always set Content-Disposition "inline"
+  </IfModule>
+</FilesMatch>
+
+<FilesMatch "^index\.php$">
+  <IfModule mod_headers.c>
+    Header set Content-Type "text/html; charset=utf-8" env=!aries_dl
+    Header unset Content-Disposition env=!aries_dl
+  </IfModule>
+</FilesMatch>
+
+<FilesMatch "^download\.php$">
+  <IfModule mod_headers.c>
+    Header set Content-Type "application/octet-stream"
+  </IfModule>
+</FilesMatch>
+
+<FilesMatch "\.(sql|bak|old|log|inc|json)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+<FilesMatch "^(config|aries_lib|aries-latest)\.php$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+  </IfModule>
+</FilesMatch>

@@ -1,0 +1,1 @@
+Wgraj WSZYSTKIE pliki z tego folderu do katalogu /aries/ na filipekweb.pl (nadpisz stare).
