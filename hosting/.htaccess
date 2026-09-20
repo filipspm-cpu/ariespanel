@@ -1,6 +1,11 @@
 Options -Indexes
 DirectoryIndex index.php index.html
 
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^polityka-prywatnosci\.php$ aries_panel_polityka_prywatnosci.html [L]
+</IfModule>
+
 AddType text/html .html .htm
 AddType application/json .json
 
