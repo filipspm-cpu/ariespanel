@@ -57,14 +57,7 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
     .nav { display: flex; gap: 18px; font-size: 13px; color: #a1a1aa; }
     .nav a:hover { color: #fff; }
     .hero { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 44px; align-items: center; padding: 28px 0 52px; }
-    .kicker {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 6px 12px; border-radius: 999px;
-      border: 1px solid rgba(240, 45, 94, 0.35);
-      background: rgba(240, 45, 94, 0.1);
-      color: #fda4af; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
-    }
-    h1 { margin: 16px 0 0; font-size: clamp(38px, 6.2vw, 72px); line-height: 0.92; letter-spacing: -0.045em; }
+    h1 { margin: 0; font-size: clamp(38px, 6.2vw, 72px); line-height: 0.92; letter-spacing: -0.045em; }
     h1 em { font-style: normal; color: #f02d5e; white-space: nowrap; }
     .lead { margin: 18px 0 0; max-width: 540px; color: #a1a1aa; font-size: 17px; line-height: 1.55; }
     .cta { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-top: 28px; }
@@ -149,11 +142,9 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
     <main>
       <section class="hero">
         <div>
-          <div class="kicker">Darmowy installer · Windows</div>
           <h1>Panel, który trzyma służbę <em>w ryzach</em>.</h1>
           <p class="lead">
             ARIES to aplikacja dla administracji GTA RP: makra, nakładka na grę, reporty, osiągnięcia i kody.
-            Klikasz pobierz i dostajesz najnowszą wersję z tej strony — GitHub się nie otwiera.
           </p>
           <div class="cta">
             <a class="btn" href="download.php">Pobierz ARIES na Windows</a>
@@ -163,8 +154,6 @@ $fileName = $latest && !empty($latest["name"]) ? htmlspecialchars($latest["name"
             </div>
           </div>
           <div class="pills">
-            <span class="pill">Bez GitHuba w przeglądarce</span>
-            <span class="pill">Zawsze najnowszy release</span>
             <span class="pill">0 zł</span>
           </div>
         </div>
