@@ -10,6 +10,7 @@ import { refreshAccountRoles, setAccountRank } from "./testers";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
 import { runMacroById, setCountersListener, setOverlayRefresh, triggersFromMacros } from "./runMacro";
 import { createFeedback, listFeedback, updateFeedback } from "./feedback";
+import { savePanelName } from "./profileName";
 import { askForumAi } from "./forumAi";
 import {
   claimMoneyTier,
@@ -386,7 +387,16 @@ function registerIpc() {
         source: "discord",
         message: `Połączono jako ${profile.globalName || profile.username}`,
       });
-      void recordDiscordAccount(profile, { login: true });
+      const chosen = String(loadState().settings.username || "").trim();
+      void recordDiscordAccount(
+        {
+          ...profile,
+          name: chosen || profile.globalName || profile.username,
+          globalName: chosen || profile.globalName,
+        },
+        { login: true },
+      );
+      if (chosen) void savePanelName(chosen);
       return profile;
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
@@ -400,7 +410,7 @@ function registerIpc() {
       throw err;
     }
   });
-  ipcMain.handle("accounts:list", () => listDiscordAccounts());
+  ipcMain.handle("profile:saveName", (_e, name: string) => savePanelName(String(name || "")));
   ipcMain.handle("ranks:list", () => refreshAccountRoles());
   ipcMain.handle("ranks:set", (_e, payload: { id?: string; rank?: string; name?: string }) =>
     setAccountRank(String(payload?.id || ""), String(payload?.rank || ""), payload?.name),

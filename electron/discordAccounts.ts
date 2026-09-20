@@ -24,7 +24,7 @@ const DB = {
 };
 
 function cardName(profile: { globalName?: string; username?: string; name?: string }) {
-  return (profile.globalName || profile.username || profile.name || "Konto").trim() || "Konto";
+  return (profile.name || profile.globalName || profile.username || "Konto").trim() || "Konto";
 }
 
 function defaultAvatarUrl(id: string) {
@@ -258,6 +258,7 @@ export async function recordDiscordAccount(
     id?: string;
     username?: string;
     globalName?: string;
+    name?: string;
     avatarUrl?: string;
   },
   opts?: { login?: boolean },

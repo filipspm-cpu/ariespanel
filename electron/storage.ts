@@ -91,6 +91,7 @@ export interface CmdSettings {
 export interface AppSettings {
   language: "pl";
   username: string;
+  profileNameSet?: boolean;
   theme: "dark";
   githubOwner: string;
   githubRepo: string;
@@ -190,7 +191,8 @@ const defaultState = (): AppState => ({
   },
   settings: {
     language: "pl",
-    username: "Filipek",
+    username: "",
+    profileNameSet: false,
     theme: "dark",
     githubOwner: "filipspm-cpu",
     githubRepo: "ariespanel",
@@ -258,10 +260,15 @@ function filePath() {
 let cache: AppState | null = null;
 
 function normalizeState(state: AppState): AppState {
+  const username = String(state.settings?.username || "").trim();
   const settings = {
     ...state.settings,
     githubOwner: "filipspm-cpu",
     githubRepo: "ariespanel",
+    profileNameSet:
+      Boolean(state.settings?.profileNameSet) ||
+      Boolean(state.settings?.discordId) ||
+      (username.length >= 2 && username !== "Filipek"),
   };
   return {
     ...state,

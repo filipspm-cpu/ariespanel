@@ -66,7 +66,7 @@ export function SettingsPage() {
       const profile = await window.synvity?.discordConnect();
       if (!profile) throw new Error("Nie udało się połączyć z Discordem.");
       patchSettings({
-        username: profile.globalName || profile.username,
+        username: settings.profileNameSet && settings.username.trim() ? settings.username : profile.globalName || profile.username,
         discordId: profile.id,
         discordUsername: profile.username,
         discordGlobalName: profile.globalName,

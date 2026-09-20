@@ -100,6 +100,15 @@ try {
   $mysqli->query("ALTER TABLE discord_accounts ADD COLUMN ip VARCHAR(45) NOT NULL DEFAULT ''");
   $mysqli->query("ALTER TABLE discord_accounts ADD COLUMN last_login DATETIME NULL DEFAULT NULL");
   $mysqli->query(
+    "CREATE TABLE IF NOT EXISTS panel_profiles (
+      device_id VARCHAR(64) NOT NULL PRIMARY KEY,
+      name VARCHAR(191) NOT NULL,
+      discord_id VARCHAR(32) NOT NULL DEFAULT '',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+  );
+  $mysqli->query(
     "CREATE TABLE IF NOT EXISTS account_roles (
       discord_id VARCHAR(32) NOT NULL PRIMARY KEY,
       name VARCHAR(191) NOT NULL DEFAULT '',
@@ -1056,6 +1065,33 @@ function aries_rw_dispatch($mysqli, $data, $action) {
 }
 
 $action = req_get($data, "action");
+if ($method === "POST" && $action === "profileSave") {
+  $deviceId = preg_replace("/[^a-zA-Z0-9_-]/", "", req_get($data, "deviceId"));
+  $name = req_get($data, "name");
+  $discordId = preg_replace("/[^0-9]/", "", req_get($data, "discordId"));
+  if (function_exists("mb_substr")) $name = mb_substr($name, 0, 32);
+  else $name = substr($name, 0, 32);
+  if (strlen($deviceId) < 8 || strlen($name) < 2) {
+    json_out(array("ok" => false, "error" => "invalid"), 400);
+  }
+  $stmt = $mysqli->prepare(
+    "INSERT INTO panel_profiles (device_id, name, discord_id) VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE name = VALUES(name), discord_id = IF(VALUES(discord_id) = '', discord_id, VALUES(discord_id))"
+  );
+  if ($stmt) {
+    $stmt->bind_param("sss", $deviceId, $name, $discordId);
+    $stmt->execute();
+  }
+  if ($discordId !== "") {
+    upsert_account($mysqli, $discordId, $name, "");
+    $rw = $mysqli->prepare("UPDATE reward_stats SET name = ? WHERE discord_id = ?");
+    if ($rw) {
+      $rw->bind_param("ss", $name, $discordId);
+      $rw->execute();
+    }
+  }
+  json_out(array("ok" => true, "name" => $name));
+}
 if ($method === "POST" && preg_match("/^(promoGenerate|promoRedeem|rewardsState|rewardsSync|rewardsClaim|rewardsPaid|rewardsDefine|rewardsUndefine|rewardsGrant|rewardsAccounts)$/", $action)) {
   aries_rw_dispatch($mysqli, $data, $action);
 }

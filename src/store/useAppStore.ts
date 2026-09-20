@@ -63,7 +63,8 @@ const defaultSnapshot = (): Omit<AppSnapshot, "route" | "searchOpen" | "searchQu
   cmd: { pressT: false, reverse: false, pressEnter: true, intervalMs: 500 },
   settings: {
     language: "pl",
-    username: "Filipek",
+    username: "",
+    profileNameSet: false,
     theme: "dark",
     githubOwner: "filipspm-cpu",
     githubRepo: "ariespanel",
@@ -196,7 +197,15 @@ export const useAppStore = create<State>((set, get) => ({
           ...seedRewardStats(incoming, Array.isArray(data.counters) ? data.counters : []),
         };
       })(),
-      settings: { ...defaults.settings, ...data.settings },
+      settings: (() => {
+        const merged = { ...defaults.settings, ...data.settings };
+        const username = String(merged.username || "").trim();
+        return {
+          ...merged,
+          profileNameSet:
+            Boolean(merged.profileNameSet) || Boolean(merged.discordId) || (username.length >= 2 && username !== "Filipek"),
+        };
+      })(),
       cmd: { ...defaults.cmd, ...data.cmd },
       forumRuleId: typeof data.forumRuleId === "string" ? data.forumRuleId : defaults.forumRuleId,
       testers: Array.isArray((data as { testers?: Tester[] }).testers)

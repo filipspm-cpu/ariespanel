@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AppLayout } from "@/layouts/AppLayout";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { SetupNameScreen } from "@/components/SetupNameScreen";
 import { hydrate } from "@/services/storageClient";
 import { overlayCounterItems } from "@/services/overlayCounters";
 import { advanceRewardStats, pushRewardStats } from "@/services/rewardStats";
@@ -13,6 +14,7 @@ export function App() {
   const counters = useAppStore((s) => s.counters);
   const overlay = useAppStore((s) => s.overlay);
   const hydrated = useAppStore((s) => s.hydrated);
+  const profileNameSet = useAppStore((s) => Boolean(s.settings.profileNameSet));
   const [splash, setSplash] = useState(true);
   const splashStarted = useRef(Date.now());
 
@@ -152,6 +154,10 @@ export function App() {
 
   if (splash) {
     return <LoadingScreen />;
+  }
+
+  if (!profileNameSet) {
+    return <SetupNameScreen />;
   }
 
   return <AppLayout />;

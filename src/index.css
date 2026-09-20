@@ -133,6 +133,55 @@ body,
   text-transform: uppercase;
 }
 
+.setup-name-body {
+  padding: 0 28px 64px;
+}
+
+.setup-name-title {
+  margin: 28px 0 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #fff;
+}
+
+.setup-name-copy {
+  margin: 8px 0 0;
+  max-width: 320px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #8a8a8a;
+  text-align: center;
+}
+
+.setup-name-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(320px, 100%);
+  margin-top: 22px;
+}
+
+.setup-name-btn {
+  height: 42px;
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  color: #000;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.setup-name-btn:disabled {
+  opacity: 0.55;
+}
+
+.setup-name-error {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #f0a0a0;
+}
+
 @keyframes loading-slide {
   0% {
     transform: translateX(-120%);

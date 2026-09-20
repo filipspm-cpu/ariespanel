@@ -128,6 +128,7 @@ export interface CmdSettings {
 export interface AppSettings {
   language: "pl";
   username: string;
+  profileNameSet?: boolean;
   theme: "dark";
   githubOwner: string;
   githubRepo: string;

@@ -93,6 +93,7 @@ export interface SynvityApi {
   updateNoticesRead: () => Promise<UpdateNotice[]>;
   majesticServers: (force?: boolean) => Promise<import("./index").LiveServerStatus[]>;
   forumOpen: (url: string) => Promise<unknown>;
+  profileSaveName: (name: string) => Promise<{ ok: boolean; name: string; error?: string }>;
   forumAsk: (payload: {
     question: string;
     passages: {
