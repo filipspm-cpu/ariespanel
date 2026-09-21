@@ -10,7 +10,7 @@ import { refreshAccountRoles, setAccountRank } from "./testers";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
 import { runMacroById, setCountersListener, setOverlayRefresh, triggersFromMacros } from "./runMacro";
 import { createFeedback, listFeedback, updateFeedback } from "./feedback";
-import { createNotice, deleteNotice, listNotices } from "./notices";
+import { createNotice, deleteNotice, listNotices, setNoticesPopup } from "./notices";
 import { savePanelName } from "./profileName";
 import { askForumAi } from "./forumAi";
 import {
@@ -454,7 +454,11 @@ function registerIpc() {
       body: payload?.body || "",
     }),
   );
-  ipcMain.handle("notices:delete", (_e, id: number) => deleteNotice(Number(id) || 0));
+  ipcMain.handle("notices:delete", (_e, payload: { id?: number; title?: string } | number) => {
+    if (typeof payload === "number") return deleteNotice(payload);
+    return deleteNotice(Number(payload?.id) || 0, payload?.title);
+  });
+  ipcMain.handle("notices:setPopup", (_e, enabled: boolean) => setNoticesPopup(Boolean(enabled)));
   ipcMain.handle("forum:open", (_e, url: string) => shell.openExternal(assertForumUrl(url)));
   ipcMain.handle("forum:ask", (_e, payload: { question?: string; passages?: unknown[] }) =>
     askForumAi({

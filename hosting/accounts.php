@@ -1,5 +1,5 @@
 <?php
-// aries-accounts-1.0.99
+// aries-accounts-1.0.100
 if (function_exists("ob_start")) {
   @ob_start();
 }
@@ -354,6 +354,36 @@ function ensure_notices_table($mysqli) {
       INDEX idx_notices_created (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
   );
+  $mysqli->query(
+    "CREATE TABLE IF NOT EXISTS panel_notice_settings (
+      k VARCHAR(32) NOT NULL PRIMARY KEY,
+      v VARCHAR(32) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+  );
+}
+
+function notice_setting($mysqli, $key, $default = "") {
+  $stmt = $mysqli->prepare("SELECT v FROM panel_notice_settings WHERE k = ? LIMIT 1");
+  if (!$stmt) return $default;
+  $stmt->bind_param("s", $key);
+  $stmt->execute();
+  $res = $stmt->get_result();
+  $row = $res ? $res->fetch_assoc() : null;
+  if (!$row) return $default;
+  return (string) $row["v"];
+}
+
+function set_notice_setting($mysqli, $key, $value) {
+  $stmt = $mysqli->prepare(
+    "INSERT INTO panel_notice_settings (k, v) VALUES (?, ?) ON DUPLICATE KEY UPDATE v = VALUES(v)"
+  );
+  if (!$stmt) return;
+  $stmt->bind_param("ss", $key, $value);
+  $stmt->execute();
+}
+
+function notices_popup($mysqli) {
+  return notice_setting($mysqli, "popup", "1") !== "0";
 }
 
 function notice_kind($raw) {
@@ -385,9 +415,13 @@ function list_notices($mysqli) {
 }
 
 function seed_notices($mysqli) {
+  if (notice_setting($mysqli, "seeded", "0") === "1") return;
   $countRes = $mysqli->query("SELECT COUNT(*) AS c FROM panel_notices");
   $countRow = $countRes ? $countRes->fetch_assoc() : null;
-  if ($countRow && (int) $countRow["c"] > 0) return;
+  if ($countRow && (int) $countRow["c"] > 0) {
+    set_notice_setting($mysqli, "seeded", "1");
+    return;
+  }
   $stmt = $mysqli->prepare(
     "INSERT INTO panel_notices (kind, title, body, author_id, author_name, created_at) VALUES (?, ?, ?, ?, ?, ?)"
   );
@@ -428,6 +462,7 @@ function seed_notices($mysqli) {
     $stmt->bind_param("ssssss", $kind, $title, $body, $authorId, $authorName, $created);
     $stmt->execute();
   }
+  set_notice_setting($mysqli, "seeded", "1");
 }
 
 function notices_payload($mysqli, $discordId = "") {
@@ -436,6 +471,7 @@ function notices_payload($mysqli, $discordId = "") {
   return array(
     "ok" => true,
     "editor" => stored_has_main_developer($mysqli, $discordId),
+    "popup" => notices_popup($mysqli),
     "notices" => list_notices($mysqli),
   );
 }
@@ -1186,7 +1222,7 @@ function aries_rw_dispatch($mysqli, $data, $action) {
 
 $action = req_get($data, "action");
 if ($action === "") $action = req_get($_GET, "action");
-if ($action === "noticesList" || $action === "noticesCreate" || $action === "noticesDelete") {
+if ($action === "noticesList" || $action === "noticesCreate" || $action === "noticesDelete" || $action === "noticesSetPopup") {
   $discordId = preg_replace("/[^0-9]/", "", req_get($data, "discordId"));
   if ($discordId === "") $discordId = preg_replace("/[^0-9]/", "", req_get($data, "discord_id"));
   if ($discordId === "") $discordId = preg_replace("/[^0-9]/", "", req_get($_GET, "discordId"));
@@ -1206,18 +1242,36 @@ if ($action === "noticesList" || $action === "noticesCreate" || $action === "not
     json_out($payload, 403);
   }
   ensure_notices_table($mysqli);
+  if ($action === "noticesSetPopup") {
+    $popup = req_get($data, "popup");
+    $enabled = !($popup === "0" || $popup === "false" || $popup === "");
+    if (isset($data["popup"]) && ($data["popup"] === false || $data["popup"] === 0 || $data["popup"] === "0")) $enabled = false;
+    if (isset($data["popup"]) && ($data["popup"] === true || $data["popup"] === 1 || $data["popup"] === "1")) $enabled = true;
+    set_notice_setting($mysqli, "popup", $enabled ? "1" : "0");
+    json_out(notices_payload($mysqli, $discordId));
+  }
   if ($action === "noticesDelete") {
     $itemId = (int) req_get($data, "id");
-    if ($itemId <= 0) {
+    $title = req_get($data, "title");
+    if ($itemId === 0 && $title === "") {
       $payload = notices_payload($mysqli, $discordId);
       $payload["ok"] = false;
       $payload["error"] = "invalid";
       json_out($payload, 400);
     }
-    $stmt = $mysqli->prepare("DELETE FROM panel_notices WHERE id = ?");
-    if ($stmt) {
-      $stmt->bind_param("i", $itemId);
-      $stmt->execute();
+    if ($itemId !== 0) {
+      $stmt = $mysqli->prepare("DELETE FROM panel_notices WHERE id = ?");
+      if ($stmt) {
+        $stmt->bind_param("i", $itemId);
+        $stmt->execute();
+      }
+    }
+    if ($title !== "") {
+      $stmt = $mysqli->prepare("DELETE FROM panel_notices WHERE title = ?");
+      if ($stmt) {
+        $stmt->bind_param("s", $title);
+        $stmt->execute();
+      }
     }
     json_out(notices_payload($mysqli, $discordId));
   }

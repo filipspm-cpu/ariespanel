@@ -20,6 +20,7 @@ export type PanelNotice = {
 export type NoticesResult = {
   ok: boolean;
   editor: boolean;
+  popup: boolean;
   notices: PanelNotice[];
   error?: string;
 };
@@ -31,7 +32,7 @@ const DB = {
   database: "host425499_ariespanel",
 };
 
-const SEED: Array<Omit<PanelNotice, "id"> & { id?: number }> = [
+const SEED: Array<Omit<PanelNotice, "id">> = [
   {
     kind: "announcement",
     title: "Promuj Aries panel",
@@ -55,6 +56,12 @@ const SEED: Array<Omit<PanelNotice, "id"> & { id?: number }> = [
   },
 ];
 
+type LocalStore = {
+  popup: boolean;
+  seeded: boolean;
+  notices: PanelNotice[];
+};
+
 function localPath() {
   return path.join(app.getPath("userData"), "panel-notices.json");
 }
@@ -77,8 +84,9 @@ function asNotice(row: unknown): PanelNotice | null {
   const title = String(item.title || "").trim();
   const body = String(item.body || "").trim();
   if (!title || !body) return null;
+  const id = Number(item.id);
   return {
-    id: Number(item.id) || 0,
+    id: Number.isFinite(id) && id !== 0 ? id : Date.now() * -1,
     kind: normalizeKind(item.kind),
     title,
     body,
@@ -96,31 +104,56 @@ function parseNotices(payload: unknown): PanelNotice[] {
   return rows.map(asNotice).filter((row): row is PanelNotice => Boolean(row));
 }
 
-function readLocal(): PanelNotice[] {
+function seedRows(): PanelNotice[] {
+  return SEED.map((item, index) => ({
+    id: -1 - index,
+    kind: item.kind,
+    title: item.title,
+    body: item.body,
+    authorName: item.authorName,
+    createdAt: item.createdAt,
+  }));
+}
+
+function emptyStore(): LocalStore {
+  return { popup: true, seeded: false, notices: [] };
+}
+
+function readStore(): LocalStore {
   try {
-    const rows = parseNotices(JSON.parse(fs.readFileSync(localPath(), "utf8")));
-    return rows.length ? rows : [];
+    const raw = JSON.parse(fs.readFileSync(localPath(), "utf8")) as unknown;
+    if (Array.isArray(raw)) {
+      return { popup: true, seeded: true, notices: parseNotices(raw) };
+    }
+    if (!raw || typeof raw !== "object") return emptyStore();
+    const data = raw as { popup?: unknown; seeded?: unknown; notices?: unknown };
+    const notices = parseNotices(data.notices);
+    return {
+      popup: data.popup !== false,
+      seeded: Boolean(data.seeded) || notices.length > 0,
+      notices,
+    };
   } catch {
-    return [];
+    return emptyStore();
   }
 }
 
-function writeLocal(rows: PanelNotice[]) {
-  fs.writeFileSync(localPath(), JSON.stringify(rows, null, 2), "utf8");
+function writeStore(store: LocalStore) {
+  fs.writeFileSync(
+    localPath(),
+    JSON.stringify({ popup: store.popup, seeded: true, notices: store.notices }, null, 2),
+    "utf8",
+  );
 }
 
-function withSeed(rows: PanelNotice[]) {
-  if (rows.length) return sortNotices(rows);
-  return sortNotices(
-    SEED.map((item, index) => ({
-      id: -1 - index,
-      kind: item.kind,
-      title: item.title,
-      body: item.body,
-      authorName: item.authorName,
-      createdAt: item.createdAt,
-    })),
-  );
+function localList(popup = true): LocalStore {
+  const store = readStore();
+  if (!store.seeded) {
+    const seeded: LocalStore = { popup: store.popup, seeded: true, notices: seedRows() };
+    writeStore(seeded);
+    return { ...seeded, popup: popup && seeded.popup };
+  }
+  return { ...store, popup: popup && store.popup };
 }
 
 function sortNotices(rows: PanelNotice[]) {
@@ -146,8 +179,16 @@ function isMainDeveloper(id: string) {
   return loadTesters().some((row) => row.id === id && /main-dev|m-dev|mdev/i.test(row.role));
 }
 
-function result(ok: boolean, editor: boolean, notices: PanelNotice[], error?: string): NoticesResult {
-  return { ok, editor, notices: withSeed(notices), error };
+function asPopup(payload: unknown, fallback = true) {
+  if (!payload || typeof payload !== "object") return fallback;
+  const value = (payload as { popup?: unknown }).popup;
+  if (value === false || value === 0 || value === "0") return false;
+  if (value === true || value === 1 || value === "1") return true;
+  return fallback;
+}
+
+function result(ok: boolean, editor: boolean, notices: PanelNotice[], popup: boolean, error?: string): NoticesResult {
+  return { ok, editor, popup, notices: sortNotices(notices), error };
 }
 
 async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -187,21 +228,42 @@ async function ensureTable(conn: mysql.Connection) {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `);
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS panel_notice_settings (
+      k VARCHAR(32) NOT NULL PRIMARY KEY,
+      v VARCHAR(32) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+}
+
+async function mysqlSetting(conn: mysql.Connection, key: string) {
+  const [rows] = await conn.query("SELECT v FROM panel_notice_settings WHERE k = ? LIMIT 1", [key]);
+  return String((rows as { v?: string }[])[0]?.v || "");
+}
+
+async function mysqlSetSetting(conn: mysql.Connection, key: string, value: string) {
+  await conn.execute(
+    "INSERT INTO panel_notice_settings (k, v) VALUES (?, ?) ON DUPLICATE KEY UPDATE v = VALUES(v)",
+    [key, value],
+  );
 }
 
 async function mysqlSeed(conn: mysql.Connection) {
+  if ((await mysqlSetting(conn, "seeded")) === "1") return;
   const [countRows] = await conn.query("SELECT COUNT(*) AS c FROM panel_notices");
   const count = Number((countRows as { c?: number }[])[0]?.c || 0);
-  if (count > 0) return;
-  for (const item of SEED) {
-    await conn.execute(
-      "INSERT INTO panel_notices (kind, title, body, author_id, author_name, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-      [item.kind, item.title, item.body, "1305449847125708811", item.authorName, new Date(item.createdAt)],
-    );
+  if (count === 0) {
+    for (const item of SEED) {
+      await conn.execute(
+        "INSERT INTO panel_notices (kind, title, body, author_id, author_name, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        [item.kind, item.title, item.body, "1305449847125708811", item.authorName, new Date(item.createdAt)],
+      );
+    }
   }
+  await mysqlSetSetting(conn, "seeded", "1");
 }
 
-async function mysqlList(): Promise<PanelNotice[]> {
+async function mysqlList(): Promise<{ notices: PanelNotice[]; popup: boolean } | null> {
   let conn: mysql.Connection | undefined;
   try {
     conn = await withTimeout(mysqlConn(), 5000);
@@ -210,9 +272,10 @@ async function mysqlList(): Promise<PanelNotice[]> {
     const [rows] = await conn.query(
       "SELECT id, kind, title, body, author_name, created_at FROM panel_notices ORDER BY created_at DESC, id DESC",
     );
-    return parseNotices(rows);
+    const popup = (await mysqlSetting(conn, "popup")) !== "0";
+    return { notices: parseNotices(rows), popup };
   } catch {
-    return [];
+    return null;
   } finally {
     await conn?.end().catch(() => undefined);
   }
@@ -238,11 +301,27 @@ async function mysqlCreate(kind: NoticeKind, title: string, body: string, author
   }
 }
 
-async function mysqlDelete(id: number) {
+async function mysqlDelete(id: number, title: string) {
   let conn: mysql.Connection | undefined;
   try {
     conn = await withTimeout(mysqlConn(), 5000);
-    await conn.execute("DELETE FROM panel_notices WHERE id = ?", [id]);
+    await ensureTable(conn);
+    if (id > 0) await conn.execute("DELETE FROM panel_notices WHERE id = ?", [id]);
+    if (title) await conn.execute("DELETE FROM panel_notices WHERE title = ?", [title]);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    await conn?.end().catch(() => undefined);
+  }
+}
+
+async function mysqlSetPopup(enabled: boolean) {
+  let conn: mysql.Connection | undefined;
+  try {
+    conn = await withTimeout(mysqlConn(), 5000);
+    await ensureTable(conn);
+    await mysqlSetSetting(conn, "popup", enabled ? "1" : "0");
     return true;
   } catch {
     return false;
@@ -261,15 +340,17 @@ export async function listNotices(): Promise<NoticesResult> {
   const remote = await apiRequest("POST", { action: "noticesList", discordId }).catch(() => null);
   if (isRemoteList(remote)) {
     const notices = parseNotices(remote);
-    if (notices.length) writeLocal(notices);
-    return result(true, editor, notices.length ? notices : readLocal());
+    const popup = asPopup(remote, true);
+    writeStore({ popup, seeded: true, notices });
+    return result(true, editor, notices, popup);
   }
   const sql = await mysqlList();
-  if (sql.length) {
-    writeLocal(sql);
-    return result(true, editor, sql);
+  if (sql) {
+    writeStore({ popup: sql.popup, seeded: true, notices: sql.notices });
+    return result(true, editor, sql.notices, sql.popup);
   }
-  return result(true, editor, readLocal());
+  const local = localList();
+  return result(true, editor, local.notices, local.popup);
 }
 
 export async function createNotice(input: { kind?: string; title?: string; body?: string }): Promise<NoticesResult> {
@@ -278,8 +359,12 @@ export async function createNotice(input: { kind?: string; title?: string; body?
   if (!discordId) return { ...(await listNotices()), ok: false, error: "login" };
   if (!editor) return { ...(await listNotices()), ok: false, editor: false, error: "forbidden" };
   const kind = normalizeKind(input.kind);
-  const title = String(input.title || "").trim().slice(0, 191);
-  const body = String(input.body || "").trim().slice(0, 4000);
+  const title = String(input.title || "")
+    .trim()
+    .slice(0, 191);
+  const body = String(input.body || "")
+    .trim()
+    .slice(0, 4000);
   if (title.length < 3 || body.length < 3) {
     return { ...(await listNotices()), ok: false, error: "invalid" };
   }
@@ -293,11 +378,13 @@ export async function createNotice(input: { kind?: string; title?: string; body?
   }).catch(() => null);
   if (isRemoteList(remote) && (remote as { ok?: unknown }).ok === true) {
     const notices = parseNotices(remote);
-    writeLocal(notices);
-    return result(true, true, notices);
+    const popup = asPopup(remote, readStore().popup);
+    writeStore({ popup, seeded: true, notices });
+    return result(true, true, notices, popup);
   }
   const saved = await mysqlCreate(kind, title, body, discordId, name);
   if (saved) return listNotices();
+  const store = localList();
   const next: PanelNotice[] = [
     {
       id: Date.now(),
@@ -307,26 +394,48 @@ export async function createNotice(input: { kind?: string; title?: string; body?
       authorName: name,
       createdAt: new Date().toISOString(),
     },
-    ...readLocal().filter((row) => row.id > 0),
+    ...store.notices,
   ];
-  writeLocal(next);
-  return result(true, true, next);
+  writeStore({ popup: store.popup, seeded: true, notices: next });
+  return result(true, true, next, store.popup);
 }
 
-export async function deleteNotice(id: number): Promise<NoticesResult> {
+export async function deleteNotice(id: number, title?: string): Promise<NoticesResult> {
   const { discordId } = caller();
   const editor = isMainDeveloper(discordId);
   if (!discordId) return { ...(await listNotices()), ok: false, error: "login" };
   if (!editor) return { ...(await listNotices()), ok: false, editor: false, error: "forbidden" };
   const key = Math.floor(Number(id) || 0);
-  if (key <= 0) return { ...(await listNotices()), ok: false, error: "invalid" };
-  const remote = await apiRequest("POST", { action: "noticesDelete", discordId, id: key }).catch(() => null);
+  const label = String(title || "").trim();
+  if (!key && !label) return { ...(await listNotices()), ok: false, error: "invalid" };
+  const remote = await apiRequest("POST", { action: "noticesDelete", discordId, id: key, title: label }).catch(() => null);
   if (isRemoteList(remote) && (remote as { ok?: unknown }).ok === true) {
     const notices = parseNotices(remote);
-    writeLocal(notices);
-    return result(true, true, notices);
+    const popup = asPopup(remote, readStore().popup);
+    writeStore({ popup, seeded: true, notices });
+    return result(true, true, notices, popup);
   }
-  await mysqlDelete(key);
-  writeLocal(readLocal().filter((row) => row.id !== key));
-  return listNotices();
+  await mysqlDelete(key, label);
+  const store = localList(readStore().popup);
+  const next = store.notices.filter((row) => row.id !== key && (!label || row.title !== label));
+  writeStore({ popup: store.popup, seeded: true, notices: next });
+  return result(true, true, next, store.popup);
+}
+
+export async function setNoticesPopup(enabled: boolean): Promise<NoticesResult> {
+  const { discordId } = caller();
+  const editor = isMainDeveloper(discordId);
+  if (!discordId) return { ...(await listNotices()), ok: false, error: "login" };
+  if (!editor) return { ...(await listNotices()), ok: false, editor: false, error: "forbidden" };
+  const popup = Boolean(enabled);
+  const remote = await apiRequest("POST", { action: "noticesSetPopup", discordId, popup }).catch(() => null);
+  if (isRemoteList(remote) && (remote as { ok?: unknown }).ok === true) {
+    const notices = parseNotices(remote);
+    writeStore({ popup: asPopup(remote, popup), seeded: true, notices });
+    return result(true, true, notices, asPopup(remote, popup));
+  }
+  await mysqlSetPopup(popup);
+  const store = localList(popup);
+  writeStore({ popup, seeded: true, notices: store.notices });
+  return result(true, true, store.notices, popup);
 }

@@ -117,14 +117,33 @@ export interface SynvityApi {
   accountsList: () => Promise<{ id?: string; name: string; avatarUrl: string; ip?: string; lastLogin?: string; rank?: string }[]>;
   ranksList: () => Promise<{ name: string; discord: string; id: string; role: string }[]>;
   ranksSet: (payload: { id: string; rank: string; name?: string }) => Promise<{ name: string; discord: string; id: string; role: string }[]>;
-  noticesList: () => Promise<{ ok: boolean; editor: boolean; notices: import("./notices").PanelNotice[] }>;
+  noticesList: () => Promise<{
+    ok: boolean;
+    editor: boolean;
+    popup: boolean;
+    notices: import("./notices").PanelNotice[];
+  }>;
   noticesCreate: (payload: { kind: string; title: string; body: string }) => Promise<{
     ok: boolean;
     editor: boolean;
+    popup: boolean;
     notices: import("./notices").PanelNotice[];
     error?: string;
   }>;
-  noticesDelete: (id: number) => Promise<{ ok: boolean; editor: boolean; notices: import("./notices").PanelNotice[]; error?: string }>;
+  noticesDelete: (payload: { id: number; title?: string }) => Promise<{
+    ok: boolean;
+    editor: boolean;
+    popup: boolean;
+    notices: import("./notices").PanelNotice[];
+    error?: string;
+  }>;
+  noticesSetPopup: (enabled: boolean) => Promise<{
+    ok: boolean;
+    editor: boolean;
+    popup: boolean;
+    notices: import("./notices").PanelNotice[];
+    error?: string;
+  }>;
   rewardsState: () => Promise<import("./rewards").RewardsState>;
   rewardsGenerate: () => Promise<import("./rewards").RewardsState>;
   rewardsRedeem: (code: string) => Promise<import("./rewards").RewardsState>;

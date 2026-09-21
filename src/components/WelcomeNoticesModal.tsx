@@ -43,9 +43,10 @@ export function WelcomeNoticesModal() {
   const ranks = useAccountRanks(discordId);
   const canOpenEditor = hasMainDeveloperAccess(ranks);
   const setRoute = useAppStore((s) => s.setRoute);
-  const [open, setOpen] = useState(true);
+  const [ready, setReady] = useState(false);
+  const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<NoticeKind>("announcement");
-  const [notices, setNotices] = useState<PanelNotice[]>(DEFAULT_NOTICES);
+  const [notices, setNotices] = useState<PanelNotice[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,9 +54,22 @@ export function WelcomeNoticesModal() {
       .then((result) => {
         if (cancelled) return;
         const rows = asNotices(result?.notices);
-        if (rows.length) setNotices(rows);
+        const popup = result?.popup !== false;
+        setNotices(rows);
+        setOpen(popup && rows.length > 0);
+        setReady(true);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (cancelled) return;
+        setNotices(DEFAULT_NOTICES);
+        setOpen(true);
+        setReady(true);
+      });
+    if (!window.synvity?.noticesList) {
+      setNotices(DEFAULT_NOTICES);
+      setOpen(true);
+      setReady(true);
+    }
     return () => {
       cancelled = true;
     };
@@ -74,7 +88,7 @@ export function WelcomeNoticesModal() {
   const changelog = useMemo(() => notices.filter((row) => row.kind === "changelog"), [notices]);
   const rows = tab === "announcement" ? announcements : changelog;
 
-  if (!open) return null;
+  if (!ready || !open) return null;
 
   return (
     <div className="welcome-modal-backdrop" onClick={() => setOpen(false)}>
@@ -122,16 +136,28 @@ export function WelcomeNoticesModal() {
         </div>
         <div className="welcome-modal-actions">
           {canOpenEditor ? (
-            <button
-              type="button"
-              className="welcome-modal-ghost"
-              onClick={() => {
-                setOpen(false);
-                setRoute("notices");
-              }}
-            >
-              Edytuj
-            </button>
+            <>
+              <button
+                type="button"
+                className="welcome-modal-ghost"
+                onClick={() => {
+                  void window.synvity?.noticesSetPopup?.(false);
+                  setOpen(false);
+                }}
+              >
+                Nie pokazuj więcej
+              </button>
+              <button
+                type="button"
+                className="welcome-modal-ghost"
+                onClick={() => {
+                  setOpen(false);
+                  setRoute("notices");
+                }}
+              >
+                Edytuj
+              </button>
+            </>
           ) : null}
           <button type="button" className="welcome-modal-primary" onClick={() => setOpen(false)}>
             Rozumiem
