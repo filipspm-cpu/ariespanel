@@ -11,6 +11,7 @@ export const FEEDBACK_CHANNELS = [
   { id: "about", label: "O aplikacji" },
   { id: "credits", label: "Autorzy" },
   { id: "achievements", label: "Osiągnięcia" },
+  { id: "notices", label: "Ogłoszenia" },
   { id: "other", label: "Inne" },
 ] as const;
 

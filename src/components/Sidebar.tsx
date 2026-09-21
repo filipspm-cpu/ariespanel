@@ -16,6 +16,7 @@ import {
   Zap,
   Bug,
   Trophy,
+  Megaphone,
   type LucideIcon,
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
@@ -40,6 +41,7 @@ const icons: Record<string, LucideIcon> = {
   hammer: Hammer,
   bug: Bug,
   trophy: Trophy,
+  megaphone: Megaphone,
 };
 
 function NavButton({

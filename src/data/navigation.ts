@@ -1,5 +1,5 @@
 import { FORUM_RULES } from "@/data/forumRules";
-import { hasBetaAccess, hasDeveloperAccess, type AccountRank } from "@/data/testers";
+import { hasBetaAccess, hasDeveloperAccess, hasMainDeveloperAccess, type AccountRank } from "@/data/testers";
 import type { NavGroup, RouteId } from "@/types";
 
 export const navGroups: NavGroup[] = [
@@ -41,14 +41,16 @@ export const navGroups: NavGroup[] = [
       { id: "settings", label: "Ustawienia systemu", icon: "settings" },
       { id: "feedback", label: "Zgłoś błąd", icon: "bug" },
       { id: "accounts", label: "Konta", icon: "users", devOnly: true },
+      { id: "notices", label: "Ogłoszenia", icon: "megaphone", mainDevOnly: true },
       { id: "about", label: "O aplikacji", icon: "info" },
       { id: "credits", label: "Autorzy", icon: "heart" },
     ],
   },
 ];
 
-function canSeeNavItem(item: { devOnly?: boolean; betaOnly?: boolean }, rank: AccountRank | AccountRank[] | null) {
+function canSeeNavItem(item: { devOnly?: boolean; betaOnly?: boolean; mainDevOnly?: boolean }, rank: AccountRank | AccountRank[] | null) {
   const ranks = Array.isArray(rank) ? rank : rank ? [rank] : [];
+  if (item.mainDevOnly && !hasMainDeveloperAccess(ranks)) return false;
   if (item.devOnly && !hasDeveloperAccess(ranks)) return false;
   if (item.betaOnly && !hasBetaAccess(ranks)) return false;
   return true;
@@ -62,6 +64,7 @@ function withBetaBadge<T extends { betaOnly?: boolean; badge?: string }>(item: T
 export function canAccessRoute(route: RouteId, rank: AccountRank | AccountRank[] | null) {
   const ranks = Array.isArray(rank) ? rank : rank ? [rank] : [];
   if (route === "accounts") return hasDeveloperAccess(ranks);
+  if (route === "notices") return hasMainDeveloperAccess(ranks);
   return true;
 }
 
@@ -87,6 +90,7 @@ export const breadcrumbs: Record<RouteId, string[]> = {
   counters: ["Dashboard", "Gra", "Statystyki"],
   settings: ["Dashboard", "Ustawienia systemu"],
   accounts: ["Dashboard", "Ustawienia", "Konta"],
+  notices: ["Dashboard", "Ustawienia", "Ogłoszenia"],
   about: ["Dashboard", "O aplikacji"],
   credits: ["Dashboard", "Autorzy"],
   craft: ["Dashboard", "Craft"],
@@ -103,6 +107,7 @@ export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
   counters: { title: "Statystyki" },
   settings: { title: "Ustawienia systemu" },
   accounts: { title: "Konta", subtitle: "Użytkownicy połączeni z Discordem" },
+  notices: { title: "Ogłoszenia", subtitle: "Changelog i ogłoszenia widoczne przy starcie panelu" },
   about: { title: "O aplikacji", subtitle: "ARIES — prywatny panel administracyjny" },
   credits: { title: "Autorzy" },
   craft: { title: "Craft", subtitle: "Tabela krafta frakcji — Majestic Wiki" },

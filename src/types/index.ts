@@ -11,7 +11,8 @@ export type RouteId =
   | "forum"
   | "accounts"
   | "feedback"
-  | "achievements";
+  | "achievements"
+  | "notices";
 
 export interface NavItem {
   id: RouteId;
@@ -22,6 +23,7 @@ export interface NavItem {
   ruleId?: string;
   devOnly?: boolean;
   betaOnly?: boolean;
+  mainDevOnly?: boolean;
 }
 
 export interface NavGroup {

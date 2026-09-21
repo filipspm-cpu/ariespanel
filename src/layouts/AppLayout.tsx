@@ -11,6 +11,7 @@ import { MacrosPage } from "@/pages/MacrosPage";
 import { CountersPage } from "@/pages/CountersPage";
 import { CreditsPage } from "@/pages/CreditsPage";
 import { AccountsPage } from "@/pages/AccountsPage";
+import { NoticesPage } from "@/pages/NoticesPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { AboutPage } from "@/pages/AboutPage";
 import { CraftPage } from "@/pages/CraftPage";
@@ -18,6 +19,7 @@ import { ForumPage } from "@/pages/ForumPage";
 import { FeedbackPage } from "@/pages/FeedbackPage";
 import { AchievementsPage } from "@/pages/AchievementsPage";
 import { UpdateBanner } from "@/components/UpdateBanner";
+import { WelcomeNoticesModal } from "@/components/WelcomeNoticesModal";
 import { useAccountRanks } from "@/components/RankBadge";
 import { canAccessRoute } from "@/data/navigation";
 import { useAppStore } from "@/store/useAppStore";
@@ -31,6 +33,7 @@ const pages: Record<RouteId, ComponentType> = {
   counters: CountersPage,
   settings: SettingsPage,
   accounts: AccountsPage,
+  notices: NoticesPage,
   about: AboutPage,
   credits: CreditsPage,
   craft: CraftPage,
@@ -55,11 +58,12 @@ export function AppLayout() {
     <div className="flex h-full flex-col bg-black">
       <TitleBar />
       <UpdateBanner />
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
         <Sidebar />
         <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
           <Page />
         </main>
+        <WelcomeNoticesModal />
       </div>
       <AriesConsole />
       <CommandPalette />

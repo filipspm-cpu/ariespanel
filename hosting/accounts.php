@@ -1,5 +1,5 @@
 <?php
-// aries-accounts-1.0.97
+// aries-accounts-1.0.99
 if (function_exists("ob_start")) {
   @ob_start();
 }
@@ -339,6 +339,105 @@ function ensure_feedback_table($mysqli) {
   );
   $mysqli->query("ALTER TABLE feedback ADD COLUMN status VARCHAR(16) NOT NULL DEFAULT 'open'");
   $mysqli->query("ALTER TABLE feedback ADD COLUMN channel VARCHAR(32) NOT NULL DEFAULT 'other'");
+}
+
+function ensure_notices_table($mysqli) {
+  $mysqli->query(
+    "CREATE TABLE IF NOT EXISTS panel_notices (
+      id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      kind VARCHAR(16) NOT NULL DEFAULT 'announcement',
+      title VARCHAR(191) NOT NULL,
+      body TEXT NOT NULL,
+      author_id VARCHAR(32) NOT NULL DEFAULT '',
+      author_name VARCHAR(191) NOT NULL DEFAULT '',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_notices_created (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+  );
+}
+
+function notice_kind($raw) {
+  $k = strtolower(trim((string) $raw));
+  if ($k === "changelog" || $k === "zmiany" || $k === "log") return "changelog";
+  return "announcement";
+}
+
+function list_notices($mysqli) {
+  $out = array();
+  $result = $mysqli->query("SELECT id, kind, title, body, author_name, created_at FROM panel_notices ORDER BY created_at DESC, id DESC");
+  if (!$result) return $out;
+  while ($row = $result->fetch_assoc()) {
+    $iso = "";
+    if (!empty($row["created_at"])) {
+      $ts = strtotime($row["created_at"]);
+      if ($ts) $iso = date("c", $ts);
+    }
+    $out[] = array(
+      "id" => (int) $row["id"],
+      "kind" => notice_kind($row["kind"]),
+      "title" => $row["title"],
+      "body" => $row["body"],
+      "authorName" => $row["author_name"],
+      "createdAt" => $iso,
+    );
+  }
+  return $out;
+}
+
+function seed_notices($mysqli) {
+  $countRes = $mysqli->query("SELECT COUNT(*) AS c FROM panel_notices");
+  $countRow = $countRes ? $countRes->fetch_assoc() : null;
+  if ($countRow && (int) $countRow["c"] > 0) return;
+  $stmt = $mysqli->prepare(
+    "INSERT INTO panel_notices (kind, title, body, author_id, author_name, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+  );
+  if (!$stmt) return;
+  $rows = array(
+    array(
+      "announcement",
+      "Promuj Aries panel",
+      "Pokaż ARIES znajomym z serwera. Im więcej osób korzysta z panelu, tym łatwiej trzymać raporty, makra i nakładkę w jednym miejscu.",
+      "1305449847125708811",
+      "Filipek",
+      "2026-09-21 00:00:00",
+    ),
+    array(
+      "changelog",
+      "1.0.99",
+      "• Na starcie panelu widać changelog i ogłoszenia\n• Main developer dodaje wpisy w zakładce Ogłoszenia",
+      "1305449847125708811",
+      "Filipek",
+      "2026-09-21 00:00:00",
+    ),
+    array(
+      "changelog",
+      "1.0.98",
+      "• Zakładka Konta znowu pokazuje połączone konta Discord\n• Przy pierwszym uruchomieniu panel pyta o nazwę i zapisuje ją w bazie\n• Sugestie i błędy można kopiować oraz trwale usuwać\n• Asystent forum odpowiada na pytania z regulaminu",
+      "1305449847125708811",
+      "Filipek",
+      "2026-09-20 21:00:00",
+    ),
+  );
+  foreach ($rows as $row) {
+    $kind = $row[0];
+    $title = $row[1];
+    $body = $row[2];
+    $authorId = $row[3];
+    $authorName = $row[4];
+    $created = $row[5];
+    $stmt->bind_param("ssssss", $kind, $title, $body, $authorId, $authorName, $created);
+    $stmt->execute();
+  }
+}
+
+function notices_payload($mysqli, $discordId = "") {
+  ensure_notices_table($mysqli);
+  seed_notices($mysqli);
+  return array(
+    "ok" => true,
+    "editor" => stored_has_main_developer($mysqli, $discordId),
+    "notices" => list_notices($mysqli),
+  );
 }
 
 function feedback_status($raw) {
@@ -1086,6 +1185,68 @@ function aries_rw_dispatch($mysqli, $data, $action) {
 }
 
 $action = req_get($data, "action");
+if ($action === "") $action = req_get($_GET, "action");
+if ($action === "noticesList" || $action === "noticesCreate" || $action === "noticesDelete") {
+  $discordId = preg_replace("/[^0-9]/", "", req_get($data, "discordId"));
+  if ($discordId === "") $discordId = preg_replace("/[^0-9]/", "", req_get($data, "discord_id"));
+  if ($discordId === "") $discordId = preg_replace("/[^0-9]/", "", req_get($_GET, "discordId"));
+  if ($action === "noticesList") {
+    json_out(notices_payload($mysqli, $discordId));
+  }
+  if ($method !== "POST") {
+    json_out(array("ok" => false, "error" => "method", "editor" => false, "notices" => list_notices($mysqli)), 405);
+  }
+  if ($discordId === "") {
+    json_out(array("ok" => false, "error" => "login", "editor" => false, "notices" => list_notices($mysqli)), 401);
+  }
+  if (!stored_has_main_developer($mysqli, $discordId)) {
+    $payload = notices_payload($mysqli, $discordId);
+    $payload["ok"] = false;
+    $payload["error"] = "forbidden";
+    json_out($payload, 403);
+  }
+  ensure_notices_table($mysqli);
+  if ($action === "noticesDelete") {
+    $itemId = (int) req_get($data, "id");
+    if ($itemId <= 0) {
+      $payload = notices_payload($mysqli, $discordId);
+      $payload["ok"] = false;
+      $payload["error"] = "invalid";
+      json_out($payload, 400);
+    }
+    $stmt = $mysqli->prepare("DELETE FROM panel_notices WHERE id = ?");
+    if ($stmt) {
+      $stmt->bind_param("i", $itemId);
+      $stmt->execute();
+    }
+    json_out(notices_payload($mysqli, $discordId));
+  }
+  $kind = notice_kind(req_get($data, "kind"));
+  $title = req_get($data, "title");
+  $body = req_get($data, "body");
+  $name = req_get($data, "name");
+  if (function_exists("mb_substr")) {
+    $title = mb_substr($title, 0, 191);
+    $name = mb_substr($name, 0, 191);
+    $body = mb_substr($body, 0, 4000);
+  } else {
+    $title = substr($title, 0, 191);
+    $name = substr($name, 0, 191);
+    $body = substr($body, 0, 4000);
+  }
+  if (strlen($title) < 3 || strlen($body) < 3) {
+    $payload = notices_payload($mysqli, $discordId);
+    $payload["ok"] = false;
+    $payload["error"] = "invalid";
+    json_out($payload, 400);
+  }
+  $stmt = $mysqli->prepare("INSERT INTO panel_notices (kind, title, body, author_id, author_name) VALUES (?, ?, ?, ?, ?)");
+  if ($stmt) {
+    $stmt->bind_param("sssss", $kind, $title, $body, $discordId, $name);
+    $stmt->execute();
+  }
+  json_out(notices_payload($mysqli, $discordId));
+}
 if ($method === "POST" && $action === "profileSave") {
   $deviceId = preg_replace("/[^a-zA-Z0-9_-]/", "", req_get($data, "deviceId"));
   $name = req_get($data, "name");

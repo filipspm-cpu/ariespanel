@@ -87,3 +87,7 @@ export function hasDeveloperAccess(rank: AccountRank | AccountRank[] | null | un
   const ranks = asRankList(rank);
   return ranks.includes("main-developer") || ranks.includes("developer");
 }
+
+export function hasMainDeveloperAccess(rank: AccountRank | AccountRank[] | null | undefined) {
+  return asRankList(rank).includes("main-developer");
+}
