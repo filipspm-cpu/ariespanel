@@ -2917,11 +2917,35 @@ textarea {
   -webkit-user-select: text;
 }
 
-.forum-answer p {
+.forum-answer p,
+.forum-answer li {
   margin: 0;
   font-size: 13px;
   line-height: 1.55;
+}
+
+.forum-answer p {
   white-space: pre-wrap;
+}
+
+.forum-answer p + p,
+.forum-answer p + ul,
+.forum-answer ul + p {
+  margin-top: 10px;
+}
+
+.forum-answer ul {
+  margin: 8px 0 0;
+  padding-left: 1.15em;
+}
+
+.forum-answer li + li {
+  margin-top: 6px;
+}
+
+.forum-answer strong {
+  font-weight: 700;
+  color: #fff;
 }
 
 .forum-answer-source {

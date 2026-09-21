@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Sparkles } from "lucide-react";
+import { ForumMarkdown } from "@/components/ForumMarkdown";
 import { forumRuleById } from "@/data/forumRules";
 import { askForum, forumPassages, searchForum, type ForumHit } from "@/data/forumIndex";
 import { useAppStore } from "@/store/useAppStore";
@@ -221,7 +222,7 @@ export function ForumPage() {
                 <div className="forum-empty">Asystent czyta regulamin…</div>
               ) : (
                 <>
-                  <p>{answer || "Brak odpowiedzi asystenta."}</p>
+                  {answer ? <ForumMarkdown text={answer} /> : <p>Brak odpowiedzi asystenta.</p>}
                   {answerSource ? <div className="forum-answer-source">{answerSource}</div> : null}
                 </>
               )}
