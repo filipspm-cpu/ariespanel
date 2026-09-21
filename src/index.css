@@ -3138,12 +3138,6 @@ textarea {
   letter-spacing: 0.02em;
 }
 
-.welcome-modal-lead {
-  margin-top: 6px;
-  font-size: 13px;
-  color: #a1a1aa;
-}
-
 .welcome-modal-tabs {
   display: flex;
   gap: 8px;

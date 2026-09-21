@@ -126,9 +126,6 @@ export function NoticesPage() {
     <div className="ink-page overflow-auto p-6">
       <div>
         <h1 className="text-[26px] font-semibold tracking-tight text-white">Ogłoszenia</h1>
-        <p className="mt-1 text-[13px] text-zinc-500">
-          Changelog i ogłoszenia pokazują się na środku panelu po wejściu. Pisać tu może tylko main developer.
-        </p>
       </div>
 
       {!editor ? (
@@ -144,9 +141,6 @@ export function NoticesPage() {
             <div className="ink-card flex items-center justify-between p-5">
               <div>
                 <div className="text-[14px] font-medium text-white">Okienko przy starcie</div>
-                <div className="mt-1 text-[12px] text-zinc-500">
-                  Wyłącz, jeśli nikt nie ma widzieć changelogu i ogłoszeń po wejściu do panelu.
-                </div>
               </div>
               <Toggle checked={popup} onChange={(v) => void togglePopup(v)} />
             </div>
@@ -220,7 +214,6 @@ export function NoticesPage() {
           </div>
           <div className="ink-card flex min-h-0 flex-col p-5">
             <div className="text-[14px] font-medium text-white">Opublikowane</div>
-            <p className="mt-1 text-[12px] text-zinc-500">Możesz usunąć dowolny wpis, też te startowe.</p>
             <div className="mt-3 flex min-h-0 flex-1 flex-col gap-3 overflow-auto">
               {notices.length === 0 ? (
                 <div className="text-[13px] text-zinc-500">Nie ma jeszcze żadnych wpisów.</div>

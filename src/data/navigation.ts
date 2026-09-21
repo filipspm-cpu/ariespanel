@@ -107,7 +107,7 @@ export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
   counters: { title: "Statystyki" },
   settings: { title: "Ustawienia systemu" },
   accounts: { title: "Konta", subtitle: "Użytkownicy połączeni z Discordem" },
-  notices: { title: "Ogłoszenia", subtitle: "Changelog i ogłoszenia widoczne przy starcie panelu" },
+  notices: { title: "Ogłoszenia" },
   about: { title: "O aplikacji", subtitle: "ARIES — prywatny panel administracyjny" },
   credits: { title: "Autorzy" },
   craft: { title: "Craft", subtitle: "Tabela krafta frakcji — Majestic Wiki" },

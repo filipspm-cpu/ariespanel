@@ -98,7 +98,6 @@ export function WelcomeNoticesModal() {
         </button>
         <div className="welcome-modal-kicker">ARIES PANEL</div>
         <h2 id="welcome-modal-title">Co nowego</h2>
-        <p className="welcome-modal-lead">Changelog i ogłoszenia od main developera.</p>
         <div className="welcome-modal-tabs">
           <button
             type="button"
