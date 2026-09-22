@@ -4,6 +4,14 @@ export type { NoticeKind, PanelNotice };
 
 export const DEFAULT_NOTICES: PanelNotice[] = [
   {
+    id: -4,
+    kind: "changelog",
+    title: "1.0.103",
+    body: "• Auto kliker dla beta testerów w Gra → Auto kliker\n• Lewy lub prawy przycisk, odstęp, limit kliknięć i skrót (domyślnie F6)\n• Skrót działa, gdy gra jest na wierzchu",
+    authorName: "Filipek",
+    createdAt: "2026-09-22T18:00:00.000Z",
+  },
+  {
     id: -1,
     kind: "announcement",
     title: "Promuj Aries panel",

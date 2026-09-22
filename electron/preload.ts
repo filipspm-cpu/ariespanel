@@ -137,6 +137,57 @@ const api = {
   }) => ipcRenderer.invoke("rewards:define", payload),
   rewardsUndefine: (id: string) => ipcRenderer.invoke("rewards:undefine", id),
   rewardsGrant: (id: string) => ipcRenderer.invoke("rewards:grant", id),
+  clickerStatus: () =>
+    ipcRenderer.invoke("clicker:status") as Promise<{
+      intervalMs: number;
+      button: "left" | "right";
+      hotkey: string;
+      repeat: number;
+      gameOnly: boolean;
+      allowed: boolean;
+      running: boolean;
+      arming: boolean;
+      clicks: number;
+      message?: string;
+    }>,
+  clickerConfigure: (patch: {
+    intervalMs?: number;
+    button?: "left" | "right";
+    hotkey?: string;
+    repeat?: number;
+    gameOnly?: boolean;
+  }) => ipcRenderer.invoke("clicker:configure", patch),
+  clickerToggle: (running?: boolean) => ipcRenderer.invoke("clicker:toggle", running),
+  clickerReset: () => ipcRenderer.invoke("clicker:reset"),
+  onClickerStatus: (
+    cb: (status: {
+      intervalMs: number;
+      button: "left" | "right";
+      hotkey: string;
+      repeat: number;
+      gameOnly: boolean;
+      allowed: boolean;
+      running: boolean;
+      arming: boolean;
+      clicks: number;
+      message?: string;
+    }) => void,
+  ) => {
+    const listener = (_: unknown, status: {
+      intervalMs: number;
+      button: "left" | "right";
+      hotkey: string;
+      repeat: number;
+      gameOnly: boolean;
+      allowed: boolean;
+      running: boolean;
+      arming: boolean;
+      clicks: number;
+      message?: string;
+    }) => cb(status);
+    ipcRenderer.on("clicker:status", listener);
+    return () => ipcRenderer.removeListener("clicker:status", listener);
+  },
 };
 
 contextBridge.exposeInMainWorld("synvity", api);

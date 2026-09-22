@@ -131,7 +131,12 @@ function ensureNative() {
 
 const KEYEVENTF_KEYUP = 0x0002;
 const KEYEVENTF_UNICODE = 0x0004;
+const INPUT_MOUSE = 0;
 const INPUT_KEYBOARD = 1;
+const MOUSEEVENTF_LEFTDOWN = 0x0002;
+const MOUSEEVENTF_LEFTUP = 0x0004;
+const MOUSEEVENTF_RIGHTDOWN = 0x0008;
+const MOUSEEVENTF_RIGHTUP = 0x0010;
 const SW_RESTORE = 9;
 const VK_RETURN = 0x0d;
 const VK_TAB = 0x09;
@@ -289,6 +294,18 @@ export function findGameProcess(): ProcessInfo | null {
   return pickGameWindow(listWindows(true));
 }
 
+export function isGameForeground(): boolean {
+  ensureNative();
+  const game = pickGameWindow(listWindows());
+  if (!game?.hwnd) return false;
+  try {
+    const fg = GetForegroundWindow();
+    return hwndId(fg) !== 0 && hwndId(fg) === game.hwnd;
+  } catch {
+    return false;
+  }
+}
+
 function focusWindow(hwnd: unknown | null) {
   ensureNative();
   if (!hwnd) return false;
@@ -341,6 +358,31 @@ function keyboardEvent(wVk: number, wScan: number, dwFlags: number) {
       },
     },
   };
+}
+
+function mouseEvent(dwFlags: number) {
+  return {
+    type: INPUT_MOUSE,
+    u: {
+      mi: {
+        dx: 0,
+        dy: 0,
+        mouseData: 0,
+        dwFlags,
+        time: 0,
+        dwExtraInfo: 0,
+      },
+    },
+  };
+}
+
+export async function clickMouse(button: "left" | "right") {
+  ensureNative();
+  const down = button === "right" ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_LEFTDOWN;
+  const up = button === "right" ? MOUSEEVENTF_RIGHTUP : MOUSEEVENTF_LEFTUP;
+  sendEvents([mouseEvent(down)]);
+  await sleep(12);
+  sendEvents([mouseEvent(up)]);
 }
 
 function sendEvents(events: unknown[]) {

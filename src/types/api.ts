@@ -160,6 +160,12 @@ export interface SynvityApi {
   rewardsDefine: (payload: import("./rewards").CustomAchievementInput) => Promise<import("./rewards").RewardsState>;
   rewardsUndefine: (id: string) => Promise<import("./rewards").RewardsState>;
   rewardsGrant: (id: string) => Promise<import("./rewards").RewardsState>;
+  clickerStatus: () => Promise<import("./index").ClickerStatus>;
+  clickerConfigure: (patch: Partial<Pick<import("./index").ClickerStatus, "intervalMs" | "button" | "hotkey" | "repeat" | "gameOnly">>) =>
+    Promise<import("./index").ClickerStatus>;
+  clickerToggle: (running?: boolean) => Promise<import("./index").ClickerStatus>;
+  clickerReset: () => Promise<import("./index").ClickerStatus>;
+  onClickerStatus: (cb: (status: import("./index").ClickerStatus) => void) => () => void;
 };
 
 export {};
