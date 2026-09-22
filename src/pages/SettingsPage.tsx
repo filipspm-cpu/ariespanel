@@ -404,7 +404,7 @@ export function SettingsPage() {
           <div className="mt-2 text-[18px] font-medium text-white">Twój kod i wpisanie kodu</div>
           <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-zinc-500">
             Każdy użytkownik może wygenerować jeden kod. Cudzy kod można wpisać tylko raz na konto i tylko raz na
-            komputer — zapamiętywany jest też adres IP. Osoba, która wpisze kod, dostaje {formatCash(PROMO_ENTER_CASH)}.
+            komputer. Osoba, która wpisze kod, dostaje {formatCash(PROMO_ENTER_CASH)}.
             Właściciel kodu dostaje {formatCash(PROMO_OWNER_CASH)}.
           </p>
           {!discordConnected ? (
