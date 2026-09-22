@@ -34,14 +34,21 @@ const DB = {
 
 const RELEASE_NOTE: Omit<PanelNotice, "id"> = {
   kind: "changelog",
-  title: "1.0.103",
-  body: "• Auto kliker dla beta testerów w Gra → Auto kliker\n• Lewy lub prawy przycisk, odstęp, limit kliknięć i skrót (domyślnie F6)\n• Skrót działa, gdy gra jest na wierzchu",
+  title: "1.0.104",
+  body: "• Opis promokodu nie wspomina już o zapamiętywaniu adresu IP",
   authorName: "Filipek",
-  createdAt: "2026-09-22T18:00:00.000Z",
+  createdAt: "2026-09-22T19:05:00.000Z",
 };
 
 const SEED: Array<Omit<PanelNotice, "id">> = [
   RELEASE_NOTE,
+  {
+    kind: "changelog",
+    title: "1.0.103",
+    body: "• Auto kliker dla beta testerów w Gra → Auto kliker\n• Lewy lub prawy przycisk, odstęp, limit kliknięć i skrót (domyślnie F6)\n• Skrót działa, gdy gra jest na wierzchu",
+    authorName: "Filipek",
+    createdAt: "2026-09-22T18:00:00.000Z",
+  },
   {
     kind: "announcement",
     title: "Promuj Aries panel",

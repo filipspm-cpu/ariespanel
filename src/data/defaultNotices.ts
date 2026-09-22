@@ -4,6 +4,14 @@ export type { NoticeKind, PanelNotice };
 
 export const DEFAULT_NOTICES: PanelNotice[] = [
   {
+    id: -5,
+    kind: "changelog",
+    title: "1.0.104",
+    body: "• Opis promokodu nie wspomina już o zapamiętywaniu adresu IP",
+    authorName: "Filipek",
+    createdAt: "2026-09-22T19:05:00.000Z",
+  },
+  {
     id: -4,
     kind: "changelog",
     title: "1.0.103",
