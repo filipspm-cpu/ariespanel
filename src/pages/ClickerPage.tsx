@@ -11,7 +11,7 @@ const EMPTY: ClickerStatus = {
   button: "left",
   hotkey: "F6",
   repeat: 0,
-  gameOnly: true,
+  gameOnly: false,
   allowed: true,
   running: false,
   arming: false,
@@ -66,8 +66,8 @@ export function ClickerPage() {
         <div className="cmd-kicker">BETA · ARIES PANEL</div>
         <h1>Auto kliker</h1>
         <p className="cmd-lead">
-          Klika w miejscu kursora. Skrót działa też wtedy, gdy gra jest na wierzchu. Po starcie jest chwila, żeby
-          przesunąć mysz.
+          Klika w miejscu kursora. Włącz go skrótem w grze albo przełącz się na grę po starcie — dopóki panel jest na
+          wierzchu, kliker czeka i nie klika własnego okna.
         </p>
 
         <section className="cmd-editor">

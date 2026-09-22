@@ -33,6 +33,7 @@ let IsIconic: (h: unknown) => boolean;
 let OpenProcess: (access: number, inherit: boolean, pid: number) => unknown;
 let QueryFullProcessImageNameW: (h: unknown, flags: number, buf: Buffer, size: Buffer) => boolean;
 let CloseHandle: (h: unknown) => boolean;
+let mouse_event: (flags: number, dx: number, dy: number, data: number, extra: number) => void;
 let INPUT: unknown;
 let nativeReady = false;
 
@@ -126,13 +127,16 @@ function ensureNative() {
     "bool __stdcall QueryFullProcessImageNameW(void *hProcess, uint32 dwFlags, _Out_ uint16 *lpExeName, _Inout_ uint32 *lpdwSize)",
   ) as (h: unknown, flags: number, buf: Buffer, size: Buffer) => boolean;
   CloseHandle = kernel32.func("bool __stdcall CloseHandle(void *hObject)") as (h: unknown) => boolean;
+  mouse_event = user32.func(
+    "void __stdcall mouse_event(uint32 dwFlags, uint32 dx, uint32 dy, uint32 dwData, uintptr dwExtraInfo)",
+  ) as (flags: number, dx: number, dy: number, data: number, extra: number) => void;
   nativeReady = true;
 }
 
 const KEYEVENTF_KEYUP = 0x0002;
 const KEYEVENTF_UNICODE = 0x0004;
-const INPUT_MOUSE = 0;
 const INPUT_KEYBOARD = 1;
+const MOUSEEVENTF_MOVE = 0x0001;
 const MOUSEEVENTF_LEFTDOWN = 0x0002;
 const MOUSEEVENTF_LEFTUP = 0x0004;
 const MOUSEEVENTF_RIGHTDOWN = 0x0008;
@@ -294,16 +298,29 @@ export function findGameProcess(): ProcessInfo | null {
   return pickGameWindow(listWindows(true));
 }
 
-export function isGameForeground(): boolean {
+export function foregroundPid(): number {
   ensureNative();
-  const game = pickGameWindow(listWindows());
-  if (!game?.hwnd) return false;
   try {
     const fg = GetForegroundWindow();
-    return hwndId(fg) !== 0 && hwndId(fg) === game.hwnd;
+    if (!fg) return 0;
+    const pidBuf = Buffer.alloc(4);
+    if (!GetWindowThreadProcessId(fg, pidBuf)) return 0;
+    return pidBuf.readUInt32LE(0);
   } catch {
-    return false;
+    return 0;
   }
+}
+
+export function isGameForeground(): boolean {
+  return gameFocus() === "game";
+}
+
+export function gameFocus(): "game" | "other" | "missing" {
+  const game = pickGameWindow(listWindows());
+  if (!game?.pid) return "missing";
+  const fg = foregroundPid();
+  if (!fg || fg === game.pid) return "game";
+  return "other";
 }
 
 function focusWindow(hwnd: unknown | null) {
@@ -360,29 +377,15 @@ function keyboardEvent(wVk: number, wScan: number, dwFlags: number) {
   };
 }
 
-function mouseEvent(dwFlags: number) {
-  return {
-    type: INPUT_MOUSE,
-    u: {
-      mi: {
-        dx: 0,
-        dy: 0,
-        mouseData: 0,
-        dwFlags,
-        time: 0,
-        dwExtraInfo: 0,
-      },
-    },
-  };
-}
-
 export async function clickMouse(button: "left" | "right") {
   ensureNative();
   const down = button === "right" ? MOUSEEVENTF_RIGHTDOWN : MOUSEEVENTF_LEFTDOWN;
   const up = button === "right" ? MOUSEEVENTF_RIGHTUP : MOUSEEVENTF_LEFTUP;
-  sendEvents([mouseEvent(down)]);
-  await sleep(12);
-  sendEvents([mouseEvent(up)]);
+  // A zero move in the same burst makes games and in-game browsers accept the click.
+  mouse_event(MOUSEEVENTF_MOVE, 0, 0, 0, 0);
+  mouse_event(down, 0, 0, 0, 0);
+  await sleep(20);
+  mouse_event(up, 0, 0, 0, 0);
 }
 
 function sendEvents(events: unknown[]) {

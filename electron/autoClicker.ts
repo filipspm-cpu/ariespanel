@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { app, type BrowserWindow } from "electron";
 import type koffiDefault from "koffi";
-import { clickMouse, isGameForeground, isMacroInjecting } from "./windows";
+import { clickMouse, foregroundPid, gameFocus, isMacroInjecting } from "./windows";
 import { loadState } from "./storage";
 import { isBetaTesterId } from "./testers";
 import { panelLog } from "./panelLog";
@@ -40,14 +40,14 @@ export const CLICKER_HOTKEYS = Object.keys(HOTKEY_VK);
 const MIN_INTERVAL = 50;
 const MAX_INTERVAL = 2000;
 const MAX_REPEAT = 100_000;
-const LEAD_MS = 450;
+const SETTINGS_VERSION = 2;
 
 const DEFAULTS: ClickerSettings = {
   intervalMs: 100,
   button: "left",
   hotkey: "F6",
   repeat: 0,
-  gameOnly: true,
+  gameOnly: false,
 };
 
 let settings: ClickerSettings = { ...DEFAULTS };
@@ -95,7 +95,10 @@ function readSettings() {
   if (loaded) return settings;
   loaded = true;
   try {
-    settings = clampSettings(JSON.parse(fs.readFileSync(filePath(), "utf8")) as Partial<ClickerSettings>);
+    const raw = JSON.parse(fs.readFileSync(filePath(), "utf8")) as Partial<ClickerSettings> & { v?: number };
+    const legacy = raw.v !== SETTINGS_VERSION;
+    settings = clampSettings(legacy ? { ...raw, gameOnly: false } : raw);
+    if (legacy) writeSettings();
   } catch {
     settings = { ...DEFAULTS };
   }
@@ -105,7 +108,7 @@ function readSettings() {
 function writeSettings() {
   try {
     fs.mkdirSync(path.dirname(filePath()), { recursive: true });
-    fs.writeFileSync(filePath(), JSON.stringify(settings, null, 2), "utf8");
+    fs.writeFileSync(filePath(), JSON.stringify({ ...settings, v: SETTINGS_VERSION }, null, 2), "utf8");
   } catch {
     /* ignore */
   }
@@ -113,6 +116,18 @@ function writeSettings() {
 
 function allowedNow() {
   return isBetaTesterId(loadState().settings.discordId);
+}
+
+function panelIsForeground() {
+  const fg = foregroundPid();
+  return fg !== 0 && fg === process.pid;
+}
+
+function waitingReason(): string | null {
+  if (isMacroInjecting()) return "Czeka, aż makro skończy…";
+  if (panelIsForeground()) return "Przełącz się na grę — panel jest na wierzchu, więc kliker czeka";
+  if (settings.gameOnly && gameFocus() === "other") return "Czeka na okno gry…";
+  return null;
 }
 
 export function getClickerStatus(): ClickerStatus {
@@ -160,18 +175,17 @@ async function clickOnce(gen: number) {
     finish("Auto kliker jest tylko dla beta testerów.");
     return;
   }
-  if (isMacroInjecting()) {
-    timer = setTimeout(() => void clickOnce(gen), settings.intervalMs);
+  const pause = waitingReason();
+  if (pause) {
+    arming = true;
+    message = pause;
+    publish();
+    timer = setTimeout(() => void clickOnce(gen), 30);
     return;
   }
+  arming = false;
   const started = Date.now();
   try {
-    if (settings.gameOnly && !isGameForeground()) {
-      message = "Czeka na okno gry…";
-      publish();
-      timer = setTimeout(() => void clickOnce(gen), settings.intervalMs);
-      return;
-    }
     await clickMouse(settings.button);
   } catch (err) {
     finish("Kliknięcie nie doszło. Auto kliker działa w ARIES na Windows.");
@@ -236,20 +250,16 @@ export function setClickerRunning(next: boolean): ClickerStatus {
   if (running || arming) return getClickerStatus();
   clicks = 0;
   generation += 1;
-  const gen = generation;
   running = true;
-  arming = true;
-  message = "Przesuń kursor na grę…";
+  arming = false;
+  message = "";
   panelLog({
     level: "info",
     source: "clicker",
     message: `Auto kliker startuje (${settings.button === "right" ? "prawy" : "lewy"}, ${settings.intervalMs} ms, ${settings.hotkey})`,
   });
   publish(true);
-  timer = setTimeout(() => {
-    if (gen !== generation) return;
-    beginLoop();
-  }, LEAD_MS);
+  beginLoop();
   return getClickerStatus();
 }
 

@@ -34,14 +34,21 @@ const DB = {
 
 const RELEASE_NOTE: Omit<PanelNotice, "id"> = {
   kind: "changelog",
-  title: "1.0.104",
-  body: "• Opis promokodu nie wspomina już o zapamiętywaniu adresu IP",
+  title: "1.0.105",
+  body: "• Auto kliker klika w grze, a nie czeka w nieskończoność na okno\n• Dopóki panel jest na wierzchu, kliker czeka i nie wyłącza sam siebie",
   authorName: "Filipek",
-  createdAt: "2026-09-22T19:05:00.000Z",
+  createdAt: "2026-09-22T19:15:00.000Z",
 };
 
 const SEED: Array<Omit<PanelNotice, "id">> = [
   RELEASE_NOTE,
+  {
+    kind: "changelog",
+    title: "1.0.104",
+    body: "• Opis promokodu nie wspomina już o zapamiętywaniu adresu IP",
+    authorName: "Filipek",
+    createdAt: "2026-09-22T19:05:00.000Z",
+  },
   {
     kind: "changelog",
     title: "1.0.103",

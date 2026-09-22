@@ -4,6 +4,14 @@ export type { NoticeKind, PanelNotice };
 
 export const DEFAULT_NOTICES: PanelNotice[] = [
   {
+    id: -6,
+    kind: "changelog",
+    title: "1.0.105",
+    body: "• Auto kliker klika w grze, a nie czeka w nieskończoność na okno\n• Dopóki panel jest na wierzchu, kliker czeka i nie wyłącza sam siebie",
+    authorName: "Filipek",
+    createdAt: "2026-09-22T19:15:00.000Z",
+  },
+  {
     id: -5,
     kind: "changelog",
     title: "1.0.104",
