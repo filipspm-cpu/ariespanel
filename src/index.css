@@ -2168,6 +2168,11 @@ textarea {
   color: #fff;
 }
 
+.cmd-actions button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .cmd-side {
   display: flex;
   width: 300px;
@@ -2335,6 +2340,44 @@ textarea {
 
 .cmd-row b.ok {
   color: #86efac;
+}
+
+.clicker-meter {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 0;
+  flex: 1;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  background: #050505;
+  padding: 22px 20px;
+  color: #a1a1aa;
+}
+
+.clicker-meter strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 42px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: #fff;
+}
+
+.clicker-meter span {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6e6e6e;
+}
+
+.clicker-meter em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 13px;
+  color: #d4d4d8;
 }
 
 .ink-page {

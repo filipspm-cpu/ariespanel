@@ -16,6 +16,7 @@ export const navGroups: NavGroup[] = [
           { id: "cmd", label: "Wykonawca CMD", icon: "terminal" },
           { id: "overlay", label: "Nakładka", icon: "layers" },
           { id: "macros", label: "Makra", icon: "zap" },
+          { id: "clicker", label: "Auto kliker", icon: "mouse", betaOnly: true },
           { id: "counters", label: "Statystyki", icon: "gauge" },
         ],
       },
@@ -65,6 +66,7 @@ export function canAccessRoute(route: RouteId, rank: AccountRank | AccountRank[]
   const ranks = Array.isArray(rank) ? rank : rank ? [rank] : [];
   if (route === "accounts") return hasDeveloperAccess(ranks);
   if (route === "notices") return hasMainDeveloperAccess(ranks);
+  if (route === "clicker") return hasBetaAccess(ranks);
   return true;
 }
 
@@ -87,6 +89,7 @@ export const breadcrumbs: Record<RouteId, string[]> = {
   cmd: ["Dashboard", "Game", "Cmd"],
   overlay: ["Dashboard", "Game", "Overlay"],
   macros: ["Dashboard", "Gra", "Makra"],
+  clicker: ["Dashboard", "Gra", "Auto kliker"],
   counters: ["Dashboard", "Gra", "Statystyki"],
   settings: ["Dashboard", "Ustawienia systemu"],
   accounts: ["Dashboard", "Ustawienia", "Konta"],
@@ -104,6 +107,7 @@ export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
   cmd: { title: "CMD Executor", subtitle: "Wyślij serię komend do wybranego procesu gry" },
   overlay: { title: "Nakładka", subtitle: "Skonfiguruj nakładkę gry i powiadomienia" },
   macros: { title: "Makra" },
+  clicker: { title: "Auto kliker", subtitle: "Beta — kliknięcia w miejscu kursora" },
   counters: { title: "Statystyki" },
   settings: { title: "Ustawienia systemu" },
   accounts: { title: "Konta", subtitle: "Użytkownicy połączeni z Discordem" },

@@ -8,6 +8,16 @@ import { connectDiscord } from "./discord";
 import { listDiscordAccounts, recordDiscordAccount } from "./discordAccounts";
 import { refreshAccountRoles, setAccountRank } from "./testers";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
+import {
+  bindClickerWindow,
+  configureClicker,
+  getClickerStatus,
+  resetClickerCount,
+  startClickerHook,
+  stopClickerHook,
+  toggleClicker,
+  type ClickerSettings,
+} from "./autoClicker";
 import { runMacroById, setCountersListener, setOverlayRefresh, triggersFromMacros } from "./runMacro";
 import { createFeedback, listFeedback, updateFeedback } from "./feedback";
 import { createNotice, deleteNotice, listNotices, setNoticesPopup } from "./notices";
@@ -634,6 +644,11 @@ function registerIpc() {
     updateMacroTriggers(triggers);
     return true;
   });
+
+  ipcMain.handle("clicker:status", () => getClickerStatus());
+  ipcMain.handle("clicker:configure", (_e, patch: Partial<ClickerSettings>) => configureClicker(patch || {}));
+  ipcMain.handle("clicker:toggle", () => toggleClicker());
+  ipcMain.handle("clicker:reset", () => resetClickerCount());
 }
 
 function sleep(ms: number) {
@@ -708,6 +723,12 @@ app.whenReady().then(async () => {
     } catch (err) {
       console.warn("Macro hook failed", err);
     }
+    try {
+      bindClickerWindow(() => mainWindow);
+      startClickerHook();
+    } catch (err) {
+      console.warn("Clicker hook failed", err);
+    }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
@@ -722,5 +743,6 @@ app.on("window-all-closed", () => {
 
 app.on("before-quit", () => {
   stopMacroHook();
+  stopClickerHook();
   globalShortcut.unregisterAll();
 });

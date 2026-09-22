@@ -18,6 +18,7 @@ import { CraftPage } from "@/pages/CraftPage";
 import { ForumPage } from "@/pages/ForumPage";
 import { FeedbackPage } from "@/pages/FeedbackPage";
 import { AchievementsPage } from "@/pages/AchievementsPage";
+import { ClickerPage } from "@/pages/ClickerPage";
 import { UpdateBanner } from "@/components/UpdateBanner";
 import { WelcomeNoticesModal } from "@/components/WelcomeNoticesModal";
 import { useAccountRanks } from "@/components/RankBadge";
@@ -40,6 +41,7 @@ const pages: Record<RouteId, ComponentType> = {
   forum: ForumPage,
   feedback: FeedbackPage,
   achievements: AchievementsPage,
+  clicker: ClickerPage,
 };
 
 export function AppLayout() {

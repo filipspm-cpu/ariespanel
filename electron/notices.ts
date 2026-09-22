@@ -32,7 +32,16 @@ const DB = {
   database: "host425499_ariespanel",
 };
 
+const RELEASE_NOTE: Omit<PanelNotice, "id"> = {
+  kind: "changelog",
+  title: "1.0.103",
+  body: "• Auto kliker dla beta testerów w Gra → Auto kliker\n• Lewy lub prawy przycisk, odstęp, limit kliknięć i skrót (domyślnie F6)\n• Skrót działa, gdy gra jest na wierzchu",
+  authorName: "Filipek",
+  createdAt: "2026-09-22T18:00:00.000Z",
+};
+
 const SEED: Array<Omit<PanelNotice, "id">> = [
+  RELEASE_NOTE,
   {
     kind: "announcement",
     title: "Promuj Aries panel",
@@ -154,6 +163,11 @@ function localList(popup = true): LocalStore {
     return { ...seeded, popup: popup && seeded.popup };
   }
   return { ...store, popup: popup && store.popup };
+}
+
+function ensureReleaseNote(rows: PanelNotice[]): PanelNotice[] {
+  if (rows.some((row) => row.kind === "changelog" && row.title === RELEASE_NOTE.title)) return rows;
+  return [{ id: -103, ...RELEASE_NOTE }, ...rows];
 }
 
 function sortNotices(rows: PanelNotice[]) {
@@ -342,15 +356,15 @@ export async function listNotices(): Promise<NoticesResult> {
     const notices = parseNotices(remote);
     const popup = asPopup(remote, true);
     writeStore({ popup, seeded: true, notices });
-    return result(true, editor, notices, popup);
+    return result(true, editor, ensureReleaseNote(notices), popup);
   }
   const sql = await mysqlList();
   if (sql) {
     writeStore({ popup: sql.popup, seeded: true, notices: sql.notices });
-    return result(true, editor, sql.notices, sql.popup);
+    return result(true, editor, ensureReleaseNote(sql.notices), sql.popup);
   }
   const local = localList();
-  return result(true, editor, local.notices, local.popup);
+  return result(true, editor, ensureReleaseNote(local.notices), local.popup);
 }
 
 export async function createNotice(input: { kind?: string; title?: string; body?: string }): Promise<NoticesResult> {
@@ -380,7 +394,7 @@ export async function createNotice(input: { kind?: string; title?: string; body?
     const notices = parseNotices(remote);
     const popup = asPopup(remote, readStore().popup);
     writeStore({ popup, seeded: true, notices });
-    return result(true, true, notices, popup);
+    return result(true, true, ensureReleaseNote(notices), popup);
   }
   const saved = await mysqlCreate(kind, title, body, discordId, name);
   if (saved) return listNotices();
@@ -397,7 +411,7 @@ export async function createNotice(input: { kind?: string; title?: string; body?
     ...store.notices,
   ];
   writeStore({ popup: store.popup, seeded: true, notices: next });
-  return result(true, true, next, store.popup);
+  return result(true, true, ensureReleaseNote(next), store.popup);
 }
 
 export async function deleteNotice(id: number, title?: string): Promise<NoticesResult> {
@@ -413,13 +427,13 @@ export async function deleteNotice(id: number, title?: string): Promise<NoticesR
     const notices = parseNotices(remote);
     const popup = asPopup(remote, readStore().popup);
     writeStore({ popup, seeded: true, notices });
-    return result(true, true, notices, popup);
+    return result(true, true, ensureReleaseNote(notices), popup);
   }
   await mysqlDelete(key, label);
   const store = localList(readStore().popup);
   const next = store.notices.filter((row) => row.id !== key && (!label || row.title !== label));
   writeStore({ popup: store.popup, seeded: true, notices: next });
-  return result(true, true, next, store.popup);
+  return result(true, true, ensureReleaseNote(next), store.popup);
 }
 
 export async function setNoticesPopup(enabled: boolean): Promise<NoticesResult> {
@@ -432,10 +446,10 @@ export async function setNoticesPopup(enabled: boolean): Promise<NoticesResult> 
   if (isRemoteList(remote) && (remote as { ok?: unknown }).ok === true) {
     const notices = parseNotices(remote);
     writeStore({ popup: asPopup(remote, popup), seeded: true, notices });
-    return result(true, true, notices, asPopup(remote, popup));
+    return result(true, true, ensureReleaseNote(notices), asPopup(remote, popup));
   }
   await mysqlSetPopup(popup);
   const store = localList(popup);
   writeStore({ popup, seeded: true, notices: store.notices });
-  return result(true, true, store.notices, popup);
+  return result(true, true, ensureReleaseNote(store.notices), popup);
 }

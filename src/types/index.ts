@@ -12,7 +12,8 @@ export type RouteId =
   | "accounts"
   | "feedback"
   | "achievements"
-  | "notices";
+  | "notices"
+  | "clicker";
 
 export interface NavItem {
   id: RouteId;
@@ -142,6 +143,21 @@ export interface AppSettings {
   discordAvatar?: string | null;
   discordAvatarUrl?: string;
   craftStocks?: Record<string, { green: number; blue: number; red: number }>;
+}
+
+export type ClickerButton = "left" | "right";
+
+export interface ClickerStatus {
+  intervalMs: number;
+  button: ClickerButton;
+  hotkey: string;
+  repeat: number;
+  gameOnly: boolean;
+  allowed: boolean;
+  running: boolean;
+  arming: boolean;
+  clicks: number;
+  message?: string;
 }
 
 export interface UpdateStatus {
