@@ -8,6 +8,7 @@ import {
   Clock,
   Download,
   Folder,
+  FolderInput,
   FolderPlus,
   GripVertical,
   Hash,
@@ -72,6 +73,7 @@ export function MacrosPage() {
   const [selectedId, setSelectedId] = useState<string | null>(macros[0]?.id ?? null);
   const [packMsg, setPackMsg] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
+  const [moveMode, setMoveMode] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
   const [dragIds, setDragIds] = useState<string[]>([]);
   const [moveFolder, setMoveFolder] = useState("");
@@ -186,6 +188,21 @@ export function MacrosPage() {
             <button title="Nowe makro" className="rounded p-1 hover:bg-white/5 hover:text-white" onClick={() => addMacro(null)}>
               <Plus size={15} />
             </button>
+            <button
+              title="Przenieś kilka makr"
+              className={`rounded p-1 hover:bg-white/5 hover:text-white ${moveMode ? "bg-white/10 text-white" : ""}`}
+              onClick={() => {
+                setMoveMode((on) => {
+                  if (on) {
+                    setPicked([]);
+                    setMoveFolder("");
+                  }
+                  return !on;
+                });
+              }}
+            >
+              <FolderInput size={15} />
+            </button>
             <button title="Wczytaj z pliku" className="rounded p-1 hover:bg-white/5 hover:text-white" onClick={() => fileRef.current?.click()}>
               <FileUp size={15} />
             </button>
@@ -216,9 +233,11 @@ export function MacrosPage() {
             className="h-8 w-full rounded-md border px-2 text-[12px]"
           />
           {packMsg ? <div className="mt-2 text-[11px] text-emerald-400">{packMsg}</div> : null}
-          {picked.length ? (
+          {moveMode ? (
             <div className="mt-2 rounded-md border border-white/[0.08] bg-black/40 p-2">
-              <div className="text-[11px] text-zinc-400">Zaznaczono {picked.length}</div>
+              <div className="text-[11px] text-zinc-400">
+                {picked.length ? `Zaznaczono ${picked.length}` : "Zaznacz makra do przeniesienia"}
+              </div>
               <div className="mt-1.5 flex gap-1">
                 <select
                   value={moveFolder}
@@ -235,7 +254,7 @@ export function MacrosPage() {
                 </select>
                 <button
                   type="button"
-                  disabled={!moveFolder}
+                  disabled={!moveFolder || !picked.length}
                   onClick={movePicked}
                   className="h-8 shrink-0 rounded-md bg-white px-2 text-[12px] font-medium text-black disabled:opacity-40"
                 >
@@ -280,11 +299,12 @@ export function MacrosPage() {
               key={m.id}
               macro={m}
               active={m.id === selectedId}
-              picked={picked.includes(m.id)}
+              picked={moveMode && picked.includes(m.id)}
+              selectable={moveMode}
               onSelect={() => setSelectedId(m.id)}
               onToggle={() => updateMacro(m.id, { enabled: !m.enabled })}
               onPick={() => setPicked((prev) => (prev.includes(m.id) ? prev.filter((id) => id !== m.id) : [...prev, m.id]))}
-              onDragStart={() => setDragIds(picked.includes(m.id) ? picked : [m.id])}
+              onDragStart={() => setDragIds(moveMode && picked.includes(m.id) ? picked : [m.id])}
             />
           ))}
           {folders.map((folder) => (
@@ -293,11 +313,12 @@ export function MacrosPage() {
               folder={folder}
               macros={filtered.filter((m) => m.folderId === folder.id)}
               selectedId={selectedId}
-              picked={picked}
+              picked={moveMode ? picked : []}
+              selectable={moveMode}
               onSelect={setSelectedId}
               onToggle={(id, enabled) => updateMacro(id, { enabled })}
               onPick={(id) => setPicked((prev) => (prev.includes(id) ? prev.filter((row) => row !== id) : [...prev, id]))}
-              onDragStart={(id) => setDragIds(picked.includes(id) ? picked : [id])}
+              onDragStart={(id) => setDragIds(moveMode && picked.includes(id) ? picked : [id])}
               onDrop={() => {
                 if (dragIds.length) moveIds(dragIds, folder.id);
               }}
@@ -337,6 +358,7 @@ function FolderBlock({
   macros,
   selectedId,
   picked,
+  selectable,
   onSelect,
   onToggle,
   onPick,
@@ -350,6 +372,7 @@ function FolderBlock({
   macros: Macro[];
   selectedId: string | null;
   picked: string[];
+  selectable: boolean;
   onSelect: (id: string) => void;
   onToggle: (id: string, enabled: boolean) => void;
   onPick: (id: string) => void;
@@ -379,6 +402,7 @@ function FolderBlock({
           macro={m}
           active={m.id === selectedId}
           picked={picked.includes(m.id)}
+          selectable={selectable}
           onSelect={() => onSelect(m.id)}
           onToggle={() => onToggle(m.id, !m.enabled)}
           onPick={() => onPick(m.id)}
@@ -393,6 +417,7 @@ function MacroRow({
   macro,
   active,
   picked,
+  selectable,
   onSelect,
   onToggle,
   onPick,
@@ -401,6 +426,7 @@ function MacroRow({
   macro: Macro;
   active: boolean;
   picked: boolean;
+  selectable: boolean;
   onSelect: () => void;
   onToggle: () => void;
   onPick: () => void;
@@ -415,14 +441,16 @@ function MacroRow({
         active || picked ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"
       }`}
     >
-      <input
-        type="checkbox"
-        checked={picked}
-        onClick={(e) => e.stopPropagation()}
-        onChange={onPick}
-        className="h-3.5 w-3.5 shrink-0 accent-white"
-        title="Zaznacz do przeniesienia"
-      />
+      {selectable ? (
+        <input
+          type="checkbox"
+          checked={picked}
+          onClick={(e) => e.stopPropagation()}
+          onChange={onPick}
+          className="h-3.5 w-3.5 shrink-0 accent-white"
+          title="Zaznacz do przeniesienia"
+        />
+      ) : null}
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13px] text-white">{macro.name}</div>
         <div className="text-[11px] text-zinc-600">+ Spacja</div>
