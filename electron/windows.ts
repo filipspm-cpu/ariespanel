@@ -364,11 +364,16 @@ export function isMacroInjecting() {
 
 export async function pressBackspace(count: number) {
   ensureNative();
+  const n = Math.max(0, Math.min(Math.floor(count) || 0, 80));
+  if (!n) return;
   const vk = 0x08;
   const scan = MapVirtualKeyW(vk, 0);
-  for (let i = 0; i < count; i++) {
-    sendEvents([keyboardEvent(vk, scan, 0), keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
-    await sleep(4);
+  for (let i = 0; i < n; i++) {
+    sendEvents([keyboardEvent(vk, scan, 0)]);
+    await sleep(16);
+    sendEvents([keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
+    // One game frame per key, so leftover backspaces don't land after the paste.
+    await sleep(36);
   }
 }
 
@@ -389,23 +394,32 @@ async function tapVk(vk: number) {
 }
 
 function pasteWaitMs(text: string, fast?: boolean) {
-  if (fast) return Math.max(50, Math.min(260, 28 + text.length * 3));
-  return Math.max(220, Math.min(1500, 120 + text.length * 10));
+  if (fast) return Math.max(180, Math.min(480, 90 + text.length * 4));
+  return Math.max(320, Math.min(1600, 180 + text.length * 10));
+}
+
+async function clipboardReady(text: string) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    clipboard.writeText(text);
+    await sleep(attempt === 0 ? 30 : 50);
+    if (clipboard.readText() === text) return true;
+  }
+  return false;
 }
 
 async function pasteText(text: string, fast?: boolean) {
   ensureNative();
-  if (!text) return;
-  clipboard.writeText(text);
-  await sleep(fast ? 18 : 50);
+  if (!text) return false;
+  if (!(await clipboardReady(text))) return false;
   const ctrlScan = MapVirtualKeyW(VK_CONTROL, 0);
   const vScan = MapVirtualKeyW(VK_V, 0);
   sendEvents([keyboardEvent(VK_CONTROL, ctrlScan, 0)]);
-  await sleep(fast ? 12 : 25);
+  await sleep(fast ? 20 : 28);
   sendEvents([keyboardEvent(VK_V, vScan, 0)]);
-  await sleep(fast ? 16 : 30);
+  await sleep(fast ? 24 : 36);
   sendEvents([keyboardEvent(VK_V, vScan, KEYEVENTF_KEYUP), keyboardEvent(VK_CONTROL, ctrlScan, KEYEVENTF_KEYUP)]);
   await sleep(pasteWaitMs(text, fast));
+  return true;
 }
 
 function unicodeEvents(text: string): unknown[] {
@@ -439,13 +453,8 @@ async function typeLine(text: string, fast?: boolean) {
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
     if (part) {
-      clipboard.writeText(part);
-      await sleep(fast ? 8 : 20);
-      if (clipboard.readText() === part) {
-        await pasteText(part, fast);
-      } else {
-        await typeChars(part);
-      }
+      const pasted = await pasteText(part, fast);
+      if (!pasted) await typeChars(part);
     }
     if (i < parts.length - 1) await tapVk(VK_TAB);
   }
@@ -509,7 +518,8 @@ async function typeText(text: string, options: TypeTextOptions) {
       }
     }
   } finally {
-    await sleep(fast ? 25 : 60);
+    // Keep the macro text on the clipboard until the game has read Ctrl+V.
+    await sleep(fast ? 220 : 160);
     try {
       clipboard.writeText(previous);
     } catch {

@@ -28,12 +28,23 @@ function cardName(profile: { globalName?: string; username?: string; name?: stri
 }
 
 function defaultAvatarUrl(id: string) {
+  if (!/^\d+$/.test(id)) return "";
   try {
     const index = Number(BigInt(id) >> 22n) % 6;
     return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
   } catch {
     return "https://cdn.discordapp.com/embed/avatars/0.png";
   }
+}
+
+function parseAccountId(value: unknown): string {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/[a-zA-Z]/.test(raw)) {
+    const safe = raw.replace(/[^a-zA-Z0-9_-]/g, "");
+    return safe.length >= 8 ? safe : "";
+  }
+  return raw.replace(/\D/g, "");
 }
 
 function localPath() {
@@ -103,6 +114,7 @@ function parseAccounts(payload: unknown): StoredAccount[] {
       const item = row as {
         id?: string;
         discord_id?: string;
+        device_id?: string;
         name?: string;
         avatarUrl?: string;
         avatar_url?: string;
@@ -110,7 +122,7 @@ function parseAccounts(payload: unknown): StoredAccount[] {
         last_login?: string;
         updated_at?: string;
       };
-      const id = String(item.id || item.discord_id || "").replace(/\D/g, "");
+      const id = parseAccountId(item.id || item.discord_id || item.device_id);
       const name = String(item.name || "").trim();
       if (!id || !name) return null;
       return {
@@ -258,7 +270,11 @@ async function mysqlProfiles(): Promise<StoredAccount[]> {
   try {
     conn = await withTimeout(mysqlConn(), 5000);
     const [rows] = await conn.query(
-      "SELECT discord_id, name FROM panel_profiles WHERE discord_id IS NOT NULL AND discord_id <> ''",
+      `SELECT CASE WHEN discord_id IS NULL OR discord_id = '' THEN device_id ELSE discord_id END AS id,
+              name,
+              CASE WHEN discord_id IS NULL OR discord_id = '' THEN updated_at ELSE NULL END AS last_login
+       FROM panel_profiles
+       WHERE name IS NOT NULL AND TRIM(name) <> ''`,
     );
     return parseAccounts(rows);
   } catch {

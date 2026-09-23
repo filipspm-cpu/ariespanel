@@ -12,13 +12,20 @@ export interface PersistedState {
   notices: AppNotice[];
 }
 
-export async function persist(partial: Partial<PersistedState>) {
-  if (!window.synvity) return;
-  try {
-    await window.synvity.saveState(partial);
-  } catch (err) {
-    console.warn("Nie udało się zapisać stanu", err);
-  }
+let persistChain: Promise<void> = Promise.resolve();
+
+export function persist(partial: Partial<PersistedState>) {
+  const api = window.synvity;
+  if (!api) return persistChain;
+  const run = persistChain.then(async () => {
+    try {
+      await api.saveState(partial);
+    } catch (err) {
+      console.warn("Nie udało się zapisać stanu", err);
+    }
+  });
+  persistChain = run;
+  return run;
 }
 
 export async function hydrate(): Promise<PersistedState | null> {

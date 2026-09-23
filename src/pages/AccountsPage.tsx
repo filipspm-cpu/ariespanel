@@ -28,6 +28,10 @@ function formatLogin(value?: string) {
   });
 }
 
+function isDiscordId(id?: string) {
+  return /^\d{5,}$/.test(String(id || ""));
+}
+
 function AccountAvatar({ name, url }: { name: string; url?: string }) {
   const letter = name.trim().slice(0, 1).toUpperCase() || "A";
   const [failed, setFailed] = useState(false);
@@ -143,19 +147,22 @@ export function AccountsPage() {
         {!ready ? (
           <div className="accounts-empty">Ładowanie…</div>
         ) : accounts.length === 0 ? (
-          <div className="accounts-empty">Nikt jeszcze nie połączył Discorda.</div>
+          <div className="accounts-empty">Brak zapisanych kont.</div>
         ) : (
           <div className="accounts-grid">
             {accounts.map((account, index) => {
               const ranks = ranksFromRole(account.rank || "");
-              const accountId = String(account.id || "").replace(/\D/g, "");
-              const reward = rewards.find((row) => String(row.id || "").replace(/\D/g, "") === accountId);
+              const discord = isDiscordId(account.id);
+              const reward = discord
+                ? rewards.find((row) => String(row.id || "").replace(/\D/g, "") === String(account.id))
+                : undefined;
               return (
                 <div key={`${account.id || account.name}-${index}`} className="accounts-card">
                   <AccountAvatar name={account.name} url={account.avatarUrl} />
                   <div className="accounts-name">{account.name}</div>
+                  {discord ? null : <div className="accounts-meta">Tylko nick</div>}
                   <RankBadges ranks={ranks} size="xs" />
-                  {canEdit && account.id ? (
+                  {canEdit && discord ? (
                     <div className="accounts-rank-list">
                       {RANK_ORDER.map((rank) => {
                         const checked = ranks.includes(rank);

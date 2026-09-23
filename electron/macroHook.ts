@@ -72,12 +72,11 @@ function recordCharacter(character: string) {
   buffer = (buffer + character).slice(-48);
   const hit = triggers.find((trigger) => buffer.endsWith(`${trigger.sequence} `));
   if (!hit) return;
-  if (now - lastFireAt < 900) {
-    return;
-  }
+  const typed = `${hit.sequence} `;
+  buffer = buffer.slice(0, Math.max(0, buffer.length - typed.length));
+  if (now - lastFireAt < 900) return;
   lastFireAt = now;
-  buffer = "";
-  onFire?.(hit.id, hit.sequence.length + 1);
+  onFire?.(hit.id, typed.length);
 }
 
 function pollKeyboard() {

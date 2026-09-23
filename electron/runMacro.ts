@@ -117,19 +117,34 @@ const queue: Array<{ id: string; eraseCount: number }> = [];
 
 let runningId: string | null = null;
 
+function stepWillOutput(step: MacroStep | undefined): boolean {
+  if (!step) return false;
+  if (step.type === "random") return (step.children ?? []).some(stepWillOutput);
+  if (step.type === "if" || step.type === "if-else") {
+    return [...(step.children ?? []), ...(step.elseChildren ?? [])].some(stepWillOutput);
+  }
+  if (step.type === "wait") return false;
+  if (step.type === "counter") return Boolean(step.counterId);
+  if (step.type === "call-function") return Boolean(step.text);
+  if (step.type === "key-press") return Boolean(step.key || step.text);
+  return Boolean(step.text);
+}
+
 async function executeMacro(macroId: string, eraseCount: number) {
   const macros = loadState().macros;
   const macro = macros.find((m) => m.id === macroId);
   if (!macro || !macro.enabled) return;
+  const willOutput = (macro.steps ?? []).some(stepWillOutput);
+  if (eraseCount > 0 && !willOutput) return;
   runningId = macroId;
   setMacroInjecting(true);
   try {
     if (eraseCount > 0) {
-      await sleep(12);
+      await sleep(24);
       await pressBackspace(eraseCount);
-      await sleep(40);
+      await sleep(80);
     }
-    await runSteps(macro.steps, macros, { inChat: true });
+    await runSteps(macro.steps, macros, { inChat: eraseCount > 0 });
   } finally {
     runningId = null;
     setMacroInjecting(false);
@@ -158,6 +173,11 @@ async function drainMacroQueue() {
 
 export async function runMacroById(macroId: string, eraseCount: number): Promise<void> {
   if (runningId === macroId || queue.some((job) => job.id === macroId)) return;
+  setMacroInjecting(true);
   queue.push({ id: macroId, eraseCount });
-  await drainMacroQueue();
+  try {
+    await drainMacroQueue();
+  } finally {
+    setMacroInjecting(false);
+  }
 }

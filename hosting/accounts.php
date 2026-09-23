@@ -258,18 +258,25 @@ function list_accounts($mysqli) {
       );
     }
   }
-  $profiles = $mysqli->query("SELECT discord_id, name FROM panel_profiles WHERE discord_id IS NOT NULL AND discord_id <> ''");
+  $profiles = $mysqli->query("SELECT device_id, discord_id, name, updated_at FROM panel_profiles WHERE name IS NOT NULL AND TRIM(name) <> ''");
   if ($profiles) {
     while ($row = $profiles->fetch_assoc()) {
-      $id = preg_replace("/\\D+/", "", (string) $row["discord_id"]);
+      $discordId = preg_replace("/\\D+/", "", (string) $row["discord_id"]);
+      $deviceId = preg_replace("/[^a-zA-Z0-9_-]/", "", (string) $row["device_id"]);
+      $id = $discordId !== "" ? $discordId : $deviceId;
       $name = trim((string) $row["name"]);
       if ($id === "" || $name === "" || isset($seen[$id])) continue;
+      $iso = "";
+      if ($discordId === "" && isset($row["updated_at"]) && $row["updated_at"]) {
+        $ts = strtotime($row["updated_at"]);
+        if ($ts) $iso = date("c", $ts);
+      }
       $seen[$id] = true;
       $out[] = array(
         "id" => $id,
         "name" => $name,
         "avatarUrl" => "",
-        "lastLogin" => "",
+        "lastLogin" => $iso,
       );
     }
   }
