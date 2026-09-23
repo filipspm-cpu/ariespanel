@@ -1301,6 +1301,124 @@ if ($action === "noticesList" || $action === "noticesCreate" || $action === "not
   }
   json_out(notices_payload($mysqli, $discordId));
 }
+
+function faction_ids() {
+  return array(
+    "lspd",
+    "ems",
+    "lscsd",
+    "sang",
+    "gov",
+    "wn",
+    "fib",
+    "ballas",
+    "vagos",
+    "families",
+    "bloods",
+    "marabunta",
+  );
+}
+
+function ensure_factions_table($mysqli) {
+  $mysqli->query(
+    "CREATE TABLE IF NOT EXISTS panel_factions (
+      id VARCHAR(32) NOT NULL PRIMARY KEY,
+      leader VARCHAR(64) NOT NULL DEFAULT '',
+      frozen TINYINT NOT NULL DEFAULT 0,
+      updated_by VARCHAR(191) NOT NULL DEFAULT '',
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+  );
+}
+
+function factions_payload($mysqli, $discordId = "") {
+  ensure_factions_table($mysqli);
+  $stored = array();
+  $result = $mysqli->query("SELECT id, leader, frozen, updated_at FROM panel_factions");
+  if ($result) {
+    while ($row = $result->fetch_assoc()) {
+      $iso = "";
+      if (!empty($row["updated_at"])) {
+        $ts = strtotime($row["updated_at"]);
+        if ($ts) $iso = date("c", $ts);
+      }
+      $stored[$row["id"]] = array(
+        "leader" => (string) $row["leader"],
+        "frozen" => ((int) $row["frozen"]) === 1,
+        "updatedAt" => $iso,
+      );
+    }
+  }
+  $out = array();
+  foreach (faction_ids() as $id) {
+    $row = isset($stored[$id]) ? $stored[$id] : null;
+    $out[] = array(
+      "id" => $id,
+      "leader" => $row ? $row["leader"] : "",
+      "frozen" => $row ? $row["frozen"] : false,
+      "updatedAt" => $row ? $row["updatedAt"] : "",
+    );
+  }
+  return array(
+    "ok" => true,
+    "editor" => stored_has_main_developer($mysqli, $discordId),
+    "factions" => $out,
+  );
+}
+
+if ($action === "factionsList" || $action === "factionsSave") {
+  $discordId = preg_replace("/[^0-9]/", "", req_get($data, "discordId"));
+  if ($discordId === "") $discordId = preg_replace("/[^0-9]/", "", req_get($data, "discord_id"));
+  if ($discordId === "") $discordId = preg_replace("/[^0-9]/", "", req_get($_GET, "discordId"));
+  if ($action === "factionsList") {
+    json_out(factions_payload($mysqli, $discordId));
+  }
+  if ($method !== "POST") {
+    json_out(array("ok" => false, "error" => "method", "editor" => false, "factions" => array()), 405);
+  }
+  if ($discordId === "") {
+    $payload = factions_payload($mysqli, $discordId);
+    $payload["ok"] = false;
+    $payload["error"] = "login";
+    json_out($payload, 401);
+  }
+  if (!stored_has_main_developer($mysqli, $discordId)) {
+    $payload = factions_payload($mysqli, $discordId);
+    $payload["ok"] = false;
+    $payload["error"] = "forbidden";
+    json_out($payload, 403);
+  }
+  $id = strtolower(trim(req_get($data, "id")));
+  if (!in_array($id, faction_ids(), true)) {
+    $payload = factions_payload($mysqli, $discordId);
+    $payload["ok"] = false;
+    $payload["error"] = "invalid";
+    json_out($payload, 400);
+  }
+  $leader = trim(req_get($data, "leader"));
+  $leader = preg_replace("/[\\r\\n\\t]+/", " ", $leader);
+  if (function_exists("mb_substr")) $leader = mb_substr($leader, 0, 64);
+  else $leader = substr($leader, 0, 64);
+  $frozen = false;
+  if (isset($data["frozen"]) && ($data["frozen"] === true || $data["frozen"] === 1 || $data["frozen"] === "1" || $data["frozen"] === "true")) {
+    $frozen = true;
+  }
+  $flag = $frozen ? 1 : 0;
+  $name = req_get($data, "name");
+  if (function_exists("mb_substr")) $name = mb_substr($name, 0, 191);
+  else $name = substr($name, 0, 191);
+  ensure_factions_table($mysqli);
+  $stmt = $mysqli->prepare(
+    "INSERT INTO panel_factions (id, leader, frozen, updated_by) VALUES (?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE leader = VALUES(leader), frozen = VALUES(frozen), updated_by = VALUES(updated_by)"
+  );
+  if ($stmt) {
+    $stmt->bind_param("ssis", $id, $leader, $flag, $name);
+    $stmt->execute();
+  }
+  json_out(factions_payload($mysqli, $discordId));
+}
+
 if ($method === "POST" && $action === "profileSave") {
   $deviceId = preg_replace("/[^a-zA-Z0-9_-]/", "", req_get($data, "deviceId"));
   $name = req_get($data, "name");

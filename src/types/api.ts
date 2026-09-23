@@ -144,6 +144,18 @@ export interface SynvityApi {
     notices: import("./notices").PanelNotice[];
     error?: string;
   }>;
+  factionsList: () => Promise<{
+    ok: boolean;
+    editor: boolean;
+    factions: { id: string; leader: string; frozen: boolean; updatedAt?: string }[];
+    error?: string;
+  }>;
+  factionsSave: (payload: { id: string; leader: string; frozen: boolean }) => Promise<{
+    ok: boolean;
+    editor: boolean;
+    factions: { id: string; leader: string; frozen: boolean; updatedAt?: string }[];
+    error?: string;
+  }>;
   rewardsState: () => Promise<import("./rewards").RewardsState>;
   rewardsGenerate: () => Promise<import("./rewards").RewardsState>;
   rewardsRedeem: (code: string) => Promise<import("./rewards").RewardsState>;

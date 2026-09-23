@@ -17,6 +17,7 @@ import {
   Bug,
   Trophy,
   Megaphone,
+  Shield,
   type LucideIcon,
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
@@ -42,6 +43,7 @@ const icons: Record<string, LucideIcon> = {
   bug: Bug,
   trophy: Trophy,
   megaphone: Megaphone,
+  shield: Shield,
 };
 
 function NavButton({

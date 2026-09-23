@@ -11,6 +11,7 @@ import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook"
 import { runMacroById, setCountersListener, setOverlayRefresh, triggersFromMacros } from "./runMacro";
 import { createFeedback, listFeedback, updateFeedback } from "./feedback";
 import { createNotice, deleteNotice, listNotices, setNoticesPopup } from "./notices";
+import { listFactions, saveFaction } from "./factions";
 import { savePanelName } from "./profileName";
 import { askForumAi } from "./forumAi";
 import {
@@ -459,6 +460,16 @@ function registerIpc() {
     return deleteNotice(Number(payload?.id) || 0, payload?.title);
   });
   ipcMain.handle("notices:setPopup", (_e, enabled: boolean) => setNoticesPopup(Boolean(enabled)));
+  ipcMain.handle("factions:list", () => listFactions());
+  ipcMain.handle(
+    "factions:save",
+    (_e, payload: { id?: string; leader?: string; frozen?: unknown }) =>
+      saveFaction({
+        id: payload?.id || "",
+        leader: payload?.leader || "",
+        frozen: payload?.frozen,
+      }),
+  );
   ipcMain.handle("forum:open", (_e, url: string) => shell.openExternal(assertForumUrl(url)));
   ipcMain.handle("forum:ask", (_e, payload: { question?: string; passages?: unknown[] }) =>
     askForumAi({

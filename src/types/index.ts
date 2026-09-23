@@ -12,7 +12,8 @@ export type RouteId =
   | "accounts"
   | "feedback"
   | "achievements"
-  | "notices";
+  | "notices"
+  | "factions";
 
 export interface NavItem {
   id: RouteId;

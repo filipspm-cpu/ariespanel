@@ -1,4 +1,5 @@
 import { Copyright } from "@/components/Copyright";
+import { FactionLeadersEditor } from "@/components/FactionLeadersEditor";
 import { RankBadges, useAccountRanks } from "@/components/RankBadge";
 import { Toggle } from "@/components/ui/Toggle";
 import { hasMainDeveloperAccess } from "@/data/testers";
@@ -136,7 +137,8 @@ export function NoticesPage() {
           </p>
         </div>
       ) : (
-        <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+        <div className="mt-6 flex flex-col gap-4">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
           <div className="flex flex-col gap-4">
             <div className="ink-card flex items-center justify-between p-5">
               <div>
@@ -244,6 +246,8 @@ export function NoticesPage() {
               )}
             </div>
           </div>
+        </div>
+          <FactionLeadersEditor />
         </div>
       )}
       <Copyright className="settings-copyright" />

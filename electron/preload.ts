@@ -87,6 +87,9 @@ const api = {
   noticesCreate: (payload: { kind: string; title: string; body: string }) => ipcRenderer.invoke("notices:create", payload),
   noticesDelete: (payload: { id: number; title?: string }) => ipcRenderer.invoke("notices:delete", payload),
   noticesSetPopup: (enabled: boolean) => ipcRenderer.invoke("notices:setPopup", enabled),
+  factionsList: () => ipcRenderer.invoke("factions:list"),
+  factionsSave: (payload: { id: string; leader: string; frozen: boolean }) =>
+    ipcRenderer.invoke("factions:save", payload),
   appVersion: () => ipcRenderer.invoke("app:version") as Promise<string>,
   updateStatus: () => ipcRenderer.invoke("update:status"),
   updateCheck: () => ipcRenderer.invoke("update:check"),
