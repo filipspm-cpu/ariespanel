@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Sparkles } from "lucide-react";
 import { ForumMarkdown } from "@/components/ForumMarkdown";
+import { FACTION_GROUPS, FACTIONS } from "@/data/factions";
+import { FACTION_LOGOS, factionForumFocus, factionIdsForLine } from "@/data/factionLogos";
 import { forumRuleById } from "@/data/forumRules";
 import { askForum, forumPassages, searchForum, type ForumHit } from "@/data/forumIndex";
 import { useAppStore } from "@/store/useAppStore";
@@ -181,6 +183,27 @@ export function ForumPage() {
         <div className="credits-rule" />
       </div>
       <div className="studio-body">
+        <div className="forum-logos">
+          {FACTION_GROUPS.map((group) => (
+            <div key={group.id} className="forum-logo-group">
+              <div className="forum-logo-label">{group.label}</div>
+              <div className="forum-logo-row">
+                {FACTIONS.filter((faction) => faction.group === group.id).map((faction) => (
+                  <button
+                    key={faction.id}
+                    type="button"
+                    className="forum-logo"
+                    title={faction.name}
+                    onClick={() => setForumFocus(factionForumFocus(faction.id))}
+                  >
+                    <img src={FACTION_LOGOS[faction.id]} alt={faction.short} />
+                    <span>{faction.short}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
         <div className="studio-card forum-tools">
           <label className="forum-field">
             <Search size={14} />
@@ -265,7 +288,8 @@ export function ForumPage() {
           <pre className="forum-pre">
             {lines.map((line, i) => {
               const nl = i < lines.length - 1 ? "\n" : "";
-              const heading = isSectionTitle(line);
+              const logos = factionIdsForLine(line);
+              const heading = isSectionTitle(line) || logos.length > 0;
               const active =
                 activeStart != null &&
                 i >= activeStart &&
@@ -281,6 +305,9 @@ export function ForumPage() {
                 >
                   {heading ? (
                     <strong>
+                      {logos.map((id) => (
+                        <img key={id} src={FACTION_LOGOS[id]} alt="" className="forum-inline-logo" />
+                      ))}
                       <HighlightText text={line} needle={needle} />
                     </strong>
                   ) : (
