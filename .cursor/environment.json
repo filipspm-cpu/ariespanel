@@ -1,0 +1,15 @@
+{
+  "name": "ARIES",
+  "user": "ubuntu",
+  "install": "npm ci",
+  "terminals": [
+    {
+      "name": "vite",
+      "command": "npx vite"
+    },
+    {
+      "name": "electron",
+      "command": "npx wait-on tcp:5173 && for i in $(seq 1 90); do [ -S /tmp/.X11-unix/X1 ] && break; sleep 1; done; npx tsc -p tsconfig.electron.json && DISPLAY=${DISPLAY:-:1} VITE_DEV_SERVER_URL=http://localhost:5173 npx electron . --no-sandbox"
+    }
+  ]
+}
