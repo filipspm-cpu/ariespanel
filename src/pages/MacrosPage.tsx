@@ -8,7 +8,6 @@ import {
   Clock,
   Download,
   Folder,
-  FolderInput,
   FolderPlus,
   GripVertical,
   Hash,
@@ -143,6 +142,9 @@ export function MacrosPage() {
     setMacros([]);
     setSelectedId(null);
     setConfirmClear(false);
+    setPicked([]);
+    setMoveFolder("");
+    setMoveMode(false);
     setPackMsg("Usunięto wszystkie makra");
   };
 
@@ -189,9 +191,21 @@ export function MacrosPage() {
               <Plus size={15} />
             </button>
             <button
-              title="Przenieś kilka makr"
+              title={confirmClear ? "Na pewno usuń wszystkie" : "Usuń wszystkie makra"}
+              className={`rounded p-1 hover:bg-white/5 ${confirmClear ? "bg-red-500/20 text-red-300" : "hover:text-red-300"}`}
+              onClick={() => {
+                if (!macros.length) return;
+                if (confirmClear) clearAllMacros();
+                else setConfirmClear(true);
+              }}
+            >
+              <Trash2 size={15} />
+            </button>
+            <button
+              title="Przenieś makra do folderu"
               className={`rounded p-1 hover:bg-white/5 hover:text-white ${moveMode ? "bg-white/10 text-white" : ""}`}
               onClick={() => {
+                setConfirmClear(false);
                 setMoveMode((on) => {
                   if (on) {
                     setPicked([]);
@@ -201,7 +215,7 @@ export function MacrosPage() {
                 });
               }}
             >
-              <FolderInput size={15} />
+              <MoreHorizontal size={15} />
             </button>
             <button title="Wczytaj z pliku" className="rounded p-1 hover:bg-white/5 hover:text-white" onClick={() => fileRef.current?.click()}>
               <FileUp size={15} />
@@ -263,34 +277,23 @@ export function MacrosPage() {
               </div>
             </div>
           ) : null}
-          {macros.length ? (
-            confirmClear ? (
-              <div className="mt-2 flex gap-1">
-                <button
-                  type="button"
-                  className="h-8 flex-1 rounded-md border border-red-500/40 bg-red-500/15 text-[12px] font-medium text-red-300 hover:bg-red-500/25 hover:text-white"
-                  onClick={clearAllMacros}
-                >
-                  Na pewno?
-                </button>
-                <button
-                  type="button"
-                  className="h-8 rounded-md border border-white/[0.08] px-2 text-[12px] text-zinc-400 hover:bg-white/5 hover:text-white"
-                  onClick={() => setConfirmClear(false)}
-                >
-                  Anuluj
-                </button>
-              </div>
-            ) : (
+          {confirmClear && macros.length ? (
+            <div className="mt-2 flex gap-1">
               <button
                 type="button"
-                className="mt-2 flex h-8 w-full items-center justify-center gap-1.5 rounded-md border border-white/[0.08] text-[12px] text-zinc-500 hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-300"
-                onClick={() => setConfirmClear(true)}
+                className="h-8 flex-1 rounded-md border border-red-500/40 bg-red-500/15 text-[12px] font-medium text-red-300 hover:bg-red-500/25 hover:text-white"
+                onClick={clearAllMacros}
               >
-                <Trash2 size={12} />
-                Usuń wszystkie makra
+                Usuń wszystkie
               </button>
-            )
+              <button
+                type="button"
+                className="h-8 rounded-md border border-white/[0.08] px-2 text-[12px] text-zinc-400 hover:bg-white/5 hover:text-white"
+                onClick={() => setConfirmClear(false)}
+              >
+                Anuluj
+              </button>
+            </div>
           ) : null}
         </div>
         <div className="flex-1 overflow-auto px-2 pb-3">
