@@ -111,7 +111,7 @@ export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
   counters: { title: "Statystyki" },
   clicker: { title: "Auto clicker", subtitle: "Lewy przycisk myszy w pętli" },
   settings: { title: "Ustawienia systemu" },
-  accounts: { title: "Konta", subtitle: "Użytkownicy połączeni z Discordem" },
+  accounts: { title: "Konta", subtitle: "Discord i konta z samym nickiem" },
   notices: { title: "Ogłoszenia" },
   about: { title: "O aplikacji", subtitle: "ARIES — prywatny panel administracyjny" },
   credits: { title: "Autorzy" },
