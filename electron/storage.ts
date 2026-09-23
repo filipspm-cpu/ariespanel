@@ -88,6 +88,11 @@ export interface CmdSettings {
   intervalMs: number;
 }
 
+export interface ClickerSettings {
+  enabled: boolean;
+  intervalMs: number;
+}
+
 export interface AppSettings {
   language: "pl";
   username: string;
@@ -111,6 +116,7 @@ export interface AppState {
   counters: Counter[];
   overlay: OverlaySettings;
   cmd: CmdSettings;
+  clicker: ClickerSettings;
   settings: AppSettings;
   stats: {
     reportsToday: number;
@@ -188,6 +194,10 @@ const defaultState = (): AppState => ({
     reverse: false,
     pressEnter: true,
     intervalMs: 500,
+  },
+  clicker: {
+    enabled: false,
+    intervalMs: 150,
   },
   settings: {
     language: "pl",
@@ -274,6 +284,10 @@ function normalizeState(state: AppState): AppState {
     ...state,
     settings,
     macros: (state.macros ?? []).map((m) => migrateMacro(m)),
+    clicker: {
+      enabled: Boolean(state.clicker?.enabled),
+      intervalMs: Math.max(150, Number(state.clicker?.intervalMs) || 150),
+    },
   };
 }
 

@@ -70,9 +70,11 @@ export function MacrosPage() {
   const setFolders = useAppStore((s) => s.setFolders);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(macros[0]?.id ?? null);
-  const [dragId, setDragId] = useState<string | null>(null);
   const [packMsg, setPackMsg] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [dragIds, setDragIds] = useState<string[]>([]);
+  const [moveFolder, setMoveFolder] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const selected = macros.find((m) => m.id === selectedId) ?? null;
@@ -105,6 +107,23 @@ export function MacrosPage() {
     });
     setMacros([...useAppStore.getState().macros, m]);
     setSelectedId(m.id);
+  };
+
+  const moveIds = (ids: string[], folderId: string | null) => {
+    if (!ids.length) return;
+    const chosen = new Set(ids);
+    const current = useAppStore.getState().macros;
+    setMacros(current.map((m) => (chosen.has(m.id) ? migrateMacro({ ...m, folderId }) : m)));
+    setDragIds([]);
+  };
+
+  const movePicked = () => {
+    if (!moveFolder || !picked.length) return;
+    const count = picked.length;
+    moveIds(picked, moveFolder === "none" ? null : moveFolder);
+    setPicked([]);
+    setMoveFolder("");
+    setPackMsg(count === 1 ? "Przeniesiono 1 makro" : `Przeniesiono ${count} makr`);
   };
 
   const updateMacro = (id: string, patch: Partial<Macro>) => {
@@ -197,6 +216,34 @@ export function MacrosPage() {
             className="h-8 w-full rounded-md border px-2 text-[12px]"
           />
           {packMsg ? <div className="mt-2 text-[11px] text-emerald-400">{packMsg}</div> : null}
+          {picked.length ? (
+            <div className="mt-2 rounded-md border border-white/[0.08] bg-black/40 p-2">
+              <div className="text-[11px] text-zinc-400">Zaznaczono {picked.length}</div>
+              <div className="mt-1.5 flex gap-1">
+                <select
+                  value={moveFolder}
+                  onChange={(e) => setMoveFolder(e.target.value)}
+                  className="h-8 min-w-0 flex-1 rounded-md border px-1 text-[12px]"
+                >
+                  <option value="">Folder</option>
+                  <option value="none">Bez folderu</option>
+                  {folders.map((folder) => (
+                    <option key={folder.id} value={folder.id}>
+                      {folder.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={!moveFolder}
+                  onClick={movePicked}
+                  className="h-8 shrink-0 rounded-md bg-white px-2 text-[12px] font-medium text-black disabled:opacity-40"
+                >
+                  Przenieś
+                </button>
+              </div>
+            </div>
+          ) : null}
           {macros.length ? (
             confirmClear ? (
               <div className="mt-2 flex gap-1">
@@ -233,9 +280,11 @@ export function MacrosPage() {
               key={m.id}
               macro={m}
               active={m.id === selectedId}
+              picked={picked.includes(m.id)}
               onSelect={() => setSelectedId(m.id)}
               onToggle={() => updateMacro(m.id, { enabled: !m.enabled })}
-              onDragStart={() => setDragId(m.id)}
+              onPick={() => setPicked((prev) => (prev.includes(m.id) ? prev.filter((id) => id !== m.id) : [...prev, m.id]))}
+              onDragStart={() => setDragIds(picked.includes(m.id) ? picked : [m.id])}
             />
           ))}
           {folders.map((folder) => (
@@ -244,12 +293,13 @@ export function MacrosPage() {
               folder={folder}
               macros={filtered.filter((m) => m.folderId === folder.id)}
               selectedId={selectedId}
+              picked={picked}
               onSelect={setSelectedId}
               onToggle={(id, enabled) => updateMacro(id, { enabled })}
-              onDragStart={setDragId}
+              onPick={(id) => setPicked((prev) => (prev.includes(id) ? prev.filter((row) => row !== id) : [...prev, id]))}
+              onDragStart={(id) => setDragIds(picked.includes(id) ? picked : [id])}
               onDrop={() => {
-                if (dragId) updateMacro(dragId, { folderId: folder.id });
-                setDragId(null);
+                if (dragIds.length) moveIds(dragIds, folder.id);
               }}
               onRename={() => {
                 const name = window.prompt("Nazwa folderu", folder.name);
@@ -286,8 +336,10 @@ function FolderBlock({
   folder,
   macros,
   selectedId,
+  picked,
   onSelect,
   onToggle,
+  onPick,
   onDragStart,
   onDrop,
   onRename,
@@ -297,8 +349,10 @@ function FolderBlock({
   folder: MacroFolder;
   macros: Macro[];
   selectedId: string | null;
+  picked: string[];
   onSelect: (id: string) => void;
   onToggle: (id: string, enabled: boolean) => void;
+  onPick: (id: string) => void;
   onDragStart: (id: string) => void;
   onDrop: () => void;
   onRename: () => void;
@@ -324,8 +378,10 @@ function FolderBlock({
           key={m.id}
           macro={m}
           active={m.id === selectedId}
+          picked={picked.includes(m.id)}
           onSelect={() => onSelect(m.id)}
           onToggle={() => onToggle(m.id, !m.enabled)}
+          onPick={() => onPick(m.id)}
           onDragStart={() => onDragStart(m.id)}
         />
       ))}
@@ -336,14 +392,18 @@ function FolderBlock({
 function MacroRow({
   macro,
   active,
+  picked,
   onSelect,
   onToggle,
+  onPick,
   onDragStart,
 }: {
   macro: Macro;
   active: boolean;
+  picked: boolean;
   onSelect: () => void;
   onToggle: () => void;
+  onPick: () => void;
   onDragStart: () => void;
 }) {
   return (
@@ -352,9 +412,17 @@ function MacroRow({
       onDragStart={onDragStart}
       onClick={onSelect}
       className={`mb-0.5 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 ${
-        active ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"
+        active || picked ? "bg-white/[0.06]" : "hover:bg-white/[0.04]"
       }`}
     >
+      <input
+        type="checkbox"
+        checked={picked}
+        onClick={(e) => e.stopPropagation()}
+        onChange={onPick}
+        className="h-3.5 w-3.5 shrink-0 accent-white"
+        title="Zaznacz do przeniesienia"
+      />
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13px] text-white">{macro.name}</div>
         <div className="text-[11px] text-zinc-600">+ Spacja</div>

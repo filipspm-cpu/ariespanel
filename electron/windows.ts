@@ -536,3 +536,33 @@ export async function sendTextForeground(text: string, pressEnterOrOptions: bool
 export function pressKeyForeground(key: string) {
   keyTap(key);
 }
+
+const INPUT_MOUSE = 0;
+const MOUSEEVENTF_LEFTDOWN = 0x0002;
+const MOUSEEVENTF_LEFTUP = 0x0004;
+
+function mouseButton(dwFlags: number) {
+  return {
+    type: INPUT_MOUSE,
+    u: {
+      mi: {
+        dx: 0,
+        dy: 0,
+        mouseData: 0,
+        dwFlags,
+        time: 0,
+        dwExtraInfo: 0,
+      },
+    },
+  };
+}
+
+export function clickLeft(): boolean {
+  if (process.platform !== "win32") return false;
+  try {
+    sendEvents([mouseButton(MOUSEEVENTF_LEFTDOWN), mouseButton(MOUSEEVENTF_LEFTUP)]);
+    return true;
+  } catch {
+    return false;
+  }
+}

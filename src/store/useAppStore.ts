@@ -1,6 +1,7 @@
 import type {
   AppSettings,
   AppStats,
+  ClickerSettings,
   CmdSettings,
   Counter,
   Macro,
@@ -12,6 +13,7 @@ import type {
 import { persist } from "@/services/storageClient";
 import { pushRewardStats, seedRewardStats } from "@/services/rewardStats";
 import { calendarDayKey } from "@/services/todayStats";
+import { MIN_CLICK_MS } from "@/types";
 import { migrateMacro } from "@/data/defaultMacros";
 import type { Tester } from "@/data/testers";
 
@@ -29,6 +31,7 @@ export interface AppSnapshot {
   counters: Counter[];
   overlay: OverlaySettings;
   cmd: CmdSettings;
+  clicker: ClickerSettings;
   settings: AppSettings;
   stats: AppStats;
   testers: Tester[];
@@ -61,6 +64,7 @@ const defaultSnapshot = (): Omit<AppSnapshot, "route" | "searchOpen" | "searchQu
     previousLayout: null,
   },
   cmd: { pressT: false, reverse: false, pressEnter: true, intervalMs: 500 },
+  clicker: { enabled: false, intervalMs: MIN_CLICK_MS },
   settings: {
     language: "pl",
     username: "",
@@ -126,6 +130,7 @@ type State = AppSnapshot & {
   restoreOverlayPrevious: () => void;
   rememberOverlayLayout: () => void;
   patchCmd: (cmd: Partial<CmdSettings>) => void;
+  patchClicker: (clicker: Partial<ClickerSettings>) => void;
   patchSettings: (settings: Partial<AppSettings>) => void;
   patchStats: (stats: Partial<AppStats>) => void;
   setTesters: (testers: Tester[]) => void;
@@ -141,7 +146,7 @@ export const useAppStore = create<State>((set, get) => ({
   hydrated: false,
   ...defaultSnapshot(),
   setRoute: (route) => {
-    const gameRoutes: RouteId[] = ["cmd", "overlay", "macros", "counters"];
+    const gameRoutes: RouteId[] = ["cmd", "overlay", "macros", "counters", "clicker"];
     set({
       route,
       gameOpen: gameRoutes.includes(route) ? true : get().gameOpen,
@@ -207,6 +212,10 @@ export const useAppStore = create<State>((set, get) => ({
         };
       })(),
       cmd: { ...defaults.cmd, ...data.cmd },
+      clicker: {
+        enabled: Boolean(data.clicker?.enabled),
+        intervalMs: Math.max(MIN_CLICK_MS, Number(data.clicker?.intervalMs) || MIN_CLICK_MS),
+      },
       forumRuleId: typeof data.forumRuleId === "string" ? data.forumRuleId : defaults.forumRuleId,
       testers: Array.isArray((data as { testers?: Tester[] }).testers)
         ? (data as { testers: Tester[] }).testers
@@ -365,6 +374,15 @@ export const useAppStore = create<State>((set, get) => ({
     const next = { ...get().cmd, ...cmd };
     set({ cmd: next });
     void persist({ cmd: next });
+  },
+  patchClicker: (clicker) => {
+    const next = {
+      ...get().clicker,
+      ...clicker,
+      intervalMs: Math.max(MIN_CLICK_MS, Number(clicker.intervalMs ?? get().clicker.intervalMs) || MIN_CLICK_MS),
+    };
+    set({ clicker: next });
+    void persist({ clicker: next });
   },
   patchSettings: (settings) => {
     const next = { ...get().settings, ...settings };

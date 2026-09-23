@@ -18,6 +18,7 @@ import {
   Trophy,
   Megaphone,
   Shield,
+  MousePointerClick,
   type LucideIcon,
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
@@ -44,6 +45,7 @@ const icons: Record<string, LucideIcon> = {
   trophy: Trophy,
   megaphone: Megaphone,
   shield: Shield,
+  mouse: MousePointerClick,
 };
 
 function NavButton({

@@ -6,6 +6,7 @@ import { hydrate } from "@/services/storageClient";
 import { overlayCounterItems } from "@/services/overlayCounters";
 import { advanceRewardStats, pushRewardStats } from "@/services/rewardStats";
 import { msUntilNextMidnight } from "@/services/todayStats";
+import { MIN_CLICK_MS } from "@/types";
 import { useAppStore } from "@/store/useAppStore";
 
 export function App() {
@@ -39,6 +40,16 @@ export function App() {
     const wait = Math.max(0, 1400 - (Date.now() - splashStarted.current));
     const timer = window.setTimeout(() => setSplash(false), wait);
     return () => window.clearTimeout(timer);
+  }, [hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const clicker = useAppStore.getState().clicker;
+    if (!clicker?.enabled) return;
+    void window.synvity?.clickerSet?.({
+      enabled: true,
+      intervalMs: Math.max(MIN_CLICK_MS, clicker.intervalMs || MIN_CLICK_MS),
+    });
   }, [hydrated]);
 
   useEffect(() => {

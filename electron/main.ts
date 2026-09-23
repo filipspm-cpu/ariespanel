@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, native
 import fs from "fs";
 import path from "path";
 import { loadState, saveState, AppState } from "./storage";
-import { sendTextToWindow, sendTextForeground, pressKey, findGameProcess, listWindows, publicProcess, type ProcessInfo } from "./windows";
+import { sendTextToWindow, sendTextForeground, pressKey, clickLeft, findGameProcess, listWindows, publicProcess, type ProcessInfo } from "./windows";
 import { getSpotifyTrack } from "./spotify";
 import { connectDiscord } from "./discord";
 import { listDiscordAccounts, recordDiscordAccount } from "./discordAccounts";
@@ -617,6 +617,22 @@ function registerIpc() {
     return true;
   });
 
+  ipcMain.handle("clicker:set", (_e, payload: { enabled?: boolean; intervalMs?: number }) => {
+    const intervalMs = Math.max(150, Math.floor(Number(payload?.intervalMs) || 150));
+    clickerIntervalMs = intervalMs;
+    if (!payload?.enabled) {
+      clickerGen += 1;
+      clickerRunning = false;
+      return { ok: true, running: false, intervalMs, platform: process.platform };
+    }
+    if (!clickerRunning) {
+      clickerRunning = true;
+      const gen = ++clickerGen;
+      void runClicker(gen);
+    }
+    return { ok: true, running: true, intervalMs, platform: process.platform };
+  });
+
   ipcMain.handle(
     "macro:send",
     async (
@@ -649,6 +665,21 @@ function registerIpc() {
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+let clickerRunning = false;
+let clickerGen = 0;
+let clickerIntervalMs = 150;
+
+async function runClicker(gen: number) {
+  try {
+    while (gen === clickerGen) {
+      clickLeft();
+      await sleep(Math.max(150, clickerIntervalMs));
+    }
+  } finally {
+    if (gen === clickerGen) clickerRunning = false;
+  }
 }
 
 function registerShortcuts() {
@@ -732,6 +763,8 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+  clickerGen += 1;
+  clickerRunning = false;
   stopMacroHook();
   globalShortcut.unregisterAll();
 });

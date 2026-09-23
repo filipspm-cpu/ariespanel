@@ -30,6 +30,13 @@ const api = {
     pressEnter: boolean;
   }) => ipcRenderer.invoke("cmd:run", payload),
   cmdStop: () => ipcRenderer.invoke("cmd:stop"),
+  clickerSet: (payload: { enabled: boolean; intervalMs: number }) =>
+    ipcRenderer.invoke("clicker:set", payload) as Promise<{
+      ok: boolean;
+      running: boolean;
+      intervalMs: number;
+      platform: string;
+    }>,
   macroSend: (
     text: string,
     pressEnter: boolean,

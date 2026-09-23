@@ -13,7 +13,8 @@ export type RouteId =
   | "feedback"
   | "achievements"
   | "notices"
-  | "factions";
+  | "factions"
+  | "clicker";
 
 export interface NavItem {
   id: RouteId;
@@ -127,6 +128,13 @@ export interface CmdSettings {
   pressEnter: boolean;
   intervalMs: number;
 }
+
+export interface ClickerSettings {
+  enabled: boolean;
+  intervalMs: number;
+}
+
+export const MIN_CLICK_MS = 150;
 
 export interface AppSettings {
   language: "pl";

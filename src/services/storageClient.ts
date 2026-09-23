@@ -1,4 +1,4 @@
-import type { AppNotice, AppSettings, AppStats, CmdSettings, Counter, Macro, MacroFolder, OverlaySettings } from "@/types";
+import type { AppNotice, AppSettings, AppStats, ClickerSettings, CmdSettings, Counter, Macro, MacroFolder, OverlaySettings } from "@/types";
 
 export interface PersistedState {
   macros: Macro[];
@@ -6,6 +6,7 @@ export interface PersistedState {
   counters: Counter[];
   overlay: OverlaySettings;
   cmd: CmdSettings;
+  clicker: ClickerSettings;
   settings: AppSettings;
   stats: AppStats;
   notices: AppNotice[];
