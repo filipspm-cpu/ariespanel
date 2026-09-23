@@ -1,5 +1,6 @@
 import { Copyright } from "@/components/Copyright";
 import { FACTION_GROUPS, mergeFactions, type FactionRecord, type FactionView } from "@/data/factions";
+import { FACTION_LOGOS } from "@/data/factionLogos";
 import { RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -27,12 +28,12 @@ function FactionRow({ faction }: { faction: FactionView }) {
         faction.frozen ? "opacity-70" : ""
       }`}
     >
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: faction.color }} />
-          <span className="truncate text-[13px] font-medium text-white">{faction.name}</span>
+      <div className="flex min-w-0 items-center gap-3">
+        <img src={FACTION_LOGOS[faction.id]} alt="" className="h-12 w-12 shrink-0 rounded-xl object-contain" />
+        <div className="min-w-0">
+          <div className="truncate text-[13px] font-medium text-white">{faction.name}</div>
+          <div className="mt-0.5 text-[11px] text-zinc-600">{faction.short}</div>
         </div>
-        <div className="mt-0.5 pl-4 text-[11px] text-zinc-600">{faction.short}</div>
       </div>
       <div className="min-w-0">
         <div className="text-[10px] uppercase tracking-wide text-zinc-600">Lider</div>
