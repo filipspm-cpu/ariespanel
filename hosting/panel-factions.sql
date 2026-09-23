@@ -11,3 +11,19 @@ CREATE TABLE IF NOT EXISTS panel_factions (
   updated_by VARCHAR(191) NOT NULL DEFAULT '',
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Liderzy. Puste pola to frakcje bez lidera. Nie rusza flagi frozen.
+INSERT INTO panel_factions (id, leader) VALUES
+  ('lspd', ''),
+  ('ems', 'Janek Leon [#94585]'),
+  ('lscsd', 'Jacob Magnat [#39521]'),
+  ('sang', 'Mietek Blue [#18768]'),
+  ('gov', 'John Ewans [#40952]'),
+  ('wn', 'Monika Bundy [#124332]'),
+  ('fib', 'Lucas Anderson [#536]'),
+  ('ballas', 'Kawik Codeine [#58280]'),
+  ('vagos', 'Grygolek Arkadia [#82305]'),
+  ('families', 'Shadowek Vybili [#45118]'),
+  ('bloods', ''),
+  ('marabunta', '')
+ON DUPLICATE KEY UPDATE leader = VALUES(leader);
