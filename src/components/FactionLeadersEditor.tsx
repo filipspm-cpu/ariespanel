@@ -50,6 +50,7 @@ export function FactionLeadersEditor() {
         if (!result?.ok) {
           if (result?.error === "login") setMessage("Zaloguj się przez Discord.");
           else if (result?.error === "forbidden") setMessage("Tylko main developer może zmieniać liderów.");
+          else if (result?.error === "server" || result?.error === "offline") setMessage("Nie zapisano w bazie na serwerze.");
           else setMessage("Nie udało się zapisać frakcji.");
           await load();
           return;

@@ -1326,6 +1326,23 @@ function faction_ids() {
   );
 }
 
+function faction_leader_seed() {
+  return array(
+    "lspd" => "",
+    "ems" => "Janek Leon [#94585]",
+    "lscsd" => "Jacob Magnat [#39521]",
+    "sang" => "Mietek Blue [#18768]",
+    "gov" => "John Ewans [#40952]",
+    "wn" => "Monika Bundy [#124332]",
+    "fib" => "Lucas Anderson [#536]",
+    "ballas" => "Kawik Codeine [#58280]",
+    "vagos" => "Grygolek Arkadia [#82305]",
+    "families" => "Shadowek Vybili [#45118]",
+    "bloods" => "",
+    "marabunta" => "",
+  );
+}
+
 function ensure_factions_table($mysqli) {
   $mysqli->query(
     "CREATE TABLE IF NOT EXISTS panel_factions (
@@ -1336,6 +1353,13 @@ function ensure_factions_table($mysqli) {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
   );
+  $seed = faction_leader_seed();
+  $stmt = $mysqli->prepare("INSERT IGNORE INTO panel_factions (id, leader) VALUES (?, ?)");
+  if (!$stmt) return;
+  foreach ($seed as $id => $leader) {
+    $stmt->bind_param("ss", $id, $leader);
+    $stmt->execute();
+  }
 }
 
 function factions_payload($mysqli, $discordId = "") {
@@ -1368,6 +1392,7 @@ function factions_payload($mysqli, $discordId = "") {
   }
   return array(
     "ok" => true,
+    "storage" => "db",
     "editor" => stored_has_main_developer($mysqli, $discordId),
     "factions" => $out,
   );

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 
 type FactionsResult = {
   ok?: boolean;
+  error?: string;
   factions?: FactionRecord[];
 };
 
@@ -49,14 +50,25 @@ function FactionRow({ faction }: { faction: FactionView }) {
 export function FactionsPage() {
   const [factions, setFactions] = useState<FactionView[]>(() => mergeFactions([]));
   const [refreshing, setRefreshing] = useState(false);
+  const [dbError, setDbError] = useState("");
 
   const load = useCallback(async (manual = false) => {
     if (manual) setRefreshing(true);
     try {
       const result = (await window.synvity?.factionsList?.()) as FactionsResult | undefined;
       if (result?.factions) setFactions(mergeFactions(result.factions));
+      if (result?.ok === false && (result.error === "server" || result.error === "offline")) {
+        setDbError(
+          result.error === "offline"
+            ? "Brak połączenia z bazą. Widać ostatni zapis z serwera."
+            : "Baza frakcji nie odpowiada. LH.pl puszcza MySQL tylko z localhost — panel czyta liderów przez PHP na filipekweb.pl.",
+        );
+      } else {
+        setDbError("");
+      }
     } catch {
       setFactions(mergeFactions([]));
+      setDbError("Baza frakcji nie odpowiada. LH.pl puszcza MySQL tylko z localhost — panel czyta liderów przez PHP na filipekweb.pl.");
     } finally {
       setRefreshing(false);
     }
@@ -94,6 +106,12 @@ export function FactionsPage() {
           Odśwież
         </button>
       </div>
+
+      {dbError ? (
+        <p className="mt-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-200">
+          {dbError}
+        </p>
+      ) : null}
 
       <div className="mt-6 flex flex-col gap-4">
         {FACTION_GROUPS.map((group) => {
