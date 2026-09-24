@@ -550,6 +550,10 @@ export function pressKeyForeground(key: string) {
 const INPUT_MOUSE = 0;
 const MOUSEEVENTF_LEFTDOWN = 0x0002;
 const MOUSEEVENTF_LEFTUP = 0x0004;
+const MOUSEEVENTF_RIGHTDOWN = 0x0008;
+const MOUSEEVENTF_RIGHTUP = 0x0010;
+const MOUSEEVENTF_MIDDLEDOWN = 0x0020;
+const MOUSEEVENTF_MIDDLEUP = 0x0080;
 
 function mouseButton(dwFlags: number) {
   return {
@@ -571,6 +575,26 @@ export function clickLeft(): boolean {
   if (process.platform !== "win32") return false;
   try {
     sendEvents([mouseButton(MOUSEEVENTF_LEFTDOWN), mouseButton(MOUSEEVENTF_LEFTUP)]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function clickRight(): boolean {
+  if (process.platform !== "win32") return false;
+  try {
+    sendEvents([mouseButton(MOUSEEVENTF_RIGHTDOWN), mouseButton(MOUSEEVENTF_RIGHTUP)]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function clickMiddle(): boolean {
+  if (process.platform !== "win32") return false;
+  try {
+    sendEvents([mouseButton(MOUSEEVENTF_MIDDLEDOWN), mouseButton(MOUSEEVENTF_MIDDLEUP)]);
     return true;
   } catch {
     return false;

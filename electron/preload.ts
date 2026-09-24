@@ -30,11 +30,12 @@ const api = {
     pressEnter: boolean;
   }) => ipcRenderer.invoke("cmd:run", payload),
   cmdStop: () => ipcRenderer.invoke("cmd:stop"),
-  clickerSet: (payload: { enabled: boolean; intervalMs: number }) =>
+  clickerSet: (payload: { enabled: boolean; intervalMs: number; button?: "left" | "right" | "middle" }) =>
     ipcRenderer.invoke("clicker:set", payload) as Promise<{
       ok: boolean;
       running: boolean;
       intervalMs: number;
+      button: "left" | "right" | "middle";
       platform: string;
     }>,
   macroSend: (

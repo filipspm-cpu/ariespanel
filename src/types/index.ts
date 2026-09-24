@@ -129,9 +129,12 @@ export interface CmdSettings {
   intervalMs: number;
 }
 
+export type MouseButton = "left" | "right" | "middle";
+
 export interface ClickerSettings {
   enabled: boolean;
   intervalMs: number;
+  button: MouseButton;
 }
 
 export const MIN_CLICK_MS = 150;

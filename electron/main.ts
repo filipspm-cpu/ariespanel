@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, native
 import fs from "fs";
 import path from "path";
 import { loadState, saveState, AppState } from "./storage";
-import { sendTextToWindow, sendTextForeground, pressKey, clickLeft, findGameProcess, listWindows, publicProcess, type ProcessInfo } from "./windows";
+import { sendTextToWindow, sendTextForeground, pressKey, clickLeft, clickRight, clickMiddle, findGameProcess, listWindows, publicProcess, type ProcessInfo } from "./windows";
 import { getSpotifyTrack } from "./spotify";
 import { connectDiscord } from "./discord";
 import { listDiscordAccounts, recordDiscordAccount } from "./discordAccounts";
@@ -617,20 +617,23 @@ function registerIpc() {
     return true;
   });
 
-  ipcMain.handle("clicker:set", (_e, payload: { enabled?: boolean; intervalMs?: number }) => {
+  ipcMain.handle("clicker:set", (_e, payload: { enabled?: boolean; intervalMs?: number; button?: "left" | "right" | "middle" }) => {
     const intervalMs = Math.max(150, Math.floor(Number(payload?.intervalMs) || 150));
     clickerIntervalMs = intervalMs;
+    if (payload?.button) {
+      clickerButton = payload.button;
+    }
     if (!payload?.enabled) {
       clickerGen += 1;
       clickerRunning = false;
-      return { ok: true, running: false, intervalMs, platform: process.platform };
+      return { ok: true, running: false, intervalMs, button: clickerButton, platform: process.platform };
     }
     if (!clickerRunning) {
       clickerRunning = true;
       const gen = ++clickerGen;
       void runClicker(gen);
     }
-    return { ok: true, running: true, intervalMs, platform: process.platform };
+    return { ok: true, running: true, intervalMs, button: clickerButton, platform: process.platform };
   });
 
   ipcMain.handle(
@@ -670,11 +673,18 @@ function sleep(ms: number) {
 let clickerRunning = false;
 let clickerGen = 0;
 let clickerIntervalMs = 150;
+let clickerButton: "left" | "right" | "middle" = "left";
 
 async function runClicker(gen: number) {
   try {
     while (gen === clickerGen) {
-      clickLeft();
+      if (clickerButton === "right") {
+        clickRight();
+      } else if (clickerButton === "middle") {
+        clickMiddle();
+      } else {
+        clickLeft();
+      }
       await sleep(Math.max(150, clickerIntervalMs));
     }
   } finally {
