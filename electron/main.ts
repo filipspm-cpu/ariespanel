@@ -6,7 +6,7 @@ import { configureAutoclick, startAutoclick, stopAutoclick } from "./autoclick";
 import { sendTextToWindow, sendTextForeground, pressKey, findGameProcess, listWindows, publicProcess, type ProcessInfo } from "./windows";
 import { getSpotifyTrack } from "./spotify";
 import { connectDiscord } from "./discord";
-import { currentAccountBanned, listDiscordAccounts, recordDiscordAccount, setAccountBanned } from "./discordAccounts";
+import { currentAccountBanned, deleteDiscordAccount, listDiscordAccounts, recordDiscordAccount, setAccountBanned } from "./discordAccounts";
 import { refreshAccountRoles, setAccountRank } from "./testers";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
 import { runMacroById, setCountersListener, setOverlayRefresh, triggersFromMacros } from "./runMacro";
@@ -439,6 +439,9 @@ function registerIpc() {
     const rows = await setAccountBanned(String(payload?.id || ""), Boolean(payload?.banned), payload?.name);
     void enforceAccountBan();
     return rows;
+  });
+  ipcMain.handle("accounts:delete", async (_e, payload: { id?: string }) => {
+    return deleteDiscordAccount(String(payload?.id || ""));
   });
   ipcMain.handle("accounts:banStatus", () => currentAccountBanned());
   ipcMain.handle("ranks:list", () => refreshAccountRoles());

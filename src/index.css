@@ -1508,6 +1508,7 @@ textarea {
 }
 
 .accounts-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1516,6 +1517,118 @@ textarea {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(28, 28, 28, 0.98), rgba(14, 14, 14, 0.96));
+}
+
+.accounts-menu {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+}
+
+.accounts-menu-btn {
+  display: flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #d4d4d8;
+}
+
+.accounts-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.accounts-menu-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 132px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: #0a0a0a;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+.accounts-menu-item {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  padding: 8px 10px;
+  text-align: left;
+  color: #e4e4e7;
+  font-size: 12px;
+}
+
+.accounts-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.accounts-menu-item.danger {
+  color: #fda4af;
+}
+
+.accounts-privacy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #a1a1aa;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.accounts-privacy strong {
+  color: #e4e4e7;
+  font-weight: 600;
+}
+
+.settings-privacy {
+  margin-top: 14px;
+  margin-bottom: 0;
+  text-align: left;
+}
+
+.setup-discord-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: min(320px, 100%);
+}
+
+.setup-privacy {
+  max-width: 360px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #a1a1aa;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.setup-privacy-title {
+  margin-bottom: 4px;
+  color: #e4e4e7;
+  font-weight: 600;
+}
+
+.setup-privacy p {
+  margin: 0;
 }
 
 .accounts-avatar,

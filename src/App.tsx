@@ -15,7 +15,7 @@ export function App() {
   const counters = useAppStore((s) => s.counters);
   const overlay = useAppStore((s) => s.overlay);
   const hydrated = useAppStore((s) => s.hydrated);
-  const profileNameSet = useAppStore((s) => Boolean(s.settings.profileNameSet));
+  const discordId = useAppStore((s) => s.settings.discordId);
   const [splash, setSplash] = useState(true);
   const [banned, setBanned] = useState(false);
   const splashStarted = useRef(Date.now());
@@ -192,7 +192,7 @@ export function App() {
     );
   }
 
-  if (!profileNameSet) {
+  if (!discordId) {
     return <SetupNameScreen />;
   }
 

@@ -290,16 +290,17 @@ function list_accounts($mysqli) {
       );
     }
   }
-  $profiles = $mysqli->query("SELECT device_id, discord_id, name, updated_at FROM panel_profiles WHERE name IS NOT NULL AND TRIM(name) <> ''");
+  $profiles = $mysqli->query(
+    "SELECT discord_id, name, updated_at FROM panel_profiles
+     WHERE discord_id IS NOT NULL AND TRIM(discord_id) <> '' AND name IS NOT NULL AND TRIM(name) <> ''"
+  );
   if ($profiles) {
     while ($row = $profiles->fetch_assoc()) {
-      $discordId = preg_replace("/\\D+/", "", (string) $row["discord_id"]);
-      $deviceId = preg_replace("/[^a-zA-Z0-9_-]/", "", (string) $row["device_id"]);
-      $id = $discordId !== "" ? $discordId : $deviceId;
+      $id = preg_replace("/\\D+/", "", (string) $row["discord_id"]);
       $name = trim((string) $row["name"]);
-      if ($id === "" || $name === "" || isset($seen[$id])) continue;
+      if ($id === "" || strlen($id) < 5 || $name === "" || isset($seen[$id])) continue;
       $iso = "";
-      if ($discordId === "" && isset($row["updated_at"]) && $row["updated_at"]) {
+      if (isset($row["updated_at"]) && $row["updated_at"]) {
         $ts = strtotime($row["updated_at"]);
         if ($ts) $iso = date("c", $ts);
       }
@@ -1516,7 +1517,7 @@ if ($method === "POST" && preg_match("/^(promoGenerate|promoRedeem|rewardsState|
   aries_rw_dispatch($mysqli, $data, $action);
 }
 
-if ($method === "POST" && ($action === "accountBan" || $action === "accountUnban" || $action === "accountBanStatus")) {
+if ($method === "POST" && ($action === "accountBan" || $action === "accountUnban" || $action === "accountBanStatus" || $action === "accountDelete")) {
   $caller = preg_replace("/[^0-9]/", "", req_get($data, "discordId"));
   if ($caller === "") $caller = preg_replace("/[^0-9]/", "", req_get($data, "discord_id"));
   if ($action === "accountBanStatus") {
@@ -1525,6 +1526,26 @@ if ($method === "POST" && ($action === "accountBan" || $action === "accountUnban
     $bannedIds = banned_id_set($mysqli);
     $banned = ($deviceId !== "" && isset($bannedIds[$deviceId])) || ($discordId !== "" && isset($bannedIds[$discordId]));
     json_out(array("ok" => true, "banned" => $banned));
+  }
+  if ($action === "accountDelete") {
+    if (!is_developer_id($mysqli, $caller)) {
+      json_out(array("ok" => false, "error" => "forbidden", "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)), 403);
+    }
+    $target = preg_replace("/[^0-9]/", "", req_get($data, "id"));
+    if ($target === "" || $target === $caller || stored_has_main_developer($mysqli, $target)) {
+      json_out(array("ok" => false, "error" => "forbidden", "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)), 400);
+    }
+    $delAcc = $mysqli->prepare("DELETE FROM discord_accounts WHERE discord_id = ?");
+    if ($delAcc) {
+      $delAcc->bind_param("s", $target);
+      $delAcc->execute();
+    }
+    $delProf = $mysqli->prepare("DELETE FROM panel_profiles WHERE discord_id = ?");
+    if ($delProf) {
+      $delProf->bind_param("s", $target);
+      $delProf->execute();
+    }
+    json_out(array("ok" => true, "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)));
   }
   if (!stored_has_main_developer($mysqli, $caller)) {
     json_out(array("ok" => false, "error" => "forbidden", "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)), 403);

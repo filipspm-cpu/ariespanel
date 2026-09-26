@@ -280,13 +280,11 @@ async function mysqlProfiles(): Promise<StoredAccount[]> {
   try {
     conn = await withTimeout(mysqlConn(), 5000);
     const [rows] = await conn.query(
-      `SELECT CASE WHEN discord_id IS NULL OR discord_id = '' THEN device_id ELSE discord_id END AS id,
-              name,
-              CASE WHEN discord_id IS NULL OR discord_id = '' THEN updated_at ELSE NULL END AS last_login
+      `SELECT discord_id AS id, name, updated_at AS last_login
        FROM panel_profiles
-       WHERE name IS NOT NULL AND TRIM(name) <> ''`,
+       WHERE discord_id IS NOT NULL AND TRIM(discord_id) <> '' AND name IS NOT NULL AND TRIM(name) <> ''`,
     );
-    return parseAccounts(rows);
+    return parseAccounts(rows).filter((row) => /^\d{5,}$/.test(row.id));
   } catch {
     return [];
   } finally {
@@ -323,7 +321,9 @@ export async function listDiscordAccounts(): Promise<DiscordAccountCard[]> {
       mysqlProfiles(),
     ]);
     if (php) ingestRolesPayload(php);
-    const rows = mergeById(parseAccounts(php), sql, profiles, readLocal(), knownAccounts());
+    const rows = mergeById(parseAccounts(php), sql, profiles, readLocal(), knownAccounts()).filter((row) =>
+      /^\d{5,}$/.test(row.id),
+    );
     const testers = loadTesters();
     const rankById = new Map(testers.map((t) => [t.id, t.role]));
     const bannedIds = await mysqlBannedIds();
@@ -339,8 +339,41 @@ export async function listDiscordAccounts(): Promise<DiscordAccountCard[]> {
     });
     return toCards(rows);
   } catch {
-    return toCards(mergeById(readLocal(), knownAccounts()));
+    return toCards(mergeById(readLocal(), knownAccounts()).filter((row) => /^\d{5,}$/.test(row.id)));
   }
+}
+
+function callerCanManage(targetId: string) {
+  const caller = callerDiscordId();
+  if (!caller || caller === targetId) return false;
+  const row = loadTesters().find((tester) => tester.id === caller);
+  if (!row || !/dev/i.test(row.role)) return false;
+  const target = loadTesters().find((tester) => tester.id === targetId);
+  if (target && isMainDeveloperRole(target.role)) return false;
+  return true;
+}
+
+export async function deleteDiscordAccount(id: string): Promise<DiscordAccountCard[]> {
+  const target = String(id || "").replace(/\D/g, "");
+  if (!target || !callerCanManage(target)) return listDiscordAccounts();
+  writeLocal(readLocal().filter((row) => row.id !== target));
+  let conn: mysql.Connection | undefined;
+  try {
+    conn = await withTimeout(mysqlConn(), 5000);
+    await ensureTable(conn);
+    await conn.execute("DELETE FROM discord_accounts WHERE discord_id = ?", [target]);
+    await conn.execute("DELETE FROM panel_profiles WHERE discord_id = ?", [target]).catch(() => undefined);
+  } catch {
+    /* PHP below still tries */
+  } finally {
+    await conn?.end().catch(() => undefined);
+  }
+  await apiRequest("POST", {
+    action: "accountDelete",
+    id: target,
+    discordId: callerDiscordId(),
+  }).catch(() => null);
+  return listDiscordAccounts();
 }
 
 function callerDiscordId() {

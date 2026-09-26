@@ -96,6 +96,7 @@ export function SettingsPage() {
       discordGlobalName: "",
       discordAvatar: null,
       discordAvatarUrl: "",
+      profileNameSet: false,
     });
     setDiscordMsg("Rozłączono Discord.");
   };
@@ -274,12 +275,9 @@ export function SettingsPage() {
           {discordConnected ? <div className="mt-1 text-[12px] text-zinc-500">@{settings.discordUsername}</div> : null}
           <RankBadges ranks={ranks} size="md" />
           {!discordConnected ? (
-            <input
-              value={settings.username}
-              onChange={(e) => patchSettings({ username: e.target.value })}
-              className="settings-input mt-5"
-              placeholder="Twoja nazwa"
-            />
+            <p className="mt-4 text-center text-[12px] leading-5 text-zinc-500">
+              Do panelu trzeba zalogować się Discordem.
+            </p>
           ) : null}
           {discordConnected ? (
             <button onClick={disconnectDiscord} className="settings-btn mt-5 w-full" type="button">
@@ -299,6 +297,10 @@ export function SettingsPage() {
               {discordBusy ? "Łączenie…" : "Połącz z Discordem"}
             </button>
           )}
+          <div className="accounts-privacy settings-privacy">
+            <strong>ARIES nie pobiera żadnych innych informacji z Discorda.</strong>
+            <span>Zapisujemy wyłącznie ID konta Discord, nazwę z Discorda oraz avatar.</span>
+          </div>
           {discordMsg ? <div className="mt-3 text-center text-[12px] text-zinc-400">{discordMsg}</div> : null}
         </div>
 

@@ -128,6 +128,10 @@ const api = {
     ipcRenderer.invoke("accounts:setBan", payload) as Promise<
       { id?: string; name: string; avatarUrl: string; ip?: string; lastLogin?: string; rank?: string; banned?: boolean }[]
     >,
+  accountsDelete: (payload: { id: string }) =>
+    ipcRenderer.invoke("accounts:delete", payload) as Promise<
+      { id?: string; name: string; avatarUrl: string; ip?: string; lastLogin?: string; rank?: string; banned?: boolean }[]
+    >,
   accountsBanStatus: () => ipcRenderer.invoke("accounts:banStatus") as Promise<boolean>,
   onAccountBanned: (cb: (payload: { banned: boolean }) => void) => {
     const listener = (_: unknown, payload: { banned: boolean }) => cb(payload);

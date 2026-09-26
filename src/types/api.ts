@@ -127,6 +127,9 @@ export interface SynvityApi {
   accountsSetBan: (payload: { id: string; banned: boolean; name?: string }) => Promise<
     { id?: string; name: string; avatarUrl: string; ip?: string; lastLogin?: string; rank?: string; banned?: boolean }[]
   >;
+  accountsDelete: (payload: { id: string }) => Promise<
+    { id?: string; name: string; avatarUrl: string; ip?: string; lastLogin?: string; rank?: string; banned?: boolean }[]
+  >;
   accountsBanStatus: () => Promise<boolean>;
   onAccountBanned: (cb: (payload: { banned: boolean }) => void) => () => void;
   ranksList: () => Promise<{ name: string; discord: string; id: string; role: string }[]>;
