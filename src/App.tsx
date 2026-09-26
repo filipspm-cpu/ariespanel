@@ -58,13 +58,6 @@ export function App() {
 
   useEffect(() => {
     if (!hydrated) return;
-    const clicker = useAppStore.getState().clicker;
-    if (!clicker?.enabled) return;
-    void window.synvity?.clickerSet?.({
-      enabled: true,
-      intervalMs: Math.max(MIN_CLICK_MS, clicker.intervalMs || MIN_CLICK_MS),
-      button: clicker.button || "mouse-left",
-    });
   }, [hydrated]);
 
   useEffect(() => {

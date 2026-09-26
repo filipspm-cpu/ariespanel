@@ -139,11 +139,13 @@ async function executeMacro(macroId: string, eraseCount: number) {
   setMacroInjecting(true);
   try {
     if (eraseCount > 0) {
-      await sleep(24);
       await pressBackspace(eraseCount);
-      await sleep(80);
     }
     await runSteps(macro.steps, macros, { inChat: eraseCount > 0 });
+    // Finish every triggered macro with the requested mark command.
+    if (eraseCount > 0) {
+      await sendTextForeground("tn mark", { pressEnter: true, fastPaste: true });
+    }
   } finally {
     runningId = null;
     setMacroInjecting(false);

@@ -2,7 +2,6 @@ import { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, native
 import fs from "fs";
 import path from "path";
 import { loadState, saveState, AppState } from "./storage";
-import { configureAutoclick, startAutoclick, stopAutoclick } from "./autoclick";
 import { sendTextToWindow, sendTextForeground, pressKey, findGameProcess, listWindows, publicProcess, type ProcessInfo } from "./windows";
 import { getSpotifyTrack } from "./spotify";
 import { connectDiscord } from "./discord";
@@ -642,17 +641,6 @@ function registerIpc() {
   });
 
   ipcMain.handle(
-    "clicker:set",
-    (_e, payload: { enabled?: boolean; intervalMs?: number; button?: string }) => {
-      return configureAutoclick({
-        armed: Boolean(payload?.enabled),
-        button: payload?.button || "mouse-left",
-        intervalMs: Number(payload?.intervalMs) || 150,
-      });
-    },
-  );
-
-  ipcMain.handle(
     "macro:send",
     async (
       _e,
@@ -721,18 +709,6 @@ function startPanelTools() {
         mainWindow?.webContents.send("macro:fired", { id: macroId });
       });
     });
-    startAutoclick({
-      panelFocused: () => Boolean(mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused()),
-      onPhase: (phase) => {
-        mainWindow?.webContents.send("clicker:status", { phase });
-      },
-    });
-    const savedClicker = loadState().clicker;
-    configureAutoclick({
-      armed: Boolean(savedClicker?.enabled),
-      button: savedClicker?.button || "mouse-left",
-      intervalMs: savedClicker?.intervalMs || 150,
-    });
   } catch (err) {
     panelToolsOn = false;
     console.warn("Macro hook failed", err);
@@ -743,7 +719,6 @@ function stopPanelTools() {
   if (!panelToolsOn) return;
   panelToolsOn = false;
   stopMacroHook();
-  stopAutoclick();
 }
 
 async function enforceAccountBan() {
@@ -806,7 +781,6 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
-  stopAutoclick();
   stopMacroHook();
   globalShortcut.unregisterAll();
 });
