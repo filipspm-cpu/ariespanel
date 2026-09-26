@@ -1,7 +1,7 @@
 import { Copyright } from "@/components/Copyright";
 import { RankBadges, useAccountRanks } from "@/components/RankBadge";
 import { formatCash } from "@/data/achievements";
-import { EDITABLE_RANKS, RANK_ORDER, encodeRanks, hasDeveloperAccess, ranksFromRole, type AccountRank } from "@/data/testers";
+import { EDITABLE_RANKS, RANK_ORDER, encodeRanks, hasDeveloperAccess, hasMainDeveloperAccess, ranksFromRole, type AccountRank } from "@/data/testers";
 import { useAppStore } from "@/store/useAppStore";
 import type { AccountRewards } from "@/types/rewards";
 import { RefreshCw } from "lucide-react";
@@ -61,6 +61,7 @@ export function AccountsPage() {
   const myId = useAppStore((s) => s.settings.discordId);
   const myRanks = useAccountRanks(myId);
   const canEdit = hasDeveloperAccess(myRanks);
+  const canBan = hasMainDeveloperAccess(myRanks);
 
   const load = useCallback(async (manual = false) => {
     const list = window.synvity?.accountsList;
@@ -209,7 +210,7 @@ export function AccountsPage() {
                     {reward && reward.paidCash > 0 ? <div>Wypłacone: {formatCash(reward.paidCash)}</div> : null}
                     {reward?.code ? <div className="accounts-code">{reward.code}</div> : null}
                   </div>
-                  {canEdit && account.id && account.id !== myId && !ranks.includes("main-developer") ? (
+                  {canBan && account.id && account.id !== myId && !ranks.includes("main-developer") ? (
                     <button
                       type="button"
                       className={account.banned ? "accounts-unban" : "accounts-ban"}

@@ -358,7 +358,7 @@ function callerCanBan(targetId: string) {
   const caller = callerDiscordId();
   if (!caller || caller === targetId) return false;
   const row = loadTesters().find((tester) => tester.id === caller);
-  if (!row || !/dev/i.test(row.role)) return false;
+  if (!row || !isMainDeveloperRole(row.role)) return false;
   const target = loadTesters().find((tester) => tester.id === targetId);
   if (target && isMainDeveloperRole(target.role)) return false;
   return true;

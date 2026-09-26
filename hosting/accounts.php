@@ -1526,7 +1526,7 @@ if ($method === "POST" && ($action === "accountBan" || $action === "accountUnban
     $banned = ($deviceId !== "" && isset($bannedIds[$deviceId])) || ($discordId !== "" && isset($bannedIds[$discordId]));
     json_out(array("ok" => true, "banned" => $banned));
   }
-  if (!is_developer_id($mysqli, $caller)) {
+  if (!stored_has_main_developer($mysqli, $caller)) {
     json_out(array("ok" => false, "error" => "forbidden", "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)), 403);
   }
   $target = account_key(req_get($data, "id"));
