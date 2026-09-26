@@ -122,8 +122,18 @@ const api = {
   discordConnect: () => ipcRenderer.invoke("discord:connect"),
   accountsList: () =>
     ipcRenderer.invoke("accounts:list") as Promise<
-      { id?: string; name: string; avatarUrl: string; ip?: string; lastLogin?: string; rank?: string }[]
+      { id?: string; name: string; avatarUrl: string; ip?: string; lastLogin?: string; rank?: string; banned?: boolean }[]
     >,
+  accountsSetBan: (payload: { id: string; banned: boolean; name?: string }) =>
+    ipcRenderer.invoke("accounts:setBan", payload) as Promise<
+      { id?: string; name: string; avatarUrl: string; ip?: string; lastLogin?: string; rank?: string; banned?: boolean }[]
+    >,
+  accountsBanStatus: () => ipcRenderer.invoke("accounts:banStatus") as Promise<boolean>,
+  onAccountBanned: (cb: (payload: { banned: boolean }) => void) => {
+    const listener = (_: unknown, payload: { banned: boolean }) => cb(payload);
+    ipcRenderer.on("account:banned", listener);
+    return () => ipcRenderer.removeListener("account:banned", listener);
+  },
   ranksList: () => ipcRenderer.invoke("ranks:list"),
   ranksSet: (payload: { id: string; rank: string; name?: string }) => ipcRenderer.invoke("ranks:set", payload),
   forumOpen: (url: string) => ipcRenderer.invoke("forum:open", url),

@@ -13,6 +13,7 @@ type AccountCard = {
   avatarUrl: string;
   lastLogin?: string;
   rank?: string;
+  banned?: boolean;
 };
 
 function formatLogin(value?: string) {
@@ -114,6 +115,13 @@ export function AccountsPage() {
     if (next) setRewards(next);
   };
 
+  const setBanned = async (account: AccountCard, banned: boolean) => {
+    if (!account.id || !window.synvity?.accountsSetBan) return;
+    if (banned && !window.confirm(`Zbanować konto ${account.name}? Nie będzie mogło korzystać z ARIES.`)) return;
+    const rows = await window.synvity.accountsSetBan({ id: account.id, banned, name: account.name });
+    if (rows) setAccounts(rows);
+  };
+
   const changeRanks = async (account: AccountCard, next: AccountRank[]) => {
     if (!account.id || !window.synvity?.ranksSet) return;
     const encoded = encodeRanks(next.filter((rank) => rank !== "main-developer"));
@@ -157,11 +165,12 @@ export function AccountsPage() {
                 ? rewards.find((row) => String(row.id || "").replace(/\D/g, "") === String(account.id))
                 : undefined;
               return (
-                <div key={`${account.id || account.name}-${index}`} className="accounts-card">
+                <div key={`${account.id || account.name}-${index}`} className={`accounts-card${account.banned ? " is-banned" : ""}`}>
                   <AccountAvatar name={account.name} url={account.avatarUrl} />
                   <div className="accounts-name">{account.name}</div>
                   {discord ? null : <div className="accounts-meta">Tylko nick</div>}
                   <RankBadges ranks={ranks} size="xs" />
+                  {account.banned ? <div className="accounts-banned">Zbanowane</div> : null}
                   {canEdit && discord ? (
                     <div className="accounts-rank-list">
                       {RANK_ORDER.map((rank) => {
@@ -200,6 +209,15 @@ export function AccountsPage() {
                     {reward && reward.paidCash > 0 ? <div>Wypłacone: {formatCash(reward.paidCash)}</div> : null}
                     {reward?.code ? <div className="accounts-code">{reward.code}</div> : null}
                   </div>
+                  {canEdit && account.id && account.id !== myId && !ranks.includes("main-developer") ? (
+                    <button
+                      type="button"
+                      className={account.banned ? "accounts-unban" : "accounts-ban"}
+                      onClick={() => void setBanned(account, !account.banned)}
+                    >
+                      {account.banned ? "Odblokuj" : "Zbanuj"}
+                    </button>
+                  ) : null}
                   {canEdit && account.id && reward && reward.pendingCash > 0 ? (
                     <button type="button" className="accounts-pay" onClick={() => void markPaid(account.id)}>
                       Wypłacono w grze

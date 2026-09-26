@@ -117,6 +117,14 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
   );
   $mysqli->query("ALTER TABLE account_roles MODIFY rank VARCHAR(96) NOT NULL");
+  $mysqli->query(
+    "CREATE TABLE IF NOT EXISTS account_bans (
+      account_id VARCHAR(64) NOT NULL PRIMARY KEY,
+      name VARCHAR(191) NOT NULL DEFAULT '',
+      banned_by VARCHAR(64) NOT NULL DEFAULT '',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+  );
 } catch (Exception $e) {
   /* kolumny mogły już istnieć */
 }
@@ -232,9 +240,32 @@ function list_roles($mysqli) {
   return $out;
 }
 
+function account_key($raw) {
+  $text = trim((string) $raw);
+  if ($text === "") return "";
+  if (preg_match("/[a-zA-Z]/", $text)) {
+    $safe = preg_replace("/[^a-zA-Z0-9_-]/", "", $text);
+    return strlen($safe) >= 8 ? $safe : "";
+  }
+  return preg_replace("/[^0-9]/", "", $text);
+}
+
+function banned_id_set($mysqli) {
+  $set = array();
+  $result = $mysqli->query("SELECT account_id FROM account_bans");
+  if ($result) {
+    while ($row = $result->fetch_assoc()) {
+      $id = account_key($row["account_id"]);
+      if ($id !== "") $set[$id] = true;
+    }
+  }
+  return $set;
+}
+
 function list_accounts($mysqli) {
   $out = array();
   $seen = array();
+  $banned = banned_id_set($mysqli);
   $result = $mysqli->query("SELECT * FROM discord_accounts ORDER BY name ASC");
   if ($result) {
     while ($row = $result->fetch_assoc()) {
@@ -255,6 +286,7 @@ function list_accounts($mysqli) {
         "name" => $name,
         "avatarUrl" => isset($row["avatar_url"]) ? $row["avatar_url"] : "",
         "lastLogin" => $iso,
+        "banned" => isset($banned[$id]),
       );
     }
   }
@@ -277,6 +309,7 @@ function list_accounts($mysqli) {
         "name" => $name,
         "avatarUrl" => "",
         "lastLogin" => $iso,
+        "banned" => isset($banned[$id]),
       );
     }
   }
@@ -1481,6 +1514,45 @@ if ($method === "POST" && $action === "profileSave") {
 }
 if ($method === "POST" && preg_match("/^(promoGenerate|promoRedeem|rewardsState|rewardsSync|rewardsClaim|rewardsPaid|rewardsDefine|rewardsUndefine|rewardsGrant|rewardsAccounts)$/", $action)) {
   aries_rw_dispatch($mysqli, $data, $action);
+}
+
+if ($method === "POST" && ($action === "accountBan" || $action === "accountUnban" || $action === "accountBanStatus")) {
+  $caller = preg_replace("/[^0-9]/", "", req_get($data, "discordId"));
+  if ($caller === "") $caller = preg_replace("/[^0-9]/", "", req_get($data, "discord_id"));
+  if ($action === "accountBanStatus") {
+    $deviceId = account_key(req_get($data, "deviceId"));
+    $discordId = account_key(req_get($data, "discordId"));
+    $bannedIds = banned_id_set($mysqli);
+    $banned = ($deviceId !== "" && isset($bannedIds[$deviceId])) || ($discordId !== "" && isset($bannedIds[$discordId]));
+    json_out(array("ok" => true, "banned" => $banned));
+  }
+  if (!is_developer_id($mysqli, $caller)) {
+    json_out(array("ok" => false, "error" => "forbidden", "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)), 403);
+  }
+  $target = account_key(req_get($data, "id"));
+  if ($target === "" || $target === $caller || stored_has_main_developer($mysqli, $target)) {
+    json_out(array("ok" => false, "error" => "forbidden", "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)), 400);
+  }
+  if ($action === "accountBan") {
+    $name = req_get($data, "name");
+    if (function_exists("mb_substr")) $name = mb_substr($name, 0, 191);
+    else $name = substr($name, 0, 191);
+    $stmt = $mysqli->prepare(
+      "INSERT INTO account_bans (account_id, name, banned_by) VALUES (?, ?, ?)
+       ON DUPLICATE KEY UPDATE name = VALUES(name), banned_by = VALUES(banned_by)"
+    );
+    if ($stmt) {
+      $stmt->bind_param("sss", $target, $name, $caller);
+      $stmt->execute();
+    }
+  } else {
+    $stmt = $mysqli->prepare("DELETE FROM account_bans WHERE account_id = ?");
+    if ($stmt) {
+      $stmt->bind_param("s", $target);
+      $stmt->execute();
+    }
+  }
+  json_out(array("ok" => true, "accounts" => list_accounts($mysqli), "roles" => list_roles($mysqli)));
 }
 
 if ($method === "POST" && $action === "setRank") {

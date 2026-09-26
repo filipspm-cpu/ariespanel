@@ -3,6 +3,8 @@ import path from "path";
 import { app } from "electron";
 import mysql from "mysql2/promise";
 import { apiRequest } from "./accountsApi";
+import { loadPromoDevice } from "./promoDevice";
+import { loadState } from "./storage";
 import { ingestRolesPayload, loadTesters } from "./testers";
 
 export type DiscordAccountCard = {
@@ -12,6 +14,7 @@ export type DiscordAccountCard = {
   ip: string;
   lastLogin: string;
   rank: string;
+  banned: boolean;
 };
 
 type StoredAccount = DiscordAccountCard & { id: string };
@@ -80,6 +83,7 @@ function upsertLocal(account: StoredAccount) {
     ip: "",
     lastLogin: newerLogin(account.lastLogin, prev?.lastLogin),
     rank: account.rank || prev?.rank || "",
+    banned: Boolean(account.banned || prev?.banned),
   };
   const rows = readLocal().filter((row) => row.id !== account.id);
   rows.unshift(merged);
@@ -121,6 +125,7 @@ function parseAccounts(payload: unknown): StoredAccount[] {
         lastLogin?: string;
         last_login?: string;
         updated_at?: string;
+        banned?: boolean;
       };
       const id = parseAccountId(item.id || item.discord_id || item.device_id);
       const name = String(item.name || "").trim();
@@ -132,6 +137,7 @@ function parseAccounts(payload: unknown): StoredAccount[] {
         ip: "",
         lastLogin: asLogin(item.lastLogin || item.last_login || item.updated_at),
         rank: "",
+        banned: Boolean(item.banned),
       };
     })
     .filter((row): row is StoredAccount => Boolean(row));
@@ -151,6 +157,7 @@ function knownAccounts(): StoredAccount[] {
     ip: "",
     lastLogin: "",
     rank: "",
+    banned: false,
   }));
 }
 
@@ -164,6 +171,7 @@ function mergeById(...lists: StoredAccount[][]) {
           ...row,
           avatarUrl: asAvatar(row.avatarUrl),
           lastLogin: asLogin(row.lastLogin),
+          banned: Boolean(row.banned),
         });
         continue;
       }
@@ -174,6 +182,7 @@ function mergeById(...lists: StoredAccount[][]) {
         ip: "",
         lastLogin: newerLogin(asLogin(prev.lastLogin), asLogin(row.lastLogin)),
         rank: prev.rank || row.rank || "",
+        banned: Boolean(prev.banned || row.banned),
       });
     }
   }
@@ -181,13 +190,14 @@ function mergeById(...lists: StoredAccount[][]) {
 }
 
 function toCards(rows: StoredAccount[]): DiscordAccountCard[] {
-  return rows.map(({ id, name, avatarUrl, ip, lastLogin, rank }) => ({
+  return rows.map(({ id, name, avatarUrl, ip, lastLogin, rank, banned }) => ({
     id,
     name,
     avatarUrl: asAvatar(avatarUrl) || defaultAvatarUrl(id),
     ip: ip || "",
     lastLogin: asLogin(lastLogin),
     rank: rank || "",
+    banned: Boolean(banned),
   }));
 }
 
@@ -301,7 +311,7 @@ export async function recordDiscordAccount(
   const prev = readLocal().find((row) => row.id === id);
   const captureLogin = Boolean(opts?.login || !prev?.lastLogin);
   const lastLogin = captureLogin ? new Date().toISOString() : "";
-  const account = upsertLocal({ id, name, avatarUrl, ip: "", lastLogin, rank: "" });
+  const account = upsertLocal({ id, name, avatarUrl, ip: "", lastLogin, rank: "", banned: Boolean(prev?.banned) });
   await Promise.all([mysqlUpsert(account), apiRequest("POST", { id, name, avatarUrl })]);
 }
 
@@ -316,8 +326,10 @@ export async function listDiscordAccounts(): Promise<DiscordAccountCard[]> {
     const rows = mergeById(parseAccounts(php), sql, profiles, readLocal(), knownAccounts());
     const testers = loadTesters();
     const rankById = new Map(testers.map((t) => [t.id, t.role]));
+    const bannedIds = await mysqlBannedIds();
     for (const row of rows) {
       row.rank = rankById.get(row.id) || "";
+      if (bannedIds.has(row.id)) row.banned = true;
     }
     rows.sort((a, b) => {
       const ta = Date.parse(a.lastLogin || "") || 0;
@@ -329,4 +341,96 @@ export async function listDiscordAccounts(): Promise<DiscordAccountCard[]> {
   } catch {
     return toCards(mergeById(readLocal(), knownAccounts()));
   }
+}
+
+function callerDiscordId() {
+  return String(loadState().settings.discordId || "").replace(/\D/g, "");
+}
+
+function isMainDeveloperRole(role: string) {
+  return role.split(/[,|/]+/).some((part) => {
+    const token = part.trim().toLowerCase().replace(/[_\s]+/g, "-");
+    return token === "m-dev" || token === "mdev" || token.includes("main-dev");
+  });
+}
+
+function callerCanBan(targetId: string) {
+  const caller = callerDiscordId();
+  if (!caller || caller === targetId) return false;
+  const row = loadTesters().find((tester) => tester.id === caller);
+  if (!row || !/dev/i.test(row.role)) return false;
+  const target = loadTesters().find((tester) => tester.id === targetId);
+  if (target && isMainDeveloperRole(target.role)) return false;
+  return true;
+}
+
+async function ensureBans(conn: mysql.Connection) {
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS account_bans (
+      account_id VARCHAR(64) NOT NULL PRIMARY KEY,
+      name VARCHAR(191) NOT NULL DEFAULT '',
+      banned_by VARCHAR(64) NOT NULL DEFAULT '',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+}
+
+async function mysqlBannedIds(): Promise<Set<string>> {
+  let conn: mysql.Connection | undefined;
+  try {
+    conn = await withTimeout(mysqlConn(), 5000);
+    await ensureBans(conn);
+    const [rows] = await conn.query("SELECT account_id FROM account_bans");
+    const ids = new Set<string>();
+    for (const row of rows as { account_id?: string }[]) {
+      const id = parseAccountId(row.account_id);
+      if (id) ids.add(id);
+    }
+    return ids;
+  } catch {
+    return new Set();
+  } finally {
+    await conn?.end().catch(() => undefined);
+  }
+}
+
+export async function setAccountBanned(id: string, banned: boolean, name?: string): Promise<DiscordAccountCard[]> {
+  const target = parseAccountId(id);
+  if (!target || !callerCanBan(target)) return listDiscordAccounts();
+  const caller = callerDiscordId();
+  const label = String(name || "").trim().slice(0, 191);
+  let conn: mysql.Connection | undefined;
+  try {
+    conn = await withTimeout(mysqlConn(), 5000);
+    await ensureBans(conn);
+    if (banned) {
+      await conn.execute(
+        `INSERT INTO account_bans (account_id, name, banned_by) VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE name = VALUES(name), banned_by = VALUES(banned_by)`,
+        [target, label, caller],
+      );
+    } else {
+      await conn.execute("DELETE FROM account_bans WHERE account_id = ?", [target]);
+    }
+  } catch {
+    /* PHP below still tries */
+  } finally {
+    await conn?.end().catch(() => undefined);
+  }
+  await apiRequest("POST", {
+    action: banned ? "accountBan" : "accountUnban",
+    id: target,
+    name: label,
+    discordId: caller,
+  }).catch(() => null);
+  return listDiscordAccounts();
+}
+
+export async function currentAccountBanned(): Promise<boolean> {
+  const deviceId = loadPromoDevice().id;
+  const discordId = callerDiscordId();
+  const ids = await mysqlBannedIds();
+  if (ids.has(deviceId) || (discordId && ids.has(discordId))) return true;
+  const payload = await apiRequest("POST", { action: "accountBanStatus", deviceId, discordId }).catch(() => null);
+  return Boolean(payload && typeof payload === "object" && (payload as { banned?: unknown }).banned === true);
 }

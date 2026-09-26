@@ -895,6 +895,66 @@ textarea {
   color: #e4e4e7;
 }
 
+.accounts-card.is-banned {
+  border-color: rgba(244, 63, 94, 0.45);
+}
+
+.accounts-banned {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fb7185;
+}
+
+.accounts-ban,
+.accounts-unban {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.accounts-ban {
+  border: 1px solid rgba(244, 63, 94, 0.45);
+  background: rgba(244, 63, 94, 0.12);
+  color: #fda4af;
+}
+
+.accounts-unban {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: transparent;
+  color: #e4e4e7;
+}
+
+.banned-screen {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #09090b;
+  color: #f4f4f5;
+  text-align: center;
+}
+
+.banned-screen h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.banned-screen p {
+  margin: 0;
+  color: #a1a1aa;
+  font-size: 14px;
+}
+
 .accounts-pay {
   height: 28px;
   padding: 0 10px;

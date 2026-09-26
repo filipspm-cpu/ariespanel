@@ -6,7 +6,7 @@ import { configureAutoclick, startAutoclick, stopAutoclick } from "./autoclick";
 import { sendTextToWindow, sendTextForeground, pressKey, findGameProcess, listWindows, publicProcess, type ProcessInfo } from "./windows";
 import { getSpotifyTrack } from "./spotify";
 import { connectDiscord } from "./discord";
-import { listDiscordAccounts, recordDiscordAccount } from "./discordAccounts";
+import { currentAccountBanned, listDiscordAccounts, recordDiscordAccount, setAccountBanned } from "./discordAccounts";
 import { refreshAccountRoles, setAccountRank } from "./testers";
 import { startMacroHook, stopMacroHook, updateMacroTriggers } from "./macroHook";
 import { runMacroById, setCountersListener, setOverlayRefresh, triggersFromMacros } from "./runMacro";
@@ -435,6 +435,12 @@ function registerIpc() {
       return [];
     }
   });
+  ipcMain.handle("accounts:setBan", async (_e, payload: { id?: string; banned?: boolean; name?: string }) => {
+    const rows = await setAccountBanned(String(payload?.id || ""), Boolean(payload?.banned), payload?.name);
+    void enforceAccountBan();
+    return rows;
+  });
+  ipcMain.handle("accounts:banStatus", () => currentAccountBanned());
   ipcMain.handle("ranks:list", () => refreshAccountRoles());
   ipcMain.handle("ranks:set", (_e, payload: { id?: string; rank?: string; name?: string }) =>
     setAccountRank(String(payload?.id || ""), String(payload?.rank || ""), payload?.name),
@@ -699,6 +705,54 @@ app.commandLine.appendSwitch("disable-smooth-scrolling");
 app.commandLine.appendSwitch("js-flags", "--max-old-space-size=192");
 app.setAppUserModelId("com.aries.app");
 
+let panelToolsOn = false;
+
+function startPanelTools() {
+  if (panelToolsOn) return;
+  panelToolsOn = true;
+  try {
+    const savedMacros = loadState().macros;
+    updateMacroTriggers(triggersFromMacros(savedMacros));
+    startMacroHook((macroId, eraseCount) => {
+      void runMacroById(macroId, eraseCount).then(() => {
+        mainWindow?.webContents.send("macro:fired", { id: macroId });
+      });
+    });
+    startAutoclick({
+      panelFocused: () => Boolean(mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused()),
+      onPhase: (phase) => {
+        mainWindow?.webContents.send("clicker:status", { phase });
+      },
+    });
+    const savedClicker = loadState().clicker;
+    configureAutoclick({
+      armed: Boolean(savedClicker?.enabled),
+      button: savedClicker?.button || "mouse-left",
+      intervalMs: savedClicker?.intervalMs || 150,
+    });
+  } catch (err) {
+    panelToolsOn = false;
+    console.warn("Macro hook failed", err);
+  }
+}
+
+function stopPanelTools() {
+  if (!panelToolsOn) return;
+  panelToolsOn = false;
+  stopMacroHook();
+  stopAutoclick();
+}
+
+async function enforceAccountBan() {
+  const banned = await currentAccountBanned().catch(() => false);
+  if (banned) stopPanelTools();
+  else startPanelTools();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("account:banned", { banned });
+  }
+  return banned;
+}
+
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
   app.quit();
@@ -732,29 +786,10 @@ app.whenReady().then(async () => {
     persistOverlay({ editMode: false });
     createOverlayWindow(saved.overlay.displayId ?? undefined);
   }
-    try {
-      const savedMacros = loadState().macros;
-      updateMacroTriggers(triggersFromMacros(savedMacros));
-      startMacroHook((macroId, eraseCount) => {
-        void runMacroById(macroId, eraseCount).then(() => {
-          mainWindow?.webContents.send("macro:fired", { id: macroId });
-        });
-      });
-      startAutoclick({
-        panelFocused: () => Boolean(mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused()),
-        onPhase: (phase) => {
-          mainWindow?.webContents.send("clicker:status", { phase });
-        },
-      });
-      const savedClicker = loadState().clicker;
-      configureAutoclick({
-        armed: Boolean(savedClicker?.enabled),
-        button: savedClicker?.button || "mouse-left",
-        intervalMs: savedClicker?.intervalMs || 150,
-      });
-    } catch (err) {
-      console.warn("Macro hook failed", err);
-    }
+    await enforceAccountBan();
+    setInterval(() => {
+      void enforceAccountBan();
+    }, 20000);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();

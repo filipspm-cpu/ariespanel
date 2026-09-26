@@ -123,7 +123,12 @@ export interface SynvityApi {
     avatar: string | null;
     avatarUrl: string;
   }>;
-  accountsList: () => Promise<{ id?: string; name: string; avatarUrl: string; ip?: string; lastLogin?: string; rank?: string }[]>;
+  accountsList: () => Promise<{ id?: string; name: string; avatarUrl: string; ip?: string; lastLogin?: string; rank?: string; banned?: boolean }[]>;
+  accountsSetBan: (payload: { id: string; banned: boolean; name?: string }) => Promise<
+    { id?: string; name: string; avatarUrl: string; ip?: string; lastLogin?: string; rank?: string; banned?: boolean }[]
+  >;
+  accountsBanStatus: () => Promise<boolean>;
+  onAccountBanned: (cb: (payload: { banned: boolean }) => void) => () => void;
   ranksList: () => Promise<{ name: string; discord: string; id: string; role: string }[]>;
   ranksSet: (payload: { id: string; rank: string; name?: string }) => Promise<{ name: string; discord: string; id: string; role: string }[]>;
   noticesList: () => Promise<{

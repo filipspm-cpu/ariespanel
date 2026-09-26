@@ -17,6 +17,7 @@ export function App() {
   const hydrated = useAppStore((s) => s.hydrated);
   const profileNameSet = useAppStore((s) => Boolean(s.settings.profileNameSet));
   const [splash, setSplash] = useState(true);
+  const [banned, setBanned] = useState(false);
   const splashStarted = useRef(Date.now());
 
   useEffect(() => {
@@ -33,6 +34,19 @@ export function App() {
 
   useEffect(() => {
     document.getElementById("boot-splash")?.classList.add("is-hidden");
+  }, []);
+
+  useEffect(() => {
+    const pull = () => {
+      void window.synvity?.accountsBanStatus?.().then((value) => setBanned(Boolean(value)));
+    };
+    pull();
+    const off = window.synvity?.onAccountBanned?.((payload) => setBanned(Boolean(payload?.banned)));
+    const tick = window.setInterval(pull, 20000);
+    return () => {
+      off?.();
+      window.clearInterval(tick);
+    };
   }, []);
 
   useEffect(() => {
@@ -166,6 +180,16 @@ export function App() {
 
   if (splash) {
     return <LoadingScreen />;
+  }
+
+  if (banned) {
+    return (
+      <div className="banned-screen">
+        <div className="credits-kicker">ARIES</div>
+        <h1>Konto zbanowane</h1>
+        <p>To konto nie może korzystać z panelu.</p>
+      </div>
+    );
   }
 
   if (!profileNameSet) {
