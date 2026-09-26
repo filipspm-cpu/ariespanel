@@ -60,33 +60,55 @@ function formatStamp(ts: number) {
   }).format(new Date(ts));
 }
 
-function MiniChart({ points, color }: { points: { label: string; value: number }[]; color: string }) {
+function reportWord(name: string, value: number) {
+  if (!name.toLowerCase().includes("report")) return name;
+  const n = Math.abs(value);
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (n === 1) return "report";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "reporty";
+  return "reportów";
+}
+
+function MiniChart({
+  points,
+  color,
+  name,
+}: {
+  points: { label: string; value: number }[];
+  color: string;
+  name: string;
+}) {
   const max = Math.max(1, ...points.map((p) => p.value));
-  const w = 520;
-  const h = 88;
-  const pad = { l: 8, r: 8, t: 10, b: 18 };
-  const innerW = w - pad.l - pad.r;
-  const innerH = h - pad.t - pad.b;
-  const group = points.length ? innerW / points.length : innerW;
-  const barW = Math.max(3, Math.min(18, group * 0.55));
   const labelEvery = points.length > 16 ? 4 : points.length > 10 ? 2 : 1;
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="h-[88px] w-full">
-      {points.map((p, i) => {
-        const x = pad.l + i * group + group / 2;
-        const bh = (p.value / max) * innerH;
+    <div className="flex h-[112px] items-end gap-px pt-8">
+      {points.map((point, index) => {
+        const height = (point.value / max) * 100;
+        const word = reportWord(name, point.value);
         return (
-          <g key={`${p.label}-${i}`}>
-            <rect x={x - barW / 2} y={pad.t + innerH - bh} width={barW} height={Math.max(0, bh)} rx="2" fill={color}>
-              <title>{`${p.label}: ${p.value}`}</title>
-            </rect>
-            <text x={x} y={h - 4} textAnchor="middle" fill="#6e6e6e" fontSize="8">
-              {i % labelEvery === 0 ? p.label : ""}
-            </text>
-          </g>
+          <div key={`${point.label}-${index}`} className="group relative flex h-full min-w-0 flex-1 flex-col items-center justify-end">
+            <div className="pointer-events-none absolute bottom-[calc(100%-26px)] z-20 hidden -translate-y-1 whitespace-nowrap rounded-lg border border-white/10 bg-black px-2.5 py-1.5 text-center shadow-lg group-hover:block">
+              <div className="text-[13px] font-semibold tabular-nums text-white">
+                {point.value} {word}
+              </div>
+              <div className="text-[10px] text-zinc-500">zapisane w aplikacji · {point.label}</div>
+            </div>
+            <div
+              className="w-[58%] max-w-[16px] rounded-sm"
+              style={{
+                height: `${height}%`,
+                minHeight: point.value > 0 ? 3 : 0,
+                background: color,
+              }}
+            />
+            <div className="mt-1 h-3 text-[8px] leading-3 text-zinc-500">
+              {index % labelEvery === 0 ? point.label : ""}
+            </div>
+          </div>
         );
       })}
-    </svg>
+    </div>
   );
 }
 
@@ -334,7 +356,7 @@ export function CountersPage() {
             </div>
             <div className="text-[11px] text-zinc-600">{totals?.activeDays ?? 0} dni z aktywnością</div>
           </div>
-          <MiniChart points={chart} color={barColor} />
+          <MiniChart points={chart} color={barColor} name={selected.name} />
         </div>
 
         <div className="mt-4 flex shrink-0 flex-wrap items-center gap-2">

@@ -351,6 +351,7 @@ function sendEvents(events: unknown[]) {
 
 let injecting = false;
 let injectDepth = 0;
+const injectedKeys = new Map<number, number>();
 
 export function setMacroInjecting(value: boolean) {
   if (value) injectDepth += 1;
@@ -362,6 +363,19 @@ export function isMacroInjecting() {
   return injecting;
 }
 
+export function markInjectedKey(vk: number, ms = 160) {
+  injectedKeys.set(vk, Date.now() + ms);
+}
+
+export function isInjectedKey(vk: number) {
+  const until = injectedKeys.get(vk) ?? 0;
+  if (until <= Date.now()) {
+    if (until) injectedKeys.delete(vk);
+    return false;
+  }
+  return true;
+}
+
 export async function pressBackspace(count: number) {
   ensureNative();
   const n = Math.max(0, Math.min(Math.floor(count) || 0, 80));
@@ -369,6 +383,7 @@ export async function pressBackspace(count: number) {
   const vk = 0x08;
   const scan = MapVirtualKeyW(vk, 0);
   for (let i = 0; i < n; i++) {
+    markInjectedKey(vk, 90);
     sendEvents([keyboardEvent(vk, scan, 0)]);
     await sleep(16);
     sendEvents([keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
@@ -382,12 +397,14 @@ function keyTap(key: string) {
   const vkMap: Record<string, number> = { T: 0x54, Enter: VK_RETURN };
   const vk = vkMap[key] ?? key.toUpperCase().charCodeAt(0);
   const scan = MapVirtualKeyW(vk, 0);
+  markInjectedKey(vk, 80);
   sendEvents([keyboardEvent(vk, scan, 0), keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
 }
 
 async function tapVk(vk: number) {
   ensureNative();
   const scan = MapVirtualKeyW(vk, 0);
+  markInjectedKey(vk, 80);
   sendEvents([keyboardEvent(vk, scan, 0)]);
   await sleep(20);
   sendEvents([keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
@@ -411,6 +428,9 @@ async function pasteText(text: string, fast?: boolean) {
   ensureNative();
   if (!text) return false;
   if (!(await clipboardReady(text))) return false;
+  const hold = pasteWaitMs(text, fast) + 120;
+  markInjectedKey(VK_CONTROL, hold);
+  markInjectedKey(VK_V, hold);
   const ctrlScan = MapVirtualKeyW(VK_CONTROL, 0);
   const vScan = MapVirtualKeyW(VK_V, 0);
   sendEvents([keyboardEvent(VK_CONTROL, ctrlScan, 0)]);
@@ -518,8 +538,6 @@ async function typeText(text: string, options: TypeTextOptions) {
       }
     }
   } finally {
-    // Keep the macro text on the clipboard until the game has read Ctrl+V.
-    await sleep(fast ? 220 : 160);
     try {
       clipboard.writeText(previous);
     } catch {
@@ -593,6 +611,7 @@ export function tapVirtualKey(vk: number): boolean {
   try {
     ensureNative();
     const scan = MapVirtualKeyW(vk, 0);
+    markInjectedKey(vk, 80);
     sendEvents([keyboardEvent(vk, scan, 0), keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
     return true;
   } catch {

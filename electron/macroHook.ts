@@ -1,4 +1,4 @@
-import { isMacroInjecting } from "./windows";
+import { isInjectedKey } from "./windows";
 
 import type koffiDefault from "koffi";
 
@@ -84,7 +84,7 @@ function pollKeyboard() {
     const down = (GetAsyncKeyState(virtualKey) & 0x8000) !== 0;
     const wasDown = keyDown.get(virtualKey) ?? false;
     keyDown.set(virtualKey, down);
-    if (isMacroInjecting() || !down || wasDown) continue;
+    if (!down || wasDown || isInjectedKey(virtualKey)) continue;
     recordCharacter(virtualKey === VK_5 && shifted ? "%" : character);
   }
 }

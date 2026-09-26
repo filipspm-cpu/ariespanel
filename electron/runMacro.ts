@@ -164,19 +164,12 @@ async function drainMacroQueue() {
       }
     }
   } finally {
-    setMacroInjecting(false);
     draining = false;
     if (queue.length) void drainMacroQueue();
   }
 }
 
 export async function runMacroById(macroId: string, eraseCount: number): Promise<void> {
-  if (queue.some((job) => job.id === macroId)) return;
-  setMacroInjecting(true);
   queue.push({ id: macroId, eraseCount });
-  try {
-    await drainMacroQueue();
-  } finally {
-    setMacroInjecting(false);
-  }
+  void drainMacroQueue();
 }
