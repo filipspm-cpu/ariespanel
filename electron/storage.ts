@@ -91,6 +91,7 @@ export interface CmdSettings {
 export interface ClickerSettings {
   enabled: boolean;
   intervalMs: number;
+  button: string;
 }
 
 export interface AppSettings {
@@ -198,6 +199,7 @@ const defaultState = (): AppState => ({
   clicker: {
     enabled: false,
     intervalMs: 150,
+    button: "mouse-left",
   },
   settings: {
     language: "pl",
@@ -287,6 +289,7 @@ function normalizeState(state: AppState): AppState {
     clicker: {
       enabled: Boolean(state.clicker?.enabled),
       intervalMs: Math.max(150, Number(state.clicker?.intervalMs) || 150),
+      button: String(state.clicker?.button || "mouse-left").trim().slice(0, 24) || "mouse-left",
     },
   };
 }

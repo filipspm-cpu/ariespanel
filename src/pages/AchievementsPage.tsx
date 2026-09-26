@@ -8,11 +8,12 @@ import {
   formatPrize,
   MONEY_TIERS,
   taskUnlocked,
+  totalAchievementPoints,
   type AchievementCategory,
   type AchievementRarity,
 } from "@/data/achievements";
 import { hasDeveloperAccess } from "@/data/testers";
-import { pushRewardStats, rewardsErrorText } from "@/services/rewardStats";
+import { collectRewardStats, pushRewardStats, rewardsErrorText } from "@/services/rewardStats";
 import { useAppStore } from "@/store/useAppStore";
 import type { RewardsState } from "@/types/rewards";
 import { Trophy, X } from "lucide-react";
@@ -36,6 +37,27 @@ const emptyRewards = (): RewardsState => ({
 
 const TRACK = MONEY_TIERS;
 
+function creditLocal(next: RewardsState): RewardsState {
+  const local = collectRewardStats(useAppStore.getState());
+  const stats = {
+    ...emptyAchievementStats(),
+    ...(next.stats || {}),
+    reports: Math.max(Number(next.stats?.reports || 0), local.reports),
+    events: Math.max(Number(next.stats?.events || 0), local.events),
+    onlineHours: Math.max(
+      Number(next.stats?.onlineHours || 0),
+      Math.round((local.onlineMs / 3_600_000) * 100) / 100,
+    ),
+    nightReports: Math.max(Number(next.stats?.nightReports || 0), local.nightReports),
+    activeDays: Math.max(Number(next.stats?.activeDays || 0), local.activeDays),
+  };
+  return {
+    ...next,
+    stats,
+    points: Math.max(Number(next.points || 0), totalAchievementPoints(stats, next.customTasks ?? [])),
+  };
+}
+
 export function AchievementsPage() {
   const discordId = useAppStore((s) => s.settings.discordId);
   const ranks = useAccountRanks(discordId);
@@ -48,10 +70,11 @@ export function AchievementsPage() {
 
   const apply = (next: RewardsState | undefined) => {
     if (!next) return;
+    const credited = creditLocal(next);
     setRewards((prev) => ({
-      ...next,
-      customTasks: next.customTasks ?? prev.customTasks,
-      leaderboard: next.leaderboard?.length ? next.leaderboard : prev.leaderboard,
+      ...credited,
+      customTasks: credited.customTasks ?? prev.customTasks,
+      leaderboard: credited.leaderboard?.length ? credited.leaderboard : prev.leaderboard,
     }));
   };
 
@@ -63,10 +86,12 @@ export function AchievementsPage() {
       window.synvity.rewardsAccounts?.() ?? Promise.resolve([]),
     ]);
     if (next) {
-      setRewards({
-        ...next,
-        leaderboard: next.leaderboard?.length ? next.leaderboard : accounts ?? [],
-      });
+      setRewards(
+        creditLocal({
+          ...next,
+          leaderboard: next.leaderboard?.length ? next.leaderboard : accounts ?? [],
+        }),
+      );
     } else if (accounts?.length) {
       setRewards((prev) => ({ ...prev, leaderboard: accounts }));
     }

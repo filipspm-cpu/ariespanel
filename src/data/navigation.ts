@@ -109,7 +109,7 @@ export const pageMeta: Record<RouteId, { title: string; subtitle?: string }> = {
   overlay: { title: "Nakładka", subtitle: "Skonfiguruj nakładkę gry i powiadomienia" },
   macros: { title: "Makra" },
   counters: { title: "Statystyki" },
-  clicker: { title: "Auto clicker", subtitle: "Lewy przycisk myszy w pętli" },
+  clicker: { title: "Auto clicker", subtitle: "Uzbrój suwakiem, start wybranym przyciskiem" },
   settings: { title: "Ustawienia systemu" },
   accounts: { title: "Konta", subtitle: "Discord i konta z samym nickiem" },
   notices: { title: "Ogłoszenia" },

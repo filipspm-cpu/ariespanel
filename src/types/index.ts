@@ -132,6 +132,7 @@ export interface CmdSettings {
 export interface ClickerSettings {
   enabled: boolean;
   intervalMs: number;
+  button: string;
 }
 
 export const MIN_CLICK_MS = 150;

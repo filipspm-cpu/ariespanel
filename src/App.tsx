@@ -49,6 +49,7 @@ export function App() {
     void window.synvity?.clickerSet?.({
       enabled: true,
       intervalMs: Math.max(MIN_CLICK_MS, clicker.intervalMs || MIN_CLICK_MS),
+      button: clicker.button || "mouse-left",
     });
   }, [hydrated]);
 

@@ -485,7 +485,7 @@ async function readState(db: mysql.Connection, discordId: string, name: string):
   const stats: AchievementStats = {
     reports: Number(statRow?.reports || 0),
     events: Number(statRow?.events || 0),
-    onlineHours: Math.floor(Number(statRow?.online_ms || 0) / 3_600_000),
+    onlineHours: Math.round((Number(statRow?.online_ms || 0) / 3_600_000) * 100) / 100,
     nightReports: Number(statRow?.night_reports || 0),
     activeDays: Number(statRow?.active_days || 0),
     referrals,
@@ -755,7 +755,7 @@ export async function syncRewardStats(input: {
          events = GREATEST(events, VALUES(events)),
          online_ms = GREATEST(online_ms, VALUES(online_ms)),
          night_reports = GREATEST(night_reports, VALUES(night_reports)),
-         active_days = GREATEST(active_days + IF(IFNULL(DATE(updated_at), '1970-01-01') < CURDATE(), 1, 0), VALUES(active_days))`,
+         active_days = GREATEST(active_days, VALUES(active_days))`,
       [discordId, name, reports, events, onlineMs, nightReports, activeDays],
     );
     return readState(db, discordId, name);

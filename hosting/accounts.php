@@ -796,7 +796,8 @@ function aries_rw_task_points($mysqli, $stats) {
   $sum = 0;
   foreach ($tasks as $task) {
     $key = $task[0];
-    if ((int) (isset($stats[$key]) ? $stats[$key] : 0) >= $task[1]) $sum += $task[2];
+    $have = (float) (isset($stats[$key]) ? $stats[$key] : 0);
+    if ($have >= (float) $task[1]) $sum += $task[2];
   }
   return $sum;
 }
@@ -891,7 +892,7 @@ function aries_rw_sync_sql() {
        events = GREATEST(events, VALUES(events)),
        online_ms = GREATEST(online_ms, VALUES(online_ms)),
        night_reports = GREATEST(night_reports, VALUES(night_reports)),
-       active_days = GREATEST(active_days + IF(IFNULL(DATE(updated_at), '1970-01-01') < CURDATE(), 1, 0), VALUES(active_days))";
+       active_days = GREATEST(active_days, VALUES(active_days))";
 }
 
 function aries_rw_state($mysqli, $discordId) {
@@ -967,7 +968,7 @@ function aries_rw_state($mysqli, $discordId) {
     if ($row) {
       $stats["reports"] = (int) $row["reports"];
       $stats["events"] = (int) $row["events"];
-      $stats["onlineHours"] = (int) floor(((float) $row["online_ms"]) / 3600000);
+      $stats["onlineHours"] = round(((float) $row["online_ms"]) / 3600000, 2);
       $stats["nightReports"] = (int) $row["night_reports"];
       $stats["activeDays"] = (int) $row["active_days"];
       $grantedRefs = isset($row["referrals"]) ? (int) $row["referrals"] : 0;

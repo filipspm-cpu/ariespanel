@@ -277,7 +277,7 @@ function task_points($mysqli, $stats) {
     $key = $task[0];
     $need = $task[1];
     $pts = $task[2];
-    if ((int) (isset($stats[$key]) ? $stats[$key] : 0) >= $need) $sum += $pts;
+    if ((float) (isset($stats[$key]) ? $stats[$key] : 0) >= (float) $need) $sum += $pts;
   }
   return $sum;
 }
@@ -408,7 +408,7 @@ function read_state($mysqli, $discordId) {
     if ($row) {
       $stats["reports"] = (int) $row["reports"];
       $stats["events"] = (int) $row["events"];
-      $stats["onlineHours"] = (int) floor(((float) $row["online_ms"]) / 3600000);
+      $stats["onlineHours"] = round(((float) $row["online_ms"]) / 3600000, 2);
       $stats["nightReports"] = (int) $row["night_reports"];
       $stats["activeDays"] = (int) $row["active_days"];
       $grantedRefs = isset($row["referrals"]) ? (int) $row["referrals"] : 0;
@@ -596,7 +596,7 @@ if ($action === "rewardsSync") {
        events = GREATEST(events, VALUES(events)),
        online_ms = GREATEST(online_ms, VALUES(online_ms)),
        night_reports = GREATEST(night_reports, VALUES(night_reports)),
-       active_days = GREATEST(active_days + IF(IFNULL(DATE(updated_at), '1970-01-01') < CURDATE(), 1, 0), VALUES(active_days))"
+       active_days = GREATEST(active_days, VALUES(active_days))"
   );
   $stmt->bind_param("ssiisii", $discordId, $name, $reports, $events, $onlineMsStr, $night, $days);
   $stmt->execute();

@@ -64,12 +64,15 @@ export interface SynvityApi {
     pressEnter: boolean;
   }) => Promise<unknown>;
   cmdStop: () => Promise<unknown>;
-  clickerSet: (payload: { enabled: boolean; intervalMs: number }) => Promise<{
+  clickerSet: (payload: { enabled: boolean; intervalMs: number; button?: string }) => Promise<{
     ok: boolean;
     running: boolean;
+    armed: boolean;
     intervalMs: number;
     platform: string;
+    phase: "off" | "armed" | "clicking";
   }>;
+  onClickerStatus: (cb: (payload: { phase: "off" | "armed" | "clicking" }) => void) => () => void;
   macroSend: (
     text: string,
     pressEnter: boolean,

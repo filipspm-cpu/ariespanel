@@ -2,7 +2,8 @@ import { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, native
 import fs from "fs";
 import path from "path";
 import { loadState, saveState, AppState } from "./storage";
-import { sendTextToWindow, sendTextForeground, pressKey, clickLeft, findGameProcess, listWindows, publicProcess, type ProcessInfo } from "./windows";
+import { configureAutoclick, startAutoclick, stopAutoclick } from "./autoclick";
+import { sendTextToWindow, sendTextForeground, pressKey, findGameProcess, listWindows, publicProcess, type ProcessInfo } from "./windows";
 import { getSpotifyTrack } from "./spotify";
 import { connectDiscord } from "./discord";
 import { listDiscordAccounts, recordDiscordAccount } from "./discordAccounts";
@@ -128,7 +129,18 @@ function bindPanelConsole(win: BrowserWindow) {
   });
 }
 
+function revealMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
 function createMainWindow() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    revealMainWindow();
+    return;
+  }
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -150,6 +162,10 @@ function createMainWindow() {
     },
   });
   bindPanelConsole(mainWindow);
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith("http://") || url.startsWith("https://")) void shell.openExternal(url);
+    return { action: "deny" };
+  });
 
   if (isDev) {
     void mainWindow.loadURL(rendererUrl("index"));
@@ -312,9 +328,8 @@ function createTray() {
       {
         label: "Pokaż ARIES",
         click: () => {
-          if (!mainWindow) createMainWindow();
-          mainWindow?.show();
-          mainWindow?.focus();
+          if (!mainWindow || mainWindow.isDestroyed()) createMainWindow();
+          else revealMainWindow();
         },
       },
       {
@@ -617,21 +632,16 @@ function registerIpc() {
     return true;
   });
 
-  ipcMain.handle("clicker:set", (_e, payload: { enabled?: boolean; intervalMs?: number }) => {
-    const intervalMs = Math.max(150, Math.floor(Number(payload?.intervalMs) || 150));
-    clickerIntervalMs = intervalMs;
-    if (!payload?.enabled) {
-      clickerGen += 1;
-      clickerRunning = false;
-      return { ok: true, running: false, intervalMs, platform: process.platform };
-    }
-    if (!clickerRunning) {
-      clickerRunning = true;
-      const gen = ++clickerGen;
-      void runClicker(gen);
-    }
-    return { ok: true, running: true, intervalMs, platform: process.platform };
-  });
+  ipcMain.handle(
+    "clicker:set",
+    (_e, payload: { enabled?: boolean; intervalMs?: number; button?: string }) => {
+      return configureAutoclick({
+        armed: Boolean(payload?.enabled),
+        button: payload?.button || "mouse-left",
+        intervalMs: Number(payload?.intervalMs) || 150,
+      });
+    },
+  );
 
   ipcMain.handle(
     "macro:send",
@@ -667,21 +677,6 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-let clickerRunning = false;
-let clickerGen = 0;
-let clickerIntervalMs = 150;
-
-async function runClicker(gen: number) {
-  try {
-    while (gen === clickerGen) {
-      clickLeft();
-      await sleep(Math.max(150, clickerIntervalMs));
-    }
-  } finally {
-    if (gen === clickerGen) clickerRunning = false;
-  }
-}
-
 function registerShortcuts() {
   globalShortcut.register("CommandOrControl+K", () => {
     mainWindow?.webContents.send("ui:commandPalette");
@@ -707,16 +702,14 @@ app.setAppUserModelId("com.aries.app");
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
   app.quit();
-} else {
-  app.on("second-instance", () => {
-    if (!mainWindow) createMainWindow();
-    mainWindow?.show();
-    mainWindow?.focus();
-  });
+  process.exit(0);
 }
 
+app.on("second-instance", () => {
+  revealMainWindow();
+});
+
 app.whenReady().then(async () => {
-  if (!gotSingleInstanceLock) return;
   trustPublisherCert();
   await refreshAccountRoles();
   registerIpc();
@@ -747,6 +740,18 @@ app.whenReady().then(async () => {
           mainWindow?.webContents.send("macro:fired", { id: macroId });
         });
       });
+      startAutoclick({
+        panelFocused: () => Boolean(mainWindow && !mainWindow.isDestroyed() && mainWindow.isFocused()),
+        onPhase: (phase) => {
+          mainWindow?.webContents.send("clicker:status", { phase });
+        },
+      });
+      const savedClicker = loadState().clicker;
+      configureAutoclick({
+        armed: Boolean(savedClicker?.enabled),
+        button: savedClicker?.button || "mouse-left",
+        intervalMs: savedClicker?.intervalMs || 150,
+      });
     } catch (err) {
       console.warn("Macro hook failed", err);
     }
@@ -763,8 +768,7 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
-  clickerGen += 1;
-  clickerRunning = false;
+  stopAutoclick();
   stopMacroHook();
   globalShortcut.unregisterAll();
 });

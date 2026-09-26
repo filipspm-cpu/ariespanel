@@ -1,87 +1,199 @@
 import { Toggle } from "@/components/ui/Toggle";
 import { MIN_CLICK_MS } from "@/types";
 import { useAppStore } from "@/store/useAppStore";
-import { MousePointerClick } from "lucide-react";
+import { Keyboard, MousePointerClick } from "lucide-react";
 import { useEffect, useState } from "react";
+
+type Phase = "off" | "armed" | "clicking";
+
+const MOUSE_BINDS = [
+  { id: "mouse-left", label: "Lewy" },
+  { id: "mouse-right", label: "Prawy" },
+  { id: "mouse-middle", label: "Środkowy" },
+];
+
+const SPEED_MIN = MIN_CLICK_MS;
+const SPEED_MAX = 400;
+
+function buttonLabel(button: string) {
+  if (button === "mouse-left") return "LPM";
+  if (button === "mouse-right") return "PPM";
+  if (button === "mouse-middle") return "ŚPM";
+  if (button === "space") return "Spacja";
+  return button.toUpperCase();
+}
+
+function bindFromKey(event: KeyboardEvent) {
+  if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return "";
+  if (event.key === " ") return "space";
+  if (/^F([1-9]|1\d|2[0-4])$/i.test(event.key)) return event.key.toLowerCase();
+  if (event.key.length === 1 && /[a-z0-9]/i.test(event.key)) return event.key.toLowerCase();
+  return "";
+}
 
 export function ClickerPage() {
   const clicker = useAppStore((s) => s.clicker);
   const patchClicker = useAppStore((s) => s.patchClicker);
-  const [note, setNote] = useState("");
-  const [draft, setDraft] = useState(String(clicker.intervalMs));
+  const [phase, setPhase] = useState<Phase>(clicker.enabled ? "armed" : "off");
+  const [listening, setListening] = useState(false);
+  const [intervalMs, setIntervalMs] = useState(clicker.intervalMs);
 
-  const apply = async (enabled: boolean, intervalMs: number) => {
-    const interval = Math.max(MIN_CLICK_MS, Math.floor(intervalMs) || MIN_CLICK_MS);
-    patchClicker({ enabled, intervalMs: interval });
-    const result = (await window.synvity?.clickerSet?.({ enabled, intervalMs: interval })) as
-      | { ok?: boolean; platform?: string }
-      | undefined;
-    if (enabled && result?.platform && result.platform !== "win32") {
-      setNote("Przełącznik działa. Same kliknięcia lecą tylko w systemie Windows.");
-      return;
-    }
-    setNote(enabled ? "Auto clicker jest włączony." : "");
+  const push = async (patch: { enabled?: boolean; intervalMs?: number; button?: string }) => {
+    const enabled = patch.enabled ?? clicker.enabled;
+    const nextInterval = Math.max(SPEED_MIN, Math.min(SPEED_MAX, Math.floor(patch.intervalMs ?? intervalMs)));
+    const button = (patch.button ?? clicker.button ?? "mouse-left").trim() || "mouse-left";
+    setIntervalMs(nextInterval);
+    patchClicker({ enabled, intervalMs: nextInterval, button });
+    const result = await window.synvity?.clickerSet?.({ enabled, intervalMs: nextInterval, button });
+    setPhase(result?.phase ?? (enabled ? "armed" : "off"));
   };
 
   useEffect(() => {
+    const off = window.synvity?.onClickerStatus?.((payload) => {
+      if (payload?.phase) setPhase(payload.phase);
+    });
+    return () => off?.();
+  }, []);
+
+  useEffect(() => {
     if (!clicker.enabled) return;
-    void apply(true, clicker.intervalMs);
-    // Sync a saved "on" state once when the page opens.
+    void push({ enabled: true, intervalMs: clicker.intervalMs, button: clicker.button });
+    // Arm a saved toggle once. Clicking starts only from the chosen button.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const commitInterval = () => {
-    const intervalMs = Math.max(MIN_CLICK_MS, Math.floor(Number(draft) || MIN_CLICK_MS));
-    setDraft(String(intervalMs));
-    void apply(clicker.enabled, intervalMs);
-  };
+  useEffect(() => {
+    if (!listening) return;
+    const onKey = (event: KeyboardEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.key === "Escape") {
+        setListening(false);
+        return;
+      }
+      const name = bindFromKey(event);
+      if (!name) return;
+      setListening(false);
+      void push({ button: name });
+    };
+    const onMouse = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("[data-clicker-listen]")) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const button = event.button === 2 ? "mouse-right" : event.button === 1 ? "mouse-middle" : "mouse-left";
+      setListening(false);
+      void push({ button });
+    };
+    const blockMenu = (event: Event) => event.preventDefault();
+    window.addEventListener("keydown", onKey, true);
+    window.addEventListener("mousedown", onMouse, true);
+    window.addEventListener("contextmenu", blockMenu, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("mousedown", onMouse, true);
+      window.removeEventListener("contextmenu", blockMenu, true);
+    };
+  }, [listening, clicker.enabled, clicker.button, intervalMs]);
+
+  const status =
+    phase === "clicking" ? "Klika" : phase === "armed" || clicker.enabled ? "Uzbrojony" : "Wyłączony";
+  const hint =
+    phase === "clicking"
+      ? `Jeszcze raz ${buttonLabel(clicker.button || "mouse-left")} poza panelem zatrzymuje serię.`
+      : clicker.enabled
+        ? `Naciśnij ${buttonLabel(clicker.button || "mouse-left")} w grze, żeby zacząć. Suwak sam nie klika.`
+        : "Suwak tylko uzbraja kliker. Start jest na wybranym przycisku.";
 
   return (
     <div className="ink-page overflow-auto p-6">
       <div>
         <h1 className="text-[26px] font-semibold tracking-tight text-white">Auto clicker</h1>
-        <p className="mt-1 text-[13px] text-zinc-500">Lewy przycisk myszy klika w kółko, dopóki jest włączony.</p>
+        <p className="mt-1 max-w-xl text-[13px] text-zinc-500">
+          Wybierz przycisk, uzbrój suwakiem i włącz klikanie dopiero tym przyciskiem.
+        </p>
       </div>
 
-      <div className="mt-6 flex max-w-xl flex-col gap-4">
-        <div className="ink-card flex items-center justify-between p-5">
-          <div className="flex items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.06] text-white">
-              <MousePointerClick size={16} />
-            </span>
+      <div className="clicker-shell">
+        <div className="ink-card clicker-status">
+          <div className="flex items-center gap-4">
+            <span className={`clicker-orb ${phase === "clicking" ? "clicking" : clicker.enabled ? "armed" : ""}`} />
             <div>
-              <div className="text-[14px] font-medium text-white">{clicker.enabled ? "Włączony" : "Wyłączony"}</div>
-              <div className="text-[12px] text-zinc-500">On albo off</div>
+              <div className="text-[18px] font-semibold tracking-tight text-white">{status}</div>
+              <div className="mt-1 max-w-sm text-[12px] leading-5 text-zinc-500">{hint}</div>
             </div>
           </div>
           <Toggle
             checked={clicker.enabled}
             onChange={(enabled) => {
-              const intervalMs = Math.max(MIN_CLICK_MS, Math.floor(Number(draft) || clicker.intervalMs));
-              setDraft(String(intervalMs));
-              void apply(enabled, intervalMs);
+              void push({ enabled });
             }}
           />
         </div>
 
-        <div className="ink-card p-5">
-          <label className="block text-[13px] font-medium text-white">
-            Odstęp między kliknięciami (ms)
-            <input
-              type="number"
-              min={MIN_CLICK_MS}
-              step={10}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value.replace(/[^\d]/g, "").slice(0, 6))}
-              onBlur={commitInterval}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") e.currentTarget.blur();
-              }}
-              className="mt-2 h-10 w-40 rounded-md border px-3 text-[13px]"
-            />
-          </label>
-          <p className="mt-2 text-[12px] text-zinc-500">Minimum {MIN_CLICK_MS} ms.</p>
-          {note ? <div className="mt-3 text-[12px] text-zinc-400">{note}</div> : null}
+        <div className="ink-card clicker-card">
+          <div className="flex items-center gap-2 text-[13px] font-medium text-white">
+            <MousePointerClick size={15} />
+            Przycisk
+          </div>
+          <p className="mt-1 text-[12px] text-zinc-500">Ten przycisk włącza i wyłącza serię, kiedy kliker jest uzbrojony.</p>
+          <div className="clicker-row">
+            <button
+              type="button"
+              data-clicker-listen
+              className={`clicker-key ${listening ? "listening" : ""}`}
+              onClick={() => setListening((value) => !value)}
+            >
+              {listening ? "…" : buttonLabel(clicker.button || "mouse-left")}
+            </button>
+            <div className="min-w-0 flex-1">
+              <div className="clicker-binds">
+                {MOUSE_BINDS.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    data-clicker-listen
+                    className={`clicker-chip ${clicker.button === item.id ? "on" : ""}`}
+                    onClick={() => void push({ button: item.id })}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="clicker-listen" data-clicker-listen onClick={() => setListening(true)}>
+                <Keyboard size={13} />
+                {listening ? "Naciśnij klawisz albo przycisk myszy. Esc anuluje." : "Ustaw inny klawisz"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="ink-card clicker-card">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <div className="text-[13px] font-medium text-white">Tempo</div>
+              <div className="mt-1 text-[12px] text-zinc-500">Odstęp między kliknięciami.</div>
+            </div>
+            <div className="text-[22px] font-semibold tabular-nums text-white">
+              {intervalMs}
+              <span className="ml-1 text-[12px] font-medium text-zinc-500">ms</span>
+            </div>
+          </div>
+          <input
+            className="hud-slider mt-4"
+            type="range"
+            min={SPEED_MIN}
+            max={SPEED_MAX}
+            step={10}
+            value={Math.min(SPEED_MAX, Math.max(SPEED_MIN, intervalMs))}
+            onChange={(event) => setIntervalMs(Number(event.target.value))}
+            onPointerUp={(event) => void push({ intervalMs: Number(event.currentTarget.value) })}
+            onKeyUp={(event) => void push({ intervalMs: Number(event.currentTarget.value) })}
+          />
+          <div className="mt-2 flex justify-between text-[11px] text-zinc-600">
+            <span>Szybciej</span>
+            <span>Wolniej</span>
+          </div>
         </div>
       </div>
     </div>

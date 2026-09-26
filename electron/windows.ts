@@ -487,7 +487,7 @@ async function typeText(text: string, options: TypeTextOptions) {
   const fast = Boolean(options.fastPaste);
   try {
     const chatLines = Boolean(options.pressT || options.enterEachLine);
-    const reopenChat = Boolean(options.pressT) || chatLines;
+    const reopenChat = Boolean(options.pressT);
     const rawLines = chatLines
       ? splitChatLines(text)
       : text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
@@ -550,6 +550,10 @@ export function pressKeyForeground(key: string) {
 const INPUT_MOUSE = 0;
 const MOUSEEVENTF_LEFTDOWN = 0x0002;
 const MOUSEEVENTF_LEFTUP = 0x0004;
+const MOUSEEVENTF_RIGHTDOWN = 0x0008;
+const MOUSEEVENTF_RIGHTUP = 0x0010;
+const MOUSEEVENTF_MIDDLEDOWN = 0x0020;
+const MOUSEEVENTF_MIDDLEUP = 0x0040;
 
 function mouseButton(dwFlags: number) {
   return {
@@ -568,9 +572,28 @@ function mouseButton(dwFlags: number) {
 }
 
 export function clickLeft(): boolean {
+  return clickMouse("left");
+}
+
+export function clickMouse(button: "left" | "right" | "middle"): boolean {
+  if (process.platform !== "win32") return false;
+  const down =
+    button === "right" ? MOUSEEVENTF_RIGHTDOWN : button === "middle" ? MOUSEEVENTF_MIDDLEDOWN : MOUSEEVENTF_LEFTDOWN;
+  const up = button === "right" ? MOUSEEVENTF_RIGHTUP : button === "middle" ? MOUSEEVENTF_MIDDLEUP : MOUSEEVENTF_LEFTUP;
+  try {
+    sendEvents([mouseButton(down), mouseButton(up)]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function tapVirtualKey(vk: number): boolean {
   if (process.platform !== "win32") return false;
   try {
-    sendEvents([mouseButton(MOUSEEVENTF_LEFTDOWN), mouseButton(MOUSEEVENTF_LEFTUP)]);
+    ensureNative();
+    const scan = MapVirtualKeyW(vk, 0);
+    sendEvents([keyboardEvent(vk, scan, 0), keyboardEvent(vk, scan, KEYEVENTF_KEYUP)]);
     return true;
   } catch {
     return false;

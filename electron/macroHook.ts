@@ -18,7 +18,6 @@ type Trigger = { id: string; sequence: string };
 let timer: ReturnType<typeof setInterval> | null = null;
 let buffer = "";
 let lastInputAt = 0;
-let lastFireAt = 0;
 let triggers: Trigger[] = [];
 let onFire: ((id: string, eraseCount: number) => void) | null = null;
 const keyDown = new Map<number, boolean>();
@@ -74,8 +73,6 @@ function recordCharacter(character: string) {
   if (!hit) return;
   const typed = `${hit.sequence} `;
   buffer = buffer.slice(0, Math.max(0, buffer.length - typed.length));
-  if (now - lastFireAt < 900) return;
-  lastFireAt = now;
   onFire?.(hit.id, typed.length);
 }
 

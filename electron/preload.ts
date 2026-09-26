@@ -30,13 +30,20 @@ const api = {
     pressEnter: boolean;
   }) => ipcRenderer.invoke("cmd:run", payload),
   cmdStop: () => ipcRenderer.invoke("cmd:stop"),
-  clickerSet: (payload: { enabled: boolean; intervalMs: number }) =>
+  clickerSet: (payload: { enabled: boolean; intervalMs: number; button?: string }) =>
     ipcRenderer.invoke("clicker:set", payload) as Promise<{
       ok: boolean;
       running: boolean;
+      armed: boolean;
       intervalMs: number;
       platform: string;
+      phase: "off" | "armed" | "clicking";
     }>,
+  onClickerStatus: (cb: (payload: { phase: "off" | "armed" | "clicking" }) => void) => {
+    const listener = (_: unknown, payload: { phase: "off" | "armed" | "clicking" }) => cb(payload);
+    ipcRenderer.on("clicker:status", listener);
+    return () => ipcRenderer.removeListener("clicker:status", listener);
+  },
   macroSend: (
     text: string,
     pressEnter: boolean,

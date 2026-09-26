@@ -64,7 +64,7 @@ const defaultSnapshot = (): Omit<AppSnapshot, "route" | "searchOpen" | "searchQu
     previousLayout: null,
   },
   cmd: { pressT: false, reverse: false, pressEnter: true, intervalMs: 500 },
-  clicker: { enabled: false, intervalMs: MIN_CLICK_MS },
+  clicker: { enabled: false, intervalMs: MIN_CLICK_MS, button: "mouse-left" },
   settings: {
     language: "pl",
     username: "",
@@ -215,6 +215,7 @@ export const useAppStore = create<State>((set, get) => ({
       clicker: {
         enabled: Boolean(data.clicker?.enabled),
         intervalMs: Math.max(MIN_CLICK_MS, Number(data.clicker?.intervalMs) || MIN_CLICK_MS),
+        button: String(data.clicker?.button || "mouse-left").trim() || "mouse-left",
       },
       forumRuleId: typeof data.forumRuleId === "string" ? data.forumRuleId : defaults.forumRuleId,
       testers: Array.isArray((data as { testers?: Tester[] }).testers)

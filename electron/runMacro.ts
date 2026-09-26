@@ -72,19 +72,18 @@ async function runStep(step: MacroStep, macros: Macro[], ctx: { inChat: boolean 
     return;
   }
   if (step.text) {
-    const chat =
-      Boolean(step.pressT || step.enterEachLine) ||
-      (step.type === "multiline-text" && step.pressT == null && step.enterEachLine == null);
+    const eachLine = Boolean(step.enterEachLine) || (step.type === "multiline-text" && Boolean(step.pressT));
+    const openChat = Boolean(step.pressT);
     await withInjecting(async () => {
       await sendTextForeground(step.text, {
-        pressEnter: Boolean(step.pressEnter) || chat,
-        enterEachLine: chat,
-        pressT: chat,
+        pressEnter: Boolean(step.pressEnter) || eachLine,
+        enterEachLine: eachLine,
+        pressT: openChat,
         skipFirstT: true,
-        fastPaste: !chat,
+        fastPaste: !eachLine && !openChat,
       });
     });
-    if (chat) ctx.inChat = false;
+    if (eachLine || openChat) ctx.inChat = false;
     await sleep(8);
   }
 }
@@ -172,7 +171,7 @@ async function drainMacroQueue() {
 }
 
 export async function runMacroById(macroId: string, eraseCount: number): Promise<void> {
-  if (runningId === macroId || queue.some((job) => job.id === macroId)) return;
+  if (queue.some((job) => job.id === macroId)) return;
   setMacroInjecting(true);
   queue.push({ id: macroId, eraseCount });
   try {
