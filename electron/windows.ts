@@ -1,7 +1,7 @@
 import { clipboard } from "electron";
 
 import type koffiDefault from "koffi";
-import { pickGameWindow } from "./gameWindowScore";
+import { pickGameWindow, scoreGameWindow } from "./gameWindowScore";
 
 let koffi: typeof koffiDefault;
 let SendInput: (n: number, p: unknown, cb: number) => number;
@@ -11,22 +11,12 @@ let BringWindowToTop: (h: unknown) => boolean;
 let ShowWindow: (h: unknown, n: number) => boolean;
 let GetForegroundWindow: () => unknown;
 let GetWindowThreadProcessId: (h: unknown, pid: Buffer) => number;
-let AttachThreadInput: (a: number, b: number, f: boolean) => boolean;
-let GetCurrentThreadId: () => number;
 let AllowSetForegroundWindow: (pid: number) => boolean;
 let IsWindowVisible: (h: unknown) => boolean;
 let IsWindow: (h: unknown) => boolean;
-let IsHungAppWindow: (h: unknown) => boolean;
 let GetClassNameW: (h: unknown, buf: Buffer, n: number) => number;
-let SendMessageTimeoutW: (
-  h: unknown,
-  msg: number,
-  wParam: number,
-  lParam: Buffer,
-  flags: number,
-  timeout: number,
-  result: Buffer,
-) => number;
+let GetWindowTextW: (h: unknown, buf: Buffer, n: number) => number;
+let GetWindow: (h: unknown, cmd: number) => unknown;
 let EnumWindowsProc: unknown;
 let EnumWindows: (cb: unknown, lp: number) => boolean;
 let IsIconic: (h: unknown) => boolean;
@@ -85,32 +75,22 @@ function ensureNative() {
   GetWindowThreadProcessId = user32.func(
     "uint32 __stdcall GetWindowThreadProcessId(void *hWnd, _Out_ uint32 *lpdwProcessId)",
   ) as (h: unknown, pid: Buffer) => number;
-  AttachThreadInput = user32.func(
-    "bool __stdcall AttachThreadInput(uint32 idAttach, uint32 idAttachTo, bool fAttach)",
-  ) as (a: number, b: number, f: boolean) => boolean;
-  GetCurrentThreadId = kernel32.func("uint32 __stdcall GetCurrentThreadId()") as () => number;
   AllowSetForegroundWindow = user32.func("bool __stdcall AllowSetForegroundWindow(uint32 dwProcessId)") as (
     pid: number,
   ) => boolean;
   IsWindowVisible = user32.func("bool __stdcall IsWindowVisible(void *hWnd)") as (h: unknown) => boolean;
   IsWindow = user32.func("bool __stdcall IsWindow(void *hWnd)") as (h: unknown) => boolean;
-  IsHungAppWindow = user32.func("bool __stdcall IsHungAppWindow(void *hWnd)") as (h: unknown) => boolean;
   GetClassNameW = user32.func("int __stdcall GetClassNameW(void *hWnd, _Out_ uint16 *lpClassName, int nMaxCount)") as (
     h: unknown,
     buf: Buffer,
     n: number,
   ) => number;
-  SendMessageTimeoutW = user32.func(
-    "intptr __stdcall SendMessageTimeoutW(void *hWnd, uint32 Msg, uintptr wParam, void *lParam, uint32 fuFlags, uint32 uTimeout, _Out_ uintptr *lpdwResult)",
-  ) as (
+  GetWindowTextW = user32.func("int __stdcall GetWindowTextW(void *hWnd, _Out_ uint16 *lpString, int nMaxCount)") as (
     h: unknown,
-    msg: number,
-    wParam: number,
-    lParam: Buffer,
-    flags: number,
-    timeout: number,
-    result: Buffer,
+    buf: Buffer,
+    n: number,
   ) => number;
+  GetWindow = user32.func("void * __stdcall GetWindow(void *hWnd, uint32 uCmd)") as (h: unknown, cmd: number) => unknown;
   EnumWindowsProc = koffi.proto("bool __stdcall EnumWindowsProc(void *hwnd, intptr lParam)");
   EnumWindows = user32.func("bool __stdcall EnumWindows(EnumWindowsProc *lpEnumFunc, intptr lParam)") as (
     cb: unknown,
@@ -136,9 +116,9 @@ const SW_RESTORE = 9;
 const VK_RETURN = 0x0d;
 const VK_TAB = 0x09;
 const VK_CONTROL = 0x11;
+const VK_MENU = 0x12;
 const VK_V = 0x56;
-const WM_GETTEXT = 0x000d;
-const SMTO_ABORTIFHUNG = 0x0002;
+const GW_OWNER = 4;
 const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
 const ASFW_ANY = 0xffffffff;
 
@@ -197,16 +177,22 @@ function windowClassName(hWnd: unknown): string {
   return readUtf16(buf);
 }
 
-function windowTitleSafe(hWnd: unknown): string {
+function windowTitleFast(hWnd: unknown): string {
   try {
-    if (IsHungAppWindow(hWnd)) return "";
     const buf = Buffer.alloc(1024);
-    const result = Buffer.alloc(8);
-    const ok = SendMessageTimeoutW(hWnd, WM_GETTEXT, 512, buf, SMTO_ABORTIFHUNG, 80, result);
-    if (!ok) return "";
+    const n = GetWindowTextW(hWnd, buf, 512);
+    if (n <= 0) return "";
     return readUtf16(buf);
   } catch {
     return "";
+  }
+}
+
+function windowHasOwner(hWnd: unknown): boolean {
+  try {
+    return Boolean(GetWindow(hWnd, GW_OWNER));
+  } catch {
+    return false;
   }
 }
 
@@ -239,7 +225,7 @@ function processExeName(pid: number, cache: Map<number, string>): string {
 
 export function listWindows(force = false): ProcessInfo[] {
   const now = Date.now();
-  if (!force && now - windowsCache.at < 800 && windowsCache.list.length) return windowsCache.list;
+  if (!force && now - windowsCache.at < 2500 && windowsCache.list.length) return windowsCache.list;
   try {
     const list = listWindowsNative();
     windowsCache = { at: now, list };
@@ -257,12 +243,14 @@ function listWindowsNative(): ProcessInfo[] {
   const cb = koffi.register((hWnd: unknown) => {
     try {
       if (!IsWindowVisible(hWnd)) return true;
+      if (windowHasOwner(hWnd)) return true;
       const pidBuf = Buffer.alloc(4);
       GetWindowThreadProcessId(hWnd, pidBuf);
       const pid = pidBuf.readUInt32LE(0);
       const className = windowClassName(hWnd);
-      const title = windowTitleSafe(hWnd);
       const name = processExeName(pid, exeCache);
+      const exeScore = scoreGameWindow({ title: "", name, className });
+      const title = exeScore >= 80 ? "" : windowTitleFast(hWnd);
       if (!title && !name && !className) return true;
       result.push({
         hwnd: hwndId(hWnd),
@@ -285,29 +273,47 @@ function listWindowsNative(): ProcessInfo[] {
   return result;
 }
 
-export function findGameProcess(): ProcessInfo | null {
-  return pickGameWindow(listWindows(true));
+let lastGameWindow: ProcessInfo | null = null;
+
+export function isWindowAlive(hwnd: unknown | null): boolean {
+  if (hwnd == null) return false;
+  try {
+    ensureNative();
+    return Boolean(IsWindow(hwnd));
+  } catch {
+    return false;
+  }
+}
+
+export function findGameProcess(force = false): ProcessInfo | null {
+  const picked = pickGameWindow(listWindows(force));
+  if (picked) {
+    lastGameWindow = picked;
+    return picked;
+  }
+  if (lastGameWindow && isWindowAlive(lastGameWindow.hwnd)) return lastGameWindow;
+  return null;
+}
+
+function altUnstick() {
+  const scan = MapVirtualKeyW(VK_MENU, 0);
+  sendEvents([keyboardEvent(VK_MENU, scan, 0), keyboardEvent(VK_MENU, scan, KEYEVENTF_KEYUP)]);
 }
 
 function focusWindow(hwnd: unknown | null) {
   ensureNative();
-  if (!hwnd) return false;
+  if (hwnd == null) return false;
   try {
     if (!IsWindow(hwnd)) return false;
     if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
-    const fg = GetForegroundWindow();
-    const pidDummy = Buffer.alloc(4);
-    const fgThread = fg ? GetWindowThreadProcessId(fg, pidDummy) : 0;
-    const targetThread = GetWindowThreadProcessId(hwnd, pidDummy);
-    const cur = GetCurrentThreadId();
-    if (fgThread) AttachThreadInput(cur, fgThread, true);
-    if (targetThread) AttachThreadInput(cur, targetThread, true);
     AllowSetForegroundWindow(ASFW_ANY);
     ShowWindow(hwnd, SW_RESTORE);
     BringWindowToTop(hwnd);
     SetForegroundWindow(hwnd);
-    if (fgThread) AttachThreadInput(cur, fgThread, false);
-    if (targetThread) AttachThreadInput(cur, targetThread, false);
+    if (!sameHwnd(GetForegroundWindow(), hwnd)) {
+      altUnstick();
+      SetForegroundWindow(hwnd);
+    }
     return sameHwnd(GetForegroundWindow(), hwnd);
   } catch {
     try {
@@ -411,8 +417,8 @@ async function tapVk(vk: number) {
 }
 
 function pasteWaitMs(text: string, fast?: boolean) {
-  if (fast) return Math.max(180, Math.min(480, 90 + text.length * 4));
-  return Math.max(320, Math.min(1600, 180 + text.length * 10));
+  if (fast) return Math.max(240, Math.min(700, 140 + text.length * 6));
+  return Math.max(520, Math.min(2400, 320 + text.length * 16));
 }
 
 async function clipboardReady(text: string) {
@@ -428,15 +434,15 @@ async function pasteText(text: string, fast?: boolean) {
   ensureNative();
   if (!text) return false;
   if (!(await clipboardReady(text))) return false;
-  const hold = pasteWaitMs(text, fast) + 120;
+  const hold = pasteWaitMs(text, fast) + 200;
   markInjectedKey(VK_CONTROL, hold);
   markInjectedKey(VK_V, hold);
   const ctrlScan = MapVirtualKeyW(VK_CONTROL, 0);
   const vScan = MapVirtualKeyW(VK_V, 0);
   sendEvents([keyboardEvent(VK_CONTROL, ctrlScan, 0)]);
-  await sleep(fast ? 20 : 28);
+  await sleep(fast ? 28 : 45);
   sendEvents([keyboardEvent(VK_V, vScan, 0)]);
-  await sleep(fast ? 24 : 36);
+  await sleep(fast ? 40 : 70);
   sendEvents([keyboardEvent(VK_V, vScan, KEYEVENTF_KEYUP), keyboardEvent(VK_CONTROL, ctrlScan, KEYEVENTF_KEYUP)]);
   await sleep(pasteWaitMs(text, fast));
   return true;
@@ -495,6 +501,7 @@ export type TypeTextOptions = {
   pressT?: boolean;
   skipFirstT?: boolean;
   fastPaste?: boolean;
+  keepClipboard?: boolean;
 };
 
 function asTypeOptions(value: boolean | TypeTextOptions | undefined): TypeTextOptions {
@@ -537,11 +544,14 @@ async function typeText(text: string, options: TypeTextOptions) {
         if (!last) await sleep(chatLines ? (fast ? 220 : 380) : fast ? 90 : 220);
       }
     }
+    await sleep(Math.min(800, 180 + text.length * 4));
   } finally {
-    try {
-      clipboard.writeText(previous);
-    } catch {
-      /* ignore */
+    if (!options.keepClipboard) {
+      try {
+        clipboard.writeText(previous);
+      } catch {
+        /* ignore */
+      }
     }
   }
 }
@@ -551,10 +561,25 @@ export function pressKey(hwnd: unknown | null, key: string) {
   keyTap(key);
 }
 
-export async function sendTextToWindow(hwnd: unknown | null, text: string, pressEnter: boolean) {
+export async function pressKeyOnWindow(hwnd: unknown | null, key: string) {
   await focusWindowReliable(hwnd);
-  await sleep(80);
-  await typeText(text, { pressEnter });
+  await sleep(90);
+  keyTap(key);
+}
+
+export async function sendTextToWindow(
+  hwnd: unknown | null,
+  text: string,
+  pressEnter: boolean,
+  extra?: { pressT?: boolean; keepClipboard?: boolean },
+) {
+  await focusWindowReliable(hwnd);
+  await sleep(120);
+  if (extra?.pressT) {
+    keyTap("T");
+    await sleep(450);
+  }
+  await typeText(text, { pressEnter, keepClipboard: extra?.keepClipboard });
 }
 
 export async function sendTextForeground(text: string, pressEnterOrOptions: boolean | TypeTextOptions = false) {

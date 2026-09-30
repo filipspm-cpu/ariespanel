@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, globalShortcut, screen, Tray, Menu, native
 import fs from "fs";
 import path from "path";
 import { loadState, saveState, AppState } from "./storage";
-import { sendTextToWindow, sendTextForeground, pressKey, findGameProcess, listWindows, publicProcess, type ProcessInfo } from "./windows";
+import { sendTextToWindow, sendTextForeground, pressKey, findGameProcess, listWindows, publicProcess, isWindowAlive, type ProcessInfo } from "./windows";
 import { getSpotifyTrack } from "./spotify";
 import { connectDiscord } from "./discord";
 import { currentAccountBanned, deleteDiscordAccount, listDiscordAccounts, recordDiscordAccount, setAccountBanned } from "./discordAccounts";
@@ -391,7 +391,7 @@ function registerIpc() {
     return next;
   });
 
-  ipcMain.handle("process:find", () => publicProcess(findGameProcess()));
+  ipcMain.handle("process:find", () => publicProcess(findGameProcess(true)));
   ipcMain.handle("process:list", () => listWindows().map((win) => publicProcess(win)).filter(Boolean));
   ipcMain.handle("spotify:now", () => getSpotifyTrack());
   ipcMain.handle("majestic:servers", (_e, force?: boolean) => fetchMajesticServerStatuses(Boolean(force)));
@@ -604,7 +604,7 @@ function registerIpc() {
         let commands = payload.commands.map((c) => c.trim()).filter(Boolean);
         if (payload.reverse) commands = [...commands].reverse();
         const interval = Math.max(100, payload.intervalMs || 500);
-        let lastTarget: ProcessInfo | null = findGameProcess();
+        let lastTarget: ProcessInfo | null = findGameProcess(true);
         if (!lastTarget) {
           mainWindow?.webContents.send("cmd:done", { aborted: false });
           return { ok: false, error: "no-game", target: null };
@@ -612,14 +612,14 @@ function registerIpc() {
 
         for (const command of commands) {
           if (cmdAbort) break;
-          const processInfo: ProcessInfo = findGameProcess() ?? lastTarget;
-          lastTarget = processInfo;
-          mainWindow?.webContents.send("cmd:progress", { command });
-          if (payload.pressT) {
-            pressKey(processInfo.hwnd, "T");
-            await sleep(220);
+          if (!isWindowAlive(lastTarget.hwnd)) {
+            lastTarget = findGameProcess(true) ?? lastTarget;
           }
-          await sendTextToWindow(processInfo.hwnd, command, payload.pressEnter);
+          mainWindow?.webContents.send("cmd:progress", { command });
+          await sendTextToWindow(lastTarget.hwnd, command, payload.pressEnter, {
+            pressT: payload.pressT,
+            keepClipboard: true,
+          });
           await sleep(interval);
         }
 

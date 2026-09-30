@@ -45,7 +45,7 @@ export function CmdPage() {
 
   useEffect(() => {
     void refreshProcess();
-    const t = setInterval(() => void refreshProcess(), 4000);
+    const t = setInterval(() => void refreshProcess(), 8000);
     return () => clearInterval(t);
   }, []);
 
@@ -64,11 +64,7 @@ export function CmdPage() {
     setLastCommand(null);
     setRunning(true);
     try {
-      const proc = await refreshProcess();
-      if (!proc) {
-        setStatus("Nie wykryto gry. Uruchom GTA / Majestic i kliknij odśwież.");
-        return;
-      }
+      await refreshProcess();
       const result = (await window.synvity?.cmdRun({
         commands,
         intervalMs: cmd.intervalMs,
