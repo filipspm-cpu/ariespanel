@@ -1,4 +1,4 @@
-import { FORUM_RULES } from "@/data/forumRules";
+import { FORUM_CATALOG } from "@/data/forumCatalog";
 import { hasBetaAccess, hasDeveloperAccess, hasMainDeveloperAccess, type AccountRank } from "@/data/testers";
 import type { NavGroup, RouteId } from "@/types";
 
@@ -23,7 +23,7 @@ export const navGroups: NavGroup[] = [
         id: "forum",
         label: "Forum",
         icon: "messages",
-        children: FORUM_RULES.map((rule) => ({
+        children: FORUM_CATALOG.map((rule) => ({
           id: "forum" as const,
           label: rule.title,
           icon: "scroll",

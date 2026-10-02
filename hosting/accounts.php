@@ -269,7 +269,7 @@ function list_accounts($mysqli) {
   $result = $mysqli->query("SELECT * FROM discord_accounts ORDER BY name ASC");
   if ($result) {
     while ($row = $result->fetch_assoc()) {
-      $id = preg_replace("/\\D+/", "", (string) $row["discord_id"]);
+      $id = account_key($row["discord_id"]);
       $name = trim((string) $row["name"]);
       if ($id === "" || $name === "") continue;
       $login = "";
@@ -296,9 +296,9 @@ function list_accounts($mysqli) {
   );
   if ($profiles) {
     while ($row = $profiles->fetch_assoc()) {
-      $id = preg_replace("/\\D+/", "", (string) $row["discord_id"]);
+      $id = account_key($row["discord_id"]);
       $name = trim((string) $row["name"]);
-      if ($id === "" || strlen($id) < 5 || $name === "" || isset($seen[$id])) continue;
+      if ($id === "" || $name === "" || isset($seen[$id])) continue;
       $iso = "";
       if (isset($row["updated_at"]) && $row["updated_at"]) {
         $ts = strtotime($row["updated_at"]);
@@ -423,7 +423,18 @@ function set_notice_setting($mysqli, $key, $value) {
   $stmt->execute();
 }
 
-function notices_popup($mysqli) {
+function notices_popup_key($discordId) {
+  $id = preg_replace("/[^0-9]/", "", (string) $discordId);
+  return $id === "" ? "popup" : "popup:" . $id;
+}
+
+function notices_popup($mysqli, $discordId = "") {
+  $key = notices_popup_key($discordId);
+  if ($key !== "popup") {
+    $stored = notice_setting($mysqli, $key, "");
+    // The old global setting must not hide launch notices from new users.
+    return $stored === "" ? true : $stored !== "0";
+  }
   return notice_setting($mysqli, "popup", "1") !== "0";
 }
 
@@ -455,12 +466,41 @@ function list_notices($mysqli) {
   return $out;
 }
 
+function migrate_seeded_announcement($mysqli) {
+  if (notice_setting($mysqli, "seeded_announcement_v1", "0") === "1") return;
+  $title = "Promuj Aries panel";
+  $check = $mysqli->prepare("SELECT id FROM panel_notices WHERE kind = 'announcement' AND title = ? LIMIT 1");
+  if (!$check) return;
+  $check->bind_param("s", $title);
+  if (!$check->execute()) return;
+  $res = $check->get_result();
+  if (!$res) return;
+  if (!$res->fetch_assoc()) {
+    $kind = "announcement";
+    $body = "Pokaż ARIES znajomym z serwera. Im więcej osób korzysta z panelu, tym łatwiej trzymać raporty, makra i nakładkę w jednym miejscu.";
+    $authorId = "1305449847125708811";
+    $authorName = "Filipek";
+    $created = "2026-09-21 00:00:00";
+    $insert = $mysqli->prepare(
+      "INSERT INTO panel_notices (kind, title, body, author_id, author_name, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+    );
+    if (!$insert) return;
+    $insert->bind_param("ssssss", $kind, $title, $body, $authorId, $authorName, $created);
+    if (!$insert->execute()) return;
+  }
+  set_notice_setting($mysqli, "seeded_announcement_v1", "1");
+}
+
 function seed_notices($mysqli) {
-  if (notice_setting($mysqli, "seeded", "0") === "1") return;
+  if (notice_setting($mysqli, "seeded", "0") === "1") {
+    migrate_seeded_announcement($mysqli);
+    return;
+  }
   $countRes = $mysqli->query("SELECT COUNT(*) AS c FROM panel_notices");
   $countRow = $countRes ? $countRes->fetch_assoc() : null;
   if ($countRow && (int) $countRow["c"] > 0) {
     set_notice_setting($mysqli, "seeded", "1");
+    migrate_seeded_announcement($mysqli);
     return;
   }
   $stmt = $mysqli->prepare(
@@ -504,6 +544,7 @@ function seed_notices($mysqli) {
     $stmt->execute();
   }
   set_notice_setting($mysqli, "seeded", "1");
+  migrate_seeded_announcement($mysqli);
 }
 
 function notices_payload($mysqli, $discordId = "") {
@@ -512,7 +553,7 @@ function notices_payload($mysqli, $discordId = "") {
   return array(
     "ok" => true,
     "editor" => stored_has_main_developer($mysqli, $discordId),
-    "popup" => notices_popup($mysqli),
+    "popup" => notices_popup($mysqli, $discordId),
     "notices" => list_notices($mysqli),
   );
 }
@@ -747,6 +788,11 @@ function aries_rw_setup($mysqli) {
     ip VARCHAR(45) NOT NULL DEFAULT '',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+  // CREATE TABLE IF NOT EXISTS does not upgrade an existing rewards table.
+  // These idempotent migrations keep old installations compatible.
+  $mysqli->query("ALTER TABLE promo_redemptions ADD COLUMN device_id VARCHAR(64) NOT NULL DEFAULT ''");
+  $mysqli->query("ALTER TABLE promo_redemptions ADD COLUMN device_hash VARCHAR(64) NOT NULL DEFAULT ''");
+  $mysqli->query("ALTER TABLE promo_redemptions ADD COLUMN ip VARCHAR(45) NOT NULL DEFAULT ''");
   $mysqli->query("CREATE TABLE IF NOT EXISTS reward_claims (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     discord_id VARCHAR(32) NOT NULL,
@@ -1112,7 +1158,12 @@ function aries_rw_dispatch($mysqli, $data, $action) {
         $upd->execute();
       }
     }
-    json_out(aries_rw_state($mysqli, $discordId));
+    $next = aries_rw_state($mysqli, $discordId);
+    if ($next["code"] === "") {
+      $next["ok"] = false;
+      $next["error"] = "db";
+    }
+    json_out($next);
   }
 
   if ($action === "promoRedeem") {
@@ -1136,7 +1187,13 @@ function aries_rw_dispatch($mysqli, $data, $action) {
     $ins = $mysqli->prepare("INSERT INTO promo_redemptions (discord_id, code, owner_id, amount, device_id, device_hash) VALUES (?, ?, ?, ?, ?, ?)");
     if ($ins) {
       $ins->bind_param("sssiss", $discordId, $code, $ownerId, $enterAmount, $deviceId, $deviceHash);
-      if (!$ins->execute()) aries_rw_fail($mysqli, $discordId, "device");
+      if (!$ins->execute()) {
+        // Optional device columns may still be unavailable on restrictive hosts.
+        $fallback = $mysqli->prepare("INSERT INTO promo_redemptions (discord_id, code, owner_id, amount) VALUES (?, ?, ?, ?)");
+        if (!$fallback) aries_rw_fail($mysqli, $discordId, "db");
+        $fallback->bind_param("sssi", $discordId, $code, $ownerId, $enterAmount);
+        if (!$fallback->execute()) aries_rw_fail($mysqli, $discordId, "device");
+      }
     } else {
       $fallback = $mysqli->prepare("INSERT INTO promo_redemptions (discord_id, code, owner_id, amount) VALUES (?, ?, ?, ?)");
       if (!$fallback) aries_rw_fail($mysqli, $discordId, "db");
@@ -1289,7 +1346,7 @@ if ($action === "noticesList" || $action === "noticesCreate" || $action === "not
     $enabled = !($popup === "0" || $popup === "false" || $popup === "");
     if (isset($data["popup"]) && ($data["popup"] === false || $data["popup"] === 0 || $data["popup"] === "0")) $enabled = false;
     if (isset($data["popup"]) && ($data["popup"] === true || $data["popup"] === 1 || $data["popup"] === "1")) $enabled = true;
-    set_notice_setting($mysqli, "popup", $enabled ? "1" : "0");
+    set_notice_setting($mysqli, notices_popup_key($discordId), $enabled ? "1" : "0");
     json_out(notices_payload($mysqli, $discordId));
   }
   if ($action === "noticesDelete") {

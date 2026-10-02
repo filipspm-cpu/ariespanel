@@ -146,7 +146,7 @@ export const useAppStore = create<State>((set, get) => ({
   hydrated: false,
   ...defaultSnapshot(),
   setRoute: (route) => {
-    const gameRoutes: RouteId[] = ["cmd", "overlay", "macros", "counters", "clicker"];
+    const gameRoutes: RouteId[] = ["cmd", "overlay", "macros", "counters"];
     set({
       route,
       gameOpen: gameRoutes.includes(route) ? true : get().gameOpen,

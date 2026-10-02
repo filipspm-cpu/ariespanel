@@ -1,5 +1,10 @@
 const fs = require("fs");
-const [owner, repo] = process.env.GITHUB_REPOSITORY.split("/");
+const sourceRepository = process.env.GITHUB_REPOSITORY;
+const updateRepository = process.env.ARIES_UPDATES_REPOSITORY || sourceRepository;
+if (!sourceRepository || !updateRepository || updateRepository.split("/").length !== 2) {
+  throw new Error("GITHUB_REPOSITORY and ARIES_UPDATES_REPOSITORY must use owner/repo format");
+}
+const [owner, repo] = updateRepository.split("/");
 const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 const ref = process.env.GITHUB_REF || "";
 const input = (process.env.RELEASE_CHANNEL || "").toLowerCase();
@@ -16,7 +21,7 @@ if (tagLooksLikeVersion) {
   pkg.version = `${pkg.version}-beta.1`;
 }
 
-pkg.repository = { type: "git", url: `https://github.com/${owner}/${repo}.git` };
+pkg.repository = { type: "git", url: `https://github.com/${sourceRepository}.git` };
 pkg.build = pkg.build || {};
 pkg.build.publish = {
   ...(pkg.build.publish || {}),
@@ -26,4 +31,4 @@ pkg.build.publish = {
   releaseType: isBeta ? "prerelease" : "release",
 };
 fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
-console.log(`publish -> ${owner}/${repo} v${pkg.version} (${isBeta ? "beta / prerelease" : "stable / release"})`);
+console.log(`publish -> ${updateRepository} v${pkg.version} (${isBeta ? "beta / prerelease" : "stable / release"})`);

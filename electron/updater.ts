@@ -1,4 +1,4 @@
-import { app, ipcMain, BrowserWindow, nativeImage, shell } from "electron";
+import { app, ipcMain, BrowserWindow, nativeImage } from "electron";
 import { autoUpdater, type UpdateInfo, type ProgressInfo } from "electron-updater";
 import { loadState } from "./storage";
 import { closeUpdateProgressWindow, openUpdateProgressWindow, setUpdateProgress } from "./updateProgress";
@@ -6,7 +6,6 @@ import { listUpdateNotices, markUpdateNoticesRead, pushUpdateNotice } from "./up
 
 export const GITHUB_OWNER = "filipspm-cpu";
 export const GITHUB_REPO = "ariespanel";
-
 export type UpdateStatus = {
   status: "idle" | "checking" | "available" | "not-available" | "downloading" | "downloaded" | "error";
   version?: string;
@@ -41,19 +40,52 @@ function isRetiredLine(version: string | undefined) {
   return /^1\.1\.\d+/.test(String(version || "").replace(/^v/i, ""));
 }
 
-function setupUrl(version?: string) {
-  const ver = String(version || "").replace(/^v/i, "");
-  if (ver) return `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/v${ver}/ARIES-Setup-${ver}.exe`;
-  return `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
+function compareVersions(left: string | undefined, right: string | undefined): number | null {
+  const parse = (value: string | undefined) => {
+    const normalized = String(value || "").trim().replace(/^v/i, "").split("+")[0];
+    const [core, prerelease = ""] = normalized.split("-", 2);
+    if (!/^\d+(?:\.\d+)*$/.test(core)) return null;
+    return {
+      core: core.split(".").map((part) => Number(part)),
+      prerelease: prerelease ? prerelease.split(".") : [],
+    };
+  };
+  const a = parse(left);
+  const b = parse(right);
+  if (!a || !b) return null;
+  const length = Math.max(a.core.length, b.core.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = (a.core[index] || 0) - (b.core[index] || 0);
+    if (difference !== 0) return difference > 0 ? 1 : -1;
+  }
+  if (!a.prerelease.length && !b.prerelease.length) return 0;
+  if (!a.prerelease.length) return 1;
+  if (!b.prerelease.length) return -1;
+  const preLength = Math.max(a.prerelease.length, b.prerelease.length);
+  for (let index = 0; index < preLength; index += 1) {
+    const av = a.prerelease[index];
+    const bv = b.prerelease[index];
+    if (av === undefined) return -1;
+    if (bv === undefined) return 1;
+    if (av === bv) continue;
+    const an = /^\d+$/.test(av) ? Number(av) : null;
+    const bn = /^\d+$/.test(bv) ? Number(bv) : null;
+    if (an !== null && bn !== null) return an > bn ? 1 : -1;
+    if (an !== null) return -1;
+    if (bn !== null) return 1;
+    return av > bv ? 1 : -1;
+  }
+  return 0;
 }
 
-function openSetup(version?: string) {
-  void shell.openExternal(setupUrl(version || last.version));
+function isNewerThanInstalled(version: string | undefined) {
+  const comparison = compareVersions(version, app.getVersion());
+  return comparison !== null && comparison > 0;
 }
 
 function applyFeed() {
   autoUpdater.allowPrerelease = false;
-  autoUpdater.allowDowngrade = true;
+  autoUpdater.allowDowngrade = false;
   autoUpdater.disableDifferentialDownload = true;
   autoUpdater.disableWebInstaller = true;
   autoUpdater.channel = "latest";
@@ -166,6 +198,10 @@ async function applyUpdate() {
     send({ status: "not-available", version: undefined, message: undefined });
     return last;
   }
+  if (last.version && !isNewerThanInstalled(last.version)) {
+    send({ status: "not-available", version: undefined, message: undefined });
+    return last;
+  }
   if (last.status !== "available" && last.status !== "downloaded") {
     await checkNow(true);
   }
@@ -173,6 +209,10 @@ async function applyUpdate() {
     hidePanel();
     openUpdateProgressWindow(last.version || "", getIcon());
     finishInstall();
+    return last;
+  }
+  if (last.status !== "available" || !last.version || !isNewerThanInstalled(last.version)) {
+    send({ status: "not-available", version: undefined, message: undefined });
     return last;
   }
   applying = true;
@@ -192,7 +232,6 @@ async function applyUpdate() {
     closeUpdateProgressWindow();
     showPanel();
     send({ status: "error", message: friendlyUpdateError(err) });
-    openSetup(last.version);
   }
   return last;
 }
@@ -242,6 +281,10 @@ export function registerUpdater(opts: {
       send({ status: "not-available", version: undefined, message: undefined });
       return;
     }
+    if (!isNewerThanInstalled(info.version)) {
+      send({ status: "not-available", version: undefined, message: undefined });
+      return;
+    }
     send({ status: "available", version: info.version, message: undefined });
     notifyAvailable(info.version);
   });
@@ -266,16 +309,20 @@ export function registerUpdater(opts: {
     });
   });
   autoUpdater.on("update-downloaded", (info) => {
+    if (!isNewerThanInstalled(info.version)) {
+      applying = false;
+      closeUpdateProgressWindow();
+      send({ status: "not-available", version: undefined, message: undefined });
+      return;
+    }
     send({ status: "downloaded", version: info.version, percent: 100 });
     finishInstall();
   });
   autoUpdater.on("error", (err) => {
-    const wasApplying = applying;
     applying = false;
     closeUpdateProgressWindow();
     showPanel();
     send({ status: "error", message: friendlyUpdateError(err) });
-    if (wasApplying) openSetup(last.version);
   });
 
   ipcMain.handle("app:version", () => app.getVersion());
@@ -288,10 +335,6 @@ export function registerUpdater(opts: {
     return checkNow(true);
   });
   ipcMain.handle("update:install", () => applyUpdate());
-  ipcMain.handle("update:openSetup", (_e, version?: string) => {
-    openSetup(typeof version === "string" ? version : last.version);
-    return true;
-  });
   ipcMain.handle("update:notices", () => listUpdateNotices(app.getVersion()));
   ipcMain.handle("update:noticesRead", () => markUpdateNoticesRead(app.getVersion()));
 

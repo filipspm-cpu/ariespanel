@@ -6,6 +6,7 @@ const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 const ver = pkg.version;
 const tag = `v${ver}`;
 const title = /-beta/i.test(ver) ? `ARIES ${ver} BETA` : `ARIES ${ver}`;
+const updateRepository = process.env.ARIES_UPDATES_REPOSITORY || "filipspm-cpu/ariespanel";
 const dist = path.join(process.cwd(), "release");
 
 function sleep(ms) {
@@ -13,7 +14,7 @@ function sleep(ms) {
 }
 
 function gh(args) {
-  execFileSync("gh", args, { stdio: "inherit", env: process.env });
+  execFileSync("gh", [...args, "--repo", updateRepository], { stdio: "inherit", env: process.env });
 }
 
 function retry(label, fn, times = 5) {
@@ -35,15 +36,22 @@ retry("release view/create", () => {
   try {
     gh(["release", "view", tag]);
   } catch {
-    gh(["release", "create", tag, "--title", title, "--notes", "", "--verify-tag"]);
+    gh(["release", "create", tag, "--title", title, "--notes", ""]);
   }
 });
 
-const names = [`ARIES-Setup-${ver}.exe`, `ARIES-Setup-${ver}.exe.blockmap`, "latest.yml", "beta.yml"];
-const files = names.map((name) => path.join(dist, name)).filter((file) => fs.existsSync(file));
-if (!files.length) {
-  throw new Error(`No release files in ${dist}`);
+const installer = path.join(dist, `ARIES-Setup-${ver}.exe`);
+if (!fs.existsSync(installer)) {
+  throw new Error(`Installer missing: ${installer}. The release must not be published without an .exe.`);
 }
+
+const names = [
+  `ARIES-Setup-${ver}.exe`,
+  `ARIES-Setup-${ver}.exe.blockmap`,
+  "latest.yml",
+  "beta.yml",
+];
+const files = names.map((name) => path.join(dist, name)).filter((file) => fs.existsSync(file));
 
 for (const file of files) {
   retry(`upload ${path.basename(file)}`, () => {

@@ -37,8 +37,8 @@ function formatLogin(value?: string) {
   });
 }
 
-function isDiscordId(id?: string) {
-  return /^\d{5,}$/.test(String(id || ""));
+function hasAccountId(id?: string) {
+  return String(id || "").trim().length > 0;
 }
 
 function AccountAvatar({ name, url }: { name: string; url?: string }) {
@@ -132,6 +132,7 @@ export function AccountsPage() {
   const [ready, setReady] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [menuId, setMenuId] = useState<string | null>(null);
+  const loading = useRef(false);
   const setTesters = useAppStore((s) => s.setTesters);
   const myId = useAppStore((s) => s.settings.discordId);
   const myRanks = useAccountRanks(myId);
@@ -140,11 +141,13 @@ export function AccountsPage() {
 
   const load = useCallback(
     async (manual = false) => {
+      if (loading.current) return;
       const list = window.synvity?.accountsList;
       if (!list) {
         setReady(true);
         return;
       }
+      loading.current = true;
       if (manual) setRefreshing(true);
       try {
         const [rowsResult, testersResult, rewardsResult] = await Promise.allSettled([
@@ -153,7 +156,7 @@ export function AccountsPage() {
           window.synvity?.rewardsAccounts?.() ?? Promise.resolve([]),
         ]);
         if (rowsResult.status === "fulfilled") {
-          setAccounts((rowsResult.value ?? []).filter((row) => isDiscordId(row.id)));
+          setAccounts((rowsResult.value ?? []).filter((row) => hasAccountId(row.id)));
         }
         if (testersResult.status === "fulfilled" && testersResult.value) {
           setTesters(testersResult.value);
@@ -164,6 +167,7 @@ export function AccountsPage() {
       } catch {
         // Keep the last successful list — a ranks/rewards failure must not wipe Konta.
       } finally {
+        loading.current = false;
         setReady(true);
         setRefreshing(false);
       }
@@ -198,14 +202,14 @@ export function AccountsPage() {
     if (!account.id || !window.synvity?.accountsSetBan) return;
     if (banned && !window.confirm(`Zbanować konto ${account.name}? Nie będzie mogło korzystać z ARIES.`)) return;
     const rows = await window.synvity.accountsSetBan({ id: account.id, banned, name: account.name });
-    if (rows) setAccounts(rows.filter((row) => isDiscordId(row.id)));
+    if (rows) setAccounts(rows.filter((row) => hasAccountId(row.id)));
   };
 
   const removeAccount = async (account: AccountCard) => {
     if (!account.id || !window.synvity?.accountsDelete) return;
     if (!window.confirm(`Usunąć ${account.name} z listy kont?`)) return;
     const rows = await window.synvity.accountsDelete({ id: account.id });
-    if (rows) setAccounts(rows.filter((row) => isDiscordId(row.id)));
+    if (rows) setAccounts(rows.filter((row) => hasAccountId(row.id)));
     else setAccounts((prev) => prev.filter((row) => row.id !== account.id));
   };
 

@@ -108,18 +108,29 @@ function asAvatar(value: unknown): string {
 }
 
 function parseAccounts(payload: unknown): StoredAccount[] {
+  const record = payload && typeof payload === "object" && !Array.isArray(payload)
+    ? payload as { accounts?: unknown; roles?: unknown }
+    : null;
   const rows = Array.isArray(payload)
     ? payload
-    : payload && typeof payload === "object" && Array.isArray((payload as { accounts?: unknown }).accounts)
-      ? (payload as { accounts: unknown[] }).accounts
-      : [];
+    : [
+        ...(Array.isArray(record?.accounts) ? record.accounts : []),
+        ...(Array.isArray(record?.roles) ? record.roles : []),
+      ];
   return rows
     .map((row) => {
       const item = row as {
         id?: string;
+        discordId?: string;
+        discordID?: string;
         discord_id?: string;
         device_id?: string;
         name?: string;
+        username?: string;
+        globalName?: string;
+        global_name?: string;
+        displayName?: string;
+        display_name?: string;
         avatarUrl?: string;
         avatar_url?: string;
         lastLogin?: string;
@@ -127,12 +138,14 @@ function parseAccounts(payload: unknown): StoredAccount[] {
         updated_at?: string;
         banned?: boolean;
       };
-      const id = parseAccountId(item.id || item.discord_id || item.device_id);
-      const name = String(item.name || "").trim();
-      if (!id || !name) return null;
+      const id = parseAccountId(item.id || item.discordId || item.discordID || item.discord_id || item.device_id);
+      const name = String(
+        item.name || item.displayName || item.display_name || item.globalName || item.global_name || item.username || "",
+      ).trim();
+      if (!id) return null;
       return {
         id,
-        name,
+        name: name || "Konto",
         avatarUrl: asAvatar(item.avatarUrl || item.avatar_url),
         ip: "",
         lastLogin: asLogin(item.lastLogin || item.last_login || item.updated_at),
@@ -259,37 +272,11 @@ async function mysqlUpsert(account: StoredAccount): Promise<boolean> {
   }
 }
 
-async function mysqlList(): Promise<StoredAccount[]> {
-  let conn: mysql.Connection | undefined;
-  try {
-    conn = await withTimeout(mysqlConn(), 5000);
-    await ensureTable(conn);
-    const [rows] = await conn.query(
-      "SELECT discord_id, name, avatar_url, last_login, updated_at FROM discord_accounts ORDER BY COALESCE(last_login, updated_at) DESC, name ASC",
-    );
-    return parseAccounts(rows);
-  } catch {
-    return [];
-  } finally {
-    await conn?.end().catch(() => undefined);
-  }
-}
-
-async function mysqlProfiles(): Promise<StoredAccount[]> {
-  let conn: mysql.Connection | undefined;
-  try {
-    conn = await withTimeout(mysqlConn(), 5000);
-    const [rows] = await conn.query(
-      `SELECT discord_id AS id, name, updated_at AS last_login
-       FROM panel_profiles
-       WHERE discord_id IS NOT NULL AND TRIM(discord_id) <> '' AND name IS NOT NULL AND TRIM(name) <> ''`,
-    );
-    return parseAccounts(rows).filter((row) => /^\d{5,}$/.test(row.id));
-  } catch {
-    return [];
-  } finally {
-    await conn?.end().catch(() => undefined);
-  }
+function isAccountListPayload(payload: unknown): boolean {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+  const result = payload as { ok?: unknown; error?: unknown; accounts?: unknown; roles?: unknown };
+  if (result.ok === false || result.error) return false;
+  return Array.isArray(result.accounts) || Array.isArray(result.roles);
 }
 
 export async function recordDiscordAccount(
@@ -310,26 +297,21 @@ export async function recordDiscordAccount(
   const captureLogin = Boolean(opts?.login || !prev?.lastLogin);
   const lastLogin = captureLogin ? new Date().toISOString() : "";
   const account = upsertLocal({ id, name, avatarUrl, ip: "", lastLogin, rank: "", banned: Boolean(prev?.banned) });
-  await Promise.all([mysqlUpsert(account), apiRequest("POST", { id, name, avatarUrl })]);
+  // Lokalny zapis jest źródłem prawdy dla bieżącej sesji. Synchronizacja zdalna
+  // działa w tle, aby lista kont nie czekała na niedostępny hosting.
+  void Promise.allSettled([mysqlUpsert(account), apiRequest("POST", { id, name, avatarUrl })]);
 }
 
 export async function listDiscordAccounts(): Promise<DiscordAccountCard[]> {
+  const local = readLocal();
   try {
-    const [sql, php, profiles] = await Promise.all([
-      mysqlList(),
-      apiRequest("GET").catch(() => null),
-      mysqlProfiles(),
-    ]);
+    const php = await apiRequest("GET", undefined, isAccountListPayload);
     if (php) ingestRolesPayload(php);
-    const rows = mergeById(parseAccounts(php), sql, profiles, readLocal(), knownAccounts()).filter((row) =>
-      /^\d{5,}$/.test(row.id),
-    );
+    const rows = mergeById(parseAccounts(php), local, knownAccounts()).filter((row) => row.id.trim() !== "");
     const testers = loadTesters();
     const rankById = new Map(testers.map((t) => [t.id, t.role]));
-    const bannedIds = await mysqlBannedIds();
     for (const row of rows) {
       row.rank = rankById.get(row.id) || "";
-      if (bannedIds.has(row.id)) row.banned = true;
     }
     rows.sort((a, b) => {
       const ta = Date.parse(a.lastLogin || "") || 0;
@@ -339,7 +321,7 @@ export async function listDiscordAccounts(): Promise<DiscordAccountCard[]> {
     });
     return toCards(rows);
   } catch {
-    return toCards(mergeById(readLocal(), knownAccounts()).filter((row) => /^\d{5,}$/.test(row.id)));
+    return toCards(mergeById(local, knownAccounts()).filter((row) => row.id.trim() !== ""));
   }
 }
 

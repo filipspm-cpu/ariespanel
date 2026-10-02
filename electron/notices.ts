@@ -174,6 +174,11 @@ function caller() {
   };
 }
 
+function popupSettingKey(discordId: string) {
+  const id = String(discordId || "").replace(/\D/g, "");
+  return id ? `popup:${id}` : "popup";
+}
+
 function isMainDeveloper(id: string) {
   if (!id) return false;
   return loadTesters().some((row) => row.id === id && /main-dev|m-dev|mdev/i.test(row.role));
@@ -248,22 +253,42 @@ async function mysqlSetSetting(conn: mysql.Connection, key: string, value: strin
   );
 }
 
-async function mysqlSeed(conn: mysql.Connection) {
-  if ((await mysqlSetting(conn, "seeded")) === "1") return;
-  const [countRows] = await conn.query("SELECT COUNT(*) AS c FROM panel_notices");
-  const count = Number((countRows as { c?: number }[])[0]?.c || 0);
-  if (count === 0) {
-    for (const item of SEED) {
-      await conn.execute(
-        "INSERT INTO panel_notices (kind, title, body, author_id, author_name, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-        [item.kind, item.title, item.body, "1305449847125708811", item.authorName, new Date(item.createdAt)],
-      );
-    }
+async function mysqlSeedAnnouncement(conn: mysql.Connection) {
+  if ((await mysqlSetting(conn, "seeded_announcement_v1")) === "1") return;
+  const announcement = SEED.find((item) => item.kind === "announcement" && item.title === "Promuj Aries panel");
+  if (!announcement) return;
+  const [rows] = await conn.execute(
+    "SELECT id FROM panel_notices WHERE kind = ? AND title = ? LIMIT 1",
+    [announcement.kind, announcement.title],
+  );
+  if ((rows as unknown[]).length === 0) {
+    await conn.execute(
+      "INSERT INTO panel_notices (kind, title, body, author_id, author_name, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+      [announcement.kind, announcement.title, announcement.body, "1305449847125708811", announcement.authorName, new Date(announcement.createdAt)],
+    );
   }
-  await mysqlSetSetting(conn, "seeded", "1");
+  await mysqlSetSetting(conn, "seeded_announcement_v1", "1");
 }
 
-async function mysqlList(): Promise<{ notices: PanelNotice[]; popup: boolean } | null> {
+async function mysqlSeed(conn: mysql.Connection) {
+  const seeded = (await mysqlSetting(conn, "seeded")) === "1";
+  if (!seeded) {
+    const [countRows] = await conn.query("SELECT COUNT(*) AS c FROM panel_notices");
+    const count = Number((countRows as { c?: number }[])[0]?.c || 0);
+    if (count === 0) {
+      for (const item of SEED) {
+        await conn.execute(
+          "INSERT INTO panel_notices (kind, title, body, author_id, author_name, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+          [item.kind, item.title, item.body, "1305449847125708811", item.authorName, new Date(item.createdAt)],
+        );
+      }
+    }
+    await mysqlSetSetting(conn, "seeded", "1");
+  }
+  await mysqlSeedAnnouncement(conn);
+}
+
+async function mysqlList(discordId = ""): Promise<{ notices: PanelNotice[]; popup: boolean } | null> {
   let conn: mysql.Connection | undefined;
   try {
     conn = await withTimeout(mysqlConn(), 5000);
@@ -272,7 +297,8 @@ async function mysqlList(): Promise<{ notices: PanelNotice[]; popup: boolean } |
     const [rows] = await conn.query(
       "SELECT id, kind, title, body, author_name, created_at FROM panel_notices ORDER BY created_at DESC, id DESC",
     );
-    const popup = (await mysqlSetting(conn, "popup")) !== "0";
+    const storedPopup = await mysqlSetting(conn, popupSettingKey(discordId));
+    const popup = storedPopup === "" ? true : storedPopup !== "0";
     return { notices: parseNotices(rows), popup };
   } catch {
     return null;
@@ -316,12 +342,12 @@ async function mysqlDelete(id: number, title: string) {
   }
 }
 
-async function mysqlSetPopup(enabled: boolean) {
+async function mysqlSetPopup(enabled: boolean, discordId = "") {
   let conn: mysql.Connection | undefined;
   try {
     conn = await withTimeout(mysqlConn(), 5000);
     await ensureTable(conn);
-    await mysqlSetSetting(conn, "popup", enabled ? "1" : "0");
+    await mysqlSetSetting(conn, popupSettingKey(discordId), enabled ? "1" : "0");
     return true;
   } catch {
     return false;
@@ -344,12 +370,13 @@ export async function listNotices(): Promise<NoticesResult> {
     writeStore({ popup, seeded: true, notices });
     return result(true, editor, notices, popup);
   }
-  const sql = await mysqlList();
+  const sql = await mysqlList(discordId);
   if (sql) {
     writeStore({ popup: sql.popup, seeded: true, notices: sql.notices });
     return result(true, editor, sql.notices, sql.popup);
   }
-  const local = localList();
+  // A stale device-wide flag must not hide current notices when the server is unavailable.
+  const local = localList(true);
   return result(true, editor, local.notices, local.popup);
 }
 
@@ -434,7 +461,7 @@ export async function setNoticesPopup(enabled: boolean): Promise<NoticesResult> 
     writeStore({ popup: asPopup(remote, popup), seeded: true, notices });
     return result(true, true, notices, asPopup(remote, popup));
   }
-  await mysqlSetPopup(popup);
+  await mysqlSetPopup(popup, discordId);
   const store = localList(popup);
   writeStore({ popup, seeded: true, notices: store.notices });
   return result(true, true, store.notices, popup);

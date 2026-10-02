@@ -148,8 +148,12 @@ export async function apiRequestUrls(
   return null;
 }
 
-export async function apiRequest(method: "GET" | "POST", body?: unknown): Promise<unknown | null> {
-  return apiRequestUrls(API_URLS, method, body);
+export async function apiRequest(
+  method: "GET" | "POST",
+  body?: unknown,
+  accept?: (payload: unknown) => boolean,
+): Promise<unknown | null> {
+  return apiRequestUrls(API_URLS, method, body, accept);
 }
 
 export async function feedbackRequest(body: unknown): Promise<unknown | null> {

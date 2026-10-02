@@ -7,12 +7,13 @@ const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 const ver = pkg.version;
 const isBeta = /-beta/i.test(ver);
 const title = isBeta ? `ARIES ${ver} BETA` : `ARIES ${ver}`;
+const updateRepository = process.env.ARIES_UPDATES_REPOSITORY || "filipspm-cpu/ariespanel";
 
 const emptyNotes = path.join(os.tmpdir(), "aries-empty-notes.md");
 fs.writeFileSync(emptyNotes, "");
 
 function gh(args) {
-  execFileSync("gh", args, { stdio: "inherit" });
+  execFileSync("gh", [...args, "--repo", updateRepository], { stdio: "inherit" });
 }
 
 const tags = [`v${ver}`, ver];
@@ -31,7 +32,7 @@ for (const tag of tags) {
 if (lastError) throw lastError;
 
 try {
-  const raw = execFileSync("gh", ["release", "list", "--limit", "50", "--json", "tagName"], { encoding: "utf8" });
+  const raw = execFileSync("gh", ["release", "list", "--limit", "50", "--json", "tagName", "--repo", updateRepository], { encoding: "utf8" });
   const list = JSON.parse(raw);
   for (const item of list) {
     const tag = item && item.tagName;
@@ -48,7 +49,7 @@ try {
 
 const publishedTag = tags.find((tag) => {
   try {
-    execFileSync("gh", ["release", "view", tag], { stdio: "ignore" });
+    execFileSync("gh", ["release", "view", tag, "--repo", updateRepository], { stdio: "ignore" });
     return true;
   } catch {
     return false;

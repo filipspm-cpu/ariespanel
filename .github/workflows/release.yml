@@ -26,6 +26,7 @@ jobs:
       - name: Align GitHub publish target
         env:
           RELEASE_CHANNEL: ${{ github.event.inputs.channel || '' }}
+          ARIES_UPDATES_REPOSITORY: filipspm-cpu/ariespanel
         run: node scripts/align-publish-target.js
       - uses: actions/setup-node@v4
         with:
@@ -44,13 +45,16 @@ jobs:
             release/ARIES-Setup-*.exe
             release/ARIES-Setup-*.exe.blockmap
             release/*.yml
+            strona/upd/**
           if-no-files-found: error
           retention-days: 5
       - name: Publish GitHub release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          ARIES_UPDATES_REPOSITORY: filipspm-cpu/ariespanel
         run: node scripts/publish-github-release.js
       - name: Label GitHub release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          ARIES_UPDATES_REPOSITORY: filipspm-cpu/ariespanel
         run: node scripts/label-github-release.js

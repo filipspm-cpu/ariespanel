@@ -165,7 +165,12 @@ function remoteError(payload: unknown) {
 }
 
 async function remoteFactions(body: Record<string, unknown>) {
-  return apiRequestUrls(FACTION_URLS, "POST", body, (payload) => parseRemote(payload) !== null);
+  return apiRequestUrls(
+    FACTION_URLS,
+    "POST",
+    body,
+    (payload) => parseRemote(payload) !== null && (payload as { ok?: unknown }).ok !== false,
+  );
 }
 
 export async function listFactions(): Promise<FactionsResult> {

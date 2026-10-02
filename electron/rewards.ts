@@ -595,11 +595,9 @@ export async function generatePromoCode(): Promise<RewardsState> {
         message: `Kod gotowy: ${remote.code}`,
       });
     }
-    return remote.ok ? remote : reportRewards("Generowanie kodu", remote);
-  }
-  const apiCode = lastApiError();
-  if (apiCode === "phpfile" || apiCode === "json") {
-    return reportRewards("Generowanie kodu", emptyState(phpOrNetwork()));
+    if (remote.ok || !TECH_ERRORS.has(String(remote.error || ""))) {
+      return remote.ok ? remote : reportRewards("Generowanie kodu", remote);
+    }
   }
   const sql = await withDb(async (db) => {
     const [[existing]] = (await db.query("SELECT code FROM promo_codes WHERE discord_id = ? LIMIT 1", [discordId])) as [
@@ -652,10 +650,8 @@ export async function redeemPromoCode(raw: string): Promise<RewardsState> {
   const remote = parseState(
     await php("promoRedeem", { discordId, name, code, deviceId: device.id, deviceHash: device.hash }),
   );
-  if (remote) return finish(remote.ok ? remote : reportRewards("Wpisanie kodu", remote));
-  const apiCode = lastApiError();
-  if (apiCode === "phpfile" || apiCode === "json") {
-    return finish(reportRewards("Wpisanie kodu", emptyState(phpOrNetwork())));
+  if (remote && (remote.ok || !TECH_ERRORS.has(String(remote.error || "")))) {
+    return finish(remote.ok ? remote : reportRewards("Wpisanie kodu", remote));
   }
   const sql = await withDb(async (db) => {
     const [[mine]] = (await db.query("SELECT code FROM promo_codes WHERE discord_id = ? LIMIT 1", [discordId])) as [

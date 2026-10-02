@@ -97,7 +97,7 @@ export function ingestRolesPayload(payload: unknown): Tester[] {
 }
 
 export async function refreshAccountRoles(): Promise<Tester[]> {
-  const payload = await apiRequest("GET");
+  const payload = await apiRequest("GET", undefined, payloadOk);
   return ingestRolesPayload(payload);
 }
 

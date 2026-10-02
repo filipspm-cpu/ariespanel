@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import type { ComponentType } from "react";
 import { TitleBar } from "@/components/TitleBar";
 import { Sidebar } from "@/components/Sidebar";
@@ -15,7 +15,6 @@ import { NoticesPage } from "@/pages/NoticesPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { AboutPage } from "@/pages/AboutPage";
 import { CraftPage } from "@/pages/CraftPage";
-import { ForumPage } from "@/pages/ForumPage";
 import { FeedbackPage } from "@/pages/FeedbackPage";
 import { AchievementsPage } from "@/pages/AchievementsPage";
 import { FactionsPage } from "@/pages/FactionsPage";
@@ -25,6 +24,8 @@ import { useAccountRanks } from "@/components/RankBadge";
 import { canAccessRoute } from "@/data/navigation";
 import { useAppStore } from "@/store/useAppStore";
 import type { RouteId } from "@/types";
+
+const ForumPage = lazy(() => import("@/pages/ForumPage").then(({ ForumPage }) => ({ default: ForumPage })));
 
 const pages: Record<RouteId, ComponentType> = {
   home: HomePage,
@@ -38,7 +39,6 @@ const pages: Record<RouteId, ComponentType> = {
   about: AboutPage,
   credits: CreditsPage,
   craft: CraftPage,
-  forum: ForumPage,
   feedback: FeedbackPage,
   achievements: AchievementsPage,
   factions: FactionsPage,
@@ -55,7 +55,8 @@ export function AppLayout() {
     if (!canAccessRoute(route, ranks)) setRoute("home");
   }, [route, ranks, setRoute]);
 
-  const Page = allowed ? pages[route] : HomePage;
+  const pageRoute = allowed ? route : "home";
+  const Page = pageRoute === "forum" ? null : pages[pageRoute];
   return (
     <div className="flex h-full flex-col bg-black">
       <TitleBar />
@@ -63,7 +64,19 @@ export function AppLayout() {
       <div className="relative flex min-h-0 flex-1">
         <Sidebar />
         <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
-          <Page />
+          {Page ? (
+            <Page />
+          ) : (
+            <Suspense
+              fallback={
+                <div className="studio-page">
+                  <div className="studio-body text-sm text-zinc-400">Ładowanie forum…</div>
+                </div>
+              }
+            >
+              <ForumPage />
+            </Suspense>
+          )}
         </main>
         <WelcomeNoticesModal />
       </div>

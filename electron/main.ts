@@ -404,14 +404,23 @@ function registerIpc() {
         message: `Połączono jako ${profile.globalName || profile.username}`,
       });
       const chosen = String(loadState().settings.username || "").trim();
-      void recordDiscordAccount(
-        {
-          ...profile,
-          name: chosen || profile.globalName || profile.username,
-          globalName: chosen || profile.globalName,
-        },
-        { login: true },
-      );
+      try {
+        await recordDiscordAccount(
+          {
+            ...profile,
+            name: chosen || profile.globalName || profile.username,
+            globalName: chosen || profile.globalName,
+          },
+          { login: true },
+        );
+      } catch (err) {
+        panelLog({
+          level: "warn",
+          source: "discord",
+          message: "Połączenie działa, ale nie udało się zapisać konta na liście",
+          detail: err instanceof Error ? err.message : String(err),
+        });
+      }
       if (chosen) void savePanelName(chosen);
       return profile;
     } catch (err) {
@@ -741,9 +750,8 @@ app.on("second-instance", () => {
   revealMainWindow();
 });
 
-app.whenReady().then(async () => {
+app.whenReady().then(() => {
   trustPublisherCert();
-  await refreshAccountRoles();
   registerIpc();
   setOverlayRefresh(() => {
     void pushOverlayState();
@@ -759,15 +767,23 @@ app.whenReady().then(async () => {
     getIcon: () => appIcon(),
   });
   registerShortcuts();
+
+  void refreshAccountRoles().catch(() => {
+    /* ignore background refresh failure */
+  });
+
   const saved = loadState();
   if (saved.overlay.enabled) {
     persistOverlay({ editMode: false });
     createOverlayWindow(saved.overlay.displayId ?? undefined);
   }
-    await enforceAccountBan();
-    setInterval(() => {
-      void enforceAccountBan();
-    }, 20000);
+
+  void enforceAccountBan().catch(() => {
+    /* ignore background ban check failure */
+  });
+  setInterval(() => {
+    void enforceAccountBan();
+  }, 20000);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();

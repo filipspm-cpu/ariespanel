@@ -2,7 +2,7 @@ import { Copyright } from "@/components/Copyright";
 import { FACTION_GROUPS, mergeFactions, type FactionRecord, type FactionView } from "@/data/factions";
 import { FACTION_LOGOS } from "@/data/factionLogos";
 import { RefreshCw } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type FactionsResult = {
   ok?: boolean;
@@ -51,8 +51,11 @@ export function FactionsPage() {
   const [factions, setFactions] = useState<FactionView[]>(() => mergeFactions([]));
   const [refreshing, setRefreshing] = useState(false);
   const [dbError, setDbError] = useState("");
+  const loading = useRef(false);
 
   const load = useCallback(async (manual = false) => {
+    if (loading.current) return;
+    loading.current = true;
     if (manual) setRefreshing(true);
     try {
       const result = (await window.synvity?.factionsList?.()) as FactionsResult | undefined;
@@ -70,6 +73,7 @@ export function FactionsPage() {
       setFactions(mergeFactions([]));
       setDbError("Baza frakcji nie odpowiada. LH.pl puszcza MySQL tylko z localhost — panel czyta liderów przez PHP na filipekweb.pl.");
     } finally {
+      loading.current = false;
       setRefreshing(false);
     }
   }, []);

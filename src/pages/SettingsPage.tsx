@@ -347,13 +347,6 @@ export function SettingsPage() {
                 Zaktualizuj
               </button>
             ) : null}
-            <button
-              onClick={() => void window.synvity?.updateOpenSetup(update?.version)}
-              className="settings-btn"
-            >
-              <Download size={14} />
-              Pobierz instalator
-            </button>
           </div>
           ) : null}
         </div>

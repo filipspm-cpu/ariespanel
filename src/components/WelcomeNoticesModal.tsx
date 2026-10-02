@@ -50,11 +50,23 @@ export function WelcomeNoticesModal() {
 
   useEffect(() => {
     let cancelled = false;
-    void window.synvity?.noticesList?.()
+    const request = window.synvity?.noticesList?.();
+    if (!request) {
+      setNotices(DEFAULT_NOTICES);
+      setOpen(true);
+      setReady(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+    void request
       .then((result) => {
         if (cancelled) return;
         const rows = asNotices(result?.notices);
-        const popup = result?.popup !== false;
+        // The popup toggle belongs to the editor who changed it. Older
+        // servers stored one global flag, so never let that flag hide notices
+        // from regular accounts.
+        const popup = canOpenEditor ? result?.popup !== false : true;
         setNotices(rows);
         setOpen(popup && rows.length > 0);
         setReady(true);
@@ -65,15 +77,10 @@ export function WelcomeNoticesModal() {
         setOpen(true);
         setReady(true);
       });
-    if (!window.synvity?.noticesList) {
-      setNotices(DEFAULT_NOTICES);
-      setOpen(true);
-      setReady(true);
-    }
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [canOpenEditor]);
 
   useEffect(() => {
     if (!open) return;

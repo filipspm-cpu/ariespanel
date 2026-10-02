@@ -44,6 +44,17 @@ function shiftDown() {
 
 let watchedNow = watchedKeys;
 
+function updatePolling() {
+  if (onFire && triggers.length > 0 && !timer) {
+    keyDown.clear();
+    timer = setInterval(pollKeyboard, 30);
+  } else if ((!onFire || triggers.length === 0) && timer) {
+    clearInterval(timer);
+    timer = null;
+    keyDown.clear();
+  }
+}
+
 function rebuildWatchedKeys() {
   const need = new Set<string>(["\b", " "]);
   for (const trigger of triggers) {
@@ -58,6 +69,7 @@ export function updateMacroTriggers(next: Trigger[]) {
     .filter((trigger) => trigger.sequence.length > 0)
     .sort((a, b) => b.sequence.length - a.sequence.length);
   rebuildWatchedKeys();
+  updatePolling();
 }
 
 function recordCharacter(character: string) {
@@ -90,12 +102,10 @@ function pollKeyboard() {
 }
 
 export function startMacroHook(handler: (id: string, eraseCount: number) => void) {
-  ensureNative();
   onFire = handler;
-  if (timer) return;
   keyDown.clear();
   buffer = "";
-  timer = setInterval(pollKeyboard, 12);
+  updatePolling();
 }
 
 export function stopMacroHook() {

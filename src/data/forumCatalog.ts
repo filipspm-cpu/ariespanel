@@ -1,0 +1,17 @@
+export const FORUM_CATALOG = [
+  { id: "ogolne", title: "Zasady ogólne" },
+  { id: "nalot", title: "Zasady nalotu" },
+  { id: "lider", title: "Zasady lidera" },
+  { id: "skargi", title: "Zasady składania skarg w zgłoszeniu" },
+  { id: "weryfikacja", title: "Zasady weryfikacji oprogramowania firm trzecich" },
+  { id: "napad", title: "Zasady Napadu na Bank i Biznes" },
+  { id: "fort", title: "Zasady Ataku na Fort Zancudo i Cayo Perico" },
+  { id: "org", title: "Organizacje kryminalne i ich działalność" },
+  { id: "rodziny", title: "Zasady dla Rodzin i Klanów" },
+  { id: "zasady-forum", title: "Zasady Forum" },
+  { id: "captures", title: "Zasady Captures (Turfs)" },
+  { id: "airdrop", title: "Zasady AirDrop i Wojny Magazynów/Dealerów" },
+  { id: "wojenny", title: "Zasady stanu wojennego" },
+  { id: "dostawy", title: "Zasady Dostaw i Kraftu" },
+  { id: "frakcje", title: "Frakcje państwowe i ich działalność" },
+] as const;

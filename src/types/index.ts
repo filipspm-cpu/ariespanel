@@ -13,8 +13,7 @@ export type RouteId =
   | "feedback"
   | "achievements"
   | "notices"
-  | "factions"
-  | "clicker";
+  | "factions";
 
 export interface NavItem {
   id: RouteId;
