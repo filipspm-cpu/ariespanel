@@ -1,5 +1,0 @@
-ALTER TABLE feedback
-  ADD COLUMN status VARCHAR(16) NOT NULL DEFAULT 'open';
-
-ALTER TABLE feedback
-  ADD COLUMN channel VARCHAR(32) NOT NULL DEFAULT 'other';
